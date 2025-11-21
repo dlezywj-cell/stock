@@ -2,38 +2,51 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>股票估值系统 (全弹窗交互版)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>股票估值系统 (移动端折叠版)</title>
     <style>
-        /* === 基础布局 === */
-        body { font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif; padding: 20px; max-width: 100%; margin: 0 auto; background-color: #f4f6f9; font-size: 13px; color: #333; height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; }
+        /* === 全局重置与基础 === */
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft YaHei', sans-serif; padding: 10px; max-width: 100%; margin: 0 auto; background-color: #f4f6f9; font-size: 13px; color: #333; height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; }
         
-        .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-shrink: 0; }
-        h2 { margin: 0; border-left: 5px solid #007bff; padding-left: 10px; color: #2c3e50; }
+        /* === 移动端专属导航栏 (默认隐藏，手机显示) === */
+        #mobile-nav { display: none; justify-content: space-between; align-items: center; background: #fff; padding: 10px 15px; border-radius: 8px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); flex-shrink: 0; }
+        #mobile-nav h3 { margin: 0; color: #2c3e50; font-size: 16px; display: flex; align-items: center; gap: 8px; }
+        #mobile-status { font-size: 11px; color: #007bff; font-family: monospace; }
+        .btn-menu { background: #f8f9fa; border: 1px solid #ddd; color: #333; padding: 6px 12px; border-radius: 4px; font-size: 14px; }
+
+        /* === 可折叠区域包装器 (Desktop默认显示) === */
+        #top-area { display: block; transition: all 0.3s ease; flex-shrink: 0; }
+
+        /* === 原有顶部和控制栏 === */
+        .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        h2 { margin: 0; border-left: 5px solid #007bff; padding-left: 10px; color: #2c3e50; font-size: 18px; }
 
         .control-bar { 
-            margin-bottom: 10px; display: flex; gap: 10px; align-items: center; 
-            background: #fff; padding: 10px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); 
-            flex-wrap: wrap; flex-shrink: 0;
+            margin-bottom: 10px; display: flex; gap: 8px; align-items: center; 
+            background: #fff; padding: 8px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); 
+            flex-wrap: wrap; 
         }
-        .divider { border-left: 1px solid #eee; height: 20px; margin: 0 5px; }
+        .divider { border-left: 1px solid #eee; height: 20px; margin: 0 2px; }
 
-        #input-container { background: #fff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); overflow: hidden; transition: all 0.3s ease; margin-bottom: 15px; display: none; flex-shrink: 0; }
-        #input-panel { padding: 20px; border-top: 3px solid #007bff; }
-        .input-row { display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-end; margin-bottom: 15px; }
+        /* === 录入面板 === */
+        #input-container { background: #fff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); overflow: hidden; transition: all 0.3s ease; margin-bottom: 10px; display: none; }
+        #input-panel { padding: 15px; border-top: 3px solid #007bff; }
+        .input-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; margin-bottom: 10px; }
         
-        .group-box { border: 1px solid #e9ecef; padding: 15px; border-radius: 6px; background: #f8f9fa; display: flex; gap: 10px; }
+        .group-box { border: 1px solid #e9ecef; padding: 10px; border-radius: 6px; background: #f8f9fa; display: flex; gap: 8px; flex-wrap: wrap; }
         .group-title { font-weight: bold; color: #555; margin-right: 5px; display: block; margin-bottom: 5px; font-size: 12px;}
         
-        label { font-size: 12px; color: #666; display: block; margin-bottom: 4px; font-weight: 500; }
-        input { padding: 6px 8px; border: 1px solid #ced4da; border-radius: 4px; width: 100px; transition: border-color 0.2s; }
+        label { font-size: 12px; color: #666; display: block; margin-bottom: 2px; font-weight: 500; }
+        input { padding: 5px 6px; border: 1px solid #ced4da; border-radius: 4px; width: 80px; transition: border-color 0.2s; }
         input:focus { border-color: #007bff; outline: none; }
         input[readonly] { background-color: #e9ecef; color: #495057; cursor: not-allowed; }
         
-        button { padding: 6px 12px; cursor: pointer; border: none; border-radius: 4px; font-weight: 600; transition: all 0.2s; font-size: 12px; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+        /* 按钮通用 */
+        button { padding: 6px 10px; cursor: pointer; border: none; border-radius: 4px; font-weight: 600; transition: all 0.2s; font-size: 12px; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
         button:hover { opacity: 0.85; transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         button:active { transform: translateY(1px); }
 
+        /* 按钮配色 */
         .btn-search { background-color: #17a2b8; color: white; }
         .btn-add { background-color: #28a745; color: white; }
         .btn-edit { background-color: #ffc107; color: #333; }
@@ -52,196 +65,238 @@
         .btn-confirm-del { background-color: #dc3545; color: white; font-size: 14px; padding: 8px 25px; }
         .btn-cancel { background-color: #6c757d; color: white; font-size: 14px; padding: 8px 25px; }
 
-        /* === 表格区域 (双行锁定) === */
+        /* === 表格区域 (核心) === */
         #result { 
-            background: #fff; 
-            border-radius: 8px; 
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05); 
-            border: 1px solid #e9ecef; 
-            flex-grow: 1; 
-            overflow: auto; 
-            position: relative;
+            background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); 
+            border: 1px solid #e9ecef; flex-grow: 1; overflow: auto; position: relative; 
         }
+        table { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 1200px; }
+        th, td { padding: 10px 8px; text-align: center; border-bottom: 1px solid #ebebeb; border-right: 1px solid #ebebeb; white-space: nowrap; }
         
-        table { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 1300px; }
-        th, td { padding: 10px 12px; text-align: center; border-bottom: 1px solid #ebebeb; border-right: 1px solid #ebebeb; white-space: nowrap; }
-        
+        /* 双行锁定逻辑 */
         th { background-color: #f1f3f5; color: #495057; font-weight: 700; user-select: none; position: sticky; z-index: 20; }
         thead tr:nth-child(1) th { top: 0; border-bottom: 1px solid #ccc; height: 22px; }
         thead tr:nth-child(2) th { top: 43px; box-shadow: 0 2px 2px rgba(0,0,0,0.05); }
-
+        
+        /* 首列锁定 */
         tbody td:first-child { position: sticky; left: 0; z-index: 15; background-color: #fff; border-right: 2px solid #d1d1d1; }
         tbody tr:nth-child(even) td:first-child { background-color: #f8f9fa; }
         tbody tr:hover td:first-child { background-color: #e9ecef; }
-
+        /* 交叉点锁定 */
         thead tr:nth-child(1) th:first-child { position: sticky; left: 0; top: 0; z-index: 30; border-right: 2px solid #d1d1d1; }
         thead tr:nth-child(2) th:first-child { position: sticky; left: 0; top: 43px; z-index: 30; border-right: 2px solid #d1d1d1; }
         
-        th.sortable:hover { background-color: #e2e6ea; cursor: pointer; color: #007bff; }
         .col-hidden { display: none !important; }
-        .tag-badge { display: inline-block; background: #e7f5ff; color: #007bff; padding: 2px 6px; border-radius: 4px; font-size: 11px; margin: 1px; border: 1px solid #d0ebff; }
+        .tag-badge { display: inline-block; background: #e7f5ff; color: #007bff; padding: 2px 5px; border-radius: 3px; font-size: 10px; margin: 1px; border: 1px solid #d0ebff; }
         .th-basic { border-top: 3px solid #6c757d; }
         .th-pe { border-top: 3px solid #28a745; background-color: #f3fdf6; }
         .th-ps { border-top: 3px solid #fd7e14; background-color: #fff8f3; }
         
-        .th-select { border-top: 3px solid #adb5bd; border-left: 2px solid #dee2e6 !important; background-color: #e9ecef; width: 40px !important; padding: 0 !important; cursor: pointer; z-index: 25; }
-        .td-select { border-left: 2px solid #dee2e6 !important; background-color: #f8f9fa; width: 40px !important; padding: 0 !important; cursor: pointer; }
+        .th-select { border-top: 3px solid #adb5bd; border-left: 2px solid #dee2e6 !important; background-color: #e9ecef; width: 35px !important; padding: 0 !important; cursor: pointer; z-index: 25; }
+        .td-select { border-left: 2px solid #dee2e6 !important; background-color: #f8f9fa; width: 35px !important; padding: 0 !important; cursor: pointer; }
         
-        .row-checkbox { cursor: pointer; accent-color: #007bff; width: 15px; height: 15px; margin: 0 auto; display: block; }
-        .filter-icon { font-size: 12px; color: #adb5bd; cursor: pointer; padding: 2px 4px; margin-left: 4px; border-radius: 3px; transition: 0.2s; display: inline-block; }
-        .filter-active { color: #dc3545 !important; font-weight: bold; background-color: #f8d7da; }
+        .row-checkbox { cursor: pointer; accent-color: #007bff; width: 16px; height: 16px; margin: 0 auto; display: block; }
+        .filter-icon { font-size: 12px; color: #adb5bd; cursor: pointer; margin-left: 2px; }
+        .filter-active { color: #dc3545 !important; font-weight: bold; background-color: #f8d7da; border-radius:2px; padding:0 2px; }
 
         #filter-menu { display: none; position: absolute; background: white; border: 1px solid #ccc; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border-radius: 6px; padding: 12px; z-index: 3000; min-width: 200px; }
         #filter-menu h4 { margin: 0 0 10px 0; font-size: 13px; border-bottom: 1px solid #eee; padding-bottom: 5px; color: #333; }
         .filter-row { display: flex; gap: 5px; margin-bottom: 10px; align-items: center; }
-        .filter-row select { padding: 4px; border: 1px solid #ddd; border-radius: 4px; }
-        .filter-row input { padding: 4px; border: 1px solid #ddd; border-radius: 4px; flex-grow: 1; }
+        .filter-row input { padding: 4px; border: 1px solid #ddd; border-radius: 4px; flex-grow: 1; width: 100%;}
         .filter-actions { display: flex; justify-content: flex-end; gap: 8px; }
-        .filter-actions button { font-size: 12px; padding: 4px 10px; }
         
         .row-selected { background-color: #e8f0fe !important; }
         .row-selected td:first-child { background-color: #e8f0fe !important; } 
-
+        
         .data-empty { color: #ccc; font-weight: normal; }
         #status-msg { font-size: 12px; color: #007bff; margin-left: 10px; font-family: monospace; }
-        .sort-icon { font-size: 10px; margin-left: 4px; color: #adb5bd; }
+        .sort-icon { font-size: 10px; margin-left: 2px; color: #adb5bd; }
         .sort-active { color: #007bff; }
 
-        /* 弹窗通用样式 */
+        /* 弹窗 */
         .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(2px); justify-content: center; align-items: center; }
-        .modal-content { background-color: white; padding: 25px; border-radius: 12px; width: 500px; box-shadow: 0 15px 40px rgba(0,0,0,0.3); position: relative; animation: slideDown 0.2s ease-out; }
-        .close-btn { position: absolute; top: 15px; right: 20px; font-size: 24px; cursor: pointer; color: #aaa; }
+        #delete-modal { z-index: 2200; } #sync-modal { z-index: 2100; } #log-modal { z-index: 2000; }
+        .modal-content { background-color: white; padding: 20px; border-radius: 12px; width: 90%; max-width: 500px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); position: relative; max-height: 80vh; overflow-y: auto; }
+        .close-btn { position: absolute; top: 10px; right: 15px; font-size: 24px; cursor: pointer; color: #aaa; }
         
-        /* 层级管理：删除弹窗 > 同步弹窗 > 日志弹窗 */
-        #delete-modal { z-index: 2200; }
-        #sync-modal { z-index: 2100; }
-        #log-modal { z-index: 2000; }
-
-        .log-entry { border-bottom: 1px solid #eee; padding: 12px 0; font-size: 13px; color: #444; }
-        .log-time { color: #999; font-size: 12px; margin-bottom: 4px; }
-        .log-change { color: #2c3e50; font-weight: 600; }
-        .log-note { display: block; margin-top: 6px; color: #555; background: #fff3cd; padding: 6px 10px; border-radius: 4px; border-left: 3px solid #ffc107; }
-        .log-del-btn { cursor: pointer; color: #dc3545; opacity: 0.6; transition: all 0.2s; font-size: 14px; }
-        .log-del-btn:hover { opacity: 1; transform: scale(1.1); }
-
-        /* 同步弹窗专用样式 */
+        .log-entry { border-bottom: 1px solid #eee; padding: 10px 0; font-size: 12px; color: #444; }
+        .log-time { color: #999; font-size: 12px; margin-bottom: 2px; }
+        .log-note { display: block; margin-top: 4px; color: #555; background: #fff3cd; padding: 4px 8px; border-radius: 4px; border-left: 3px solid #ffc107; }
+        .log-del-btn { cursor: pointer; color: #dc3545; opacity: 0.6; font-size: 14px; padding: 2px 8px; }
+        
+        /* 同步弹窗 */
         .sync-info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f1f1; }
-        .sync-label { color: #666; }
-        .sync-val { font-weight: bold; color: #333; }
-        .sync-val.new { color: #28a745; }
-        .sync-val.old { color: #dc3545; }
+        .sync-val.new { color: #28a745; } .sync-val.old { color: #dc3545; }
+
+        /* ★★★ 移动端适配核心 CSS ★★★ */
+        @media (max-width: 768px) {
+            /* 1. 显示移动端导航栏 */
+            #mobile-nav { display: flex; }
+            
+            /* 2. 默认隐藏顶部控制区 */
+            #top-area { display: none; }
+            
+            /* 3. 展开状态的样式 */
+            #top-area.show { display: block; animation: slideDown 0.2s ease-out; }
+            
+            /* 4. 调整 header-bar 和 control-bar 在手机上的显示 */
+            .header-bar { flex-direction: column; align-items: flex-start; gap: 10px; }
+            .header-bar h2 { display: none; } /* 手机上标题已经在 mobile-nav 显示了，这里隐藏 */
+            .header-bar div { width: 100%; display: flex; justify-content: space-between; }
+            
+            .control-bar { flex-direction: column; align-items: stretch; }
+            .control-bar > * { width: 100%; margin-bottom: 5px; }
+            .control-bar input { width: 100% !important; box-sizing: border-box; }
+            .control-bar .divider { display: none; }
+            
+            /* 按钮组调整 */
+            .control-bar button { justify-content: center; padding: 10px; font-size: 14px; }
+            
+            /* 录入面板调整 */
+            #input-panel { padding: 10px; }
+            .group-box { width: 100%; box-sizing: border-box; }
+            .input-row { flex-direction: column; gap: 0; }
+        }
+
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
 
-    <div class="header-bar">
-        <h2>📈 股票估值复盘系统</h2>
-        <div>
-            <span id="status-msg"></span>
-            <button class="btn-cloud-pull" onclick="syncFromGithub()" title="从GitHub下载">☁️ 拉取数据</button>
-            <button class="btn-cloud-push" onclick="uploadToGithub()" title="保存到 GitHub">🚀 保存到 GitHub</button>
-            <span style="border-left:1px solid #ccc; margin:0 10px; height:20px; display:inline-block; vertical-align:middle;"></span>
-            <button class="btn-control" onclick="startRealtime()">▶ 开启</button>
-            <button class="btn-control" onclick="stopRealtime()">⏹ 暂停</button>
-        </div>
+    <!-- ★★★ 移动端专属导航栏 ★★★ -->
+    <div id="mobile-nav">
+        <h3>📈 估值系统 <span id="mobile-status"></span></h3>
+        <button class="btn-menu" onclick="toggleMobileMenu()" id="mobile-menu-btn">⚙️ 菜单</button>
     </div>
 
-    <div class="control-bar">
-        <button class="btn-toggle" onclick="toggleInputPanel()" id="toggle-btn">➕ 录入/管理</button>
-        <div class="divider"></div>
-        <span style="font-size:12px; color:#666;">🔍:</span>
-        <input type="text" id="findInput" placeholder="代码/名称" style="width: 100px;" onkeydown="if(event.keyCode==13) updateTable()">
-        <input type="text" id="findTags" placeholder="属性/赛道" style="width: 100px;" onkeydown="if(event.keyCode==13) updateTable()">
-        <button class="btn-find" onclick="updateTable()">Go</button>
-        <div style="flex-grow:1"></div>
-        <span class="control-label">👁️ 显示:</span>
-        <button class="btn-view active" id="btn-toggle-code" onclick="toggleColumn('code')" title="显示/隐藏 代码列">代码</button>
-        <button class="btn-view active" id="btn-toggle-tags" onclick="toggleColumn('tags')" title="显示/隐藏 属性列">属性</button>
-        <button class="btn-view active" id="btn-toggle-update" onclick="toggleColumn('update')" title="显示/隐藏 更新列">更新</button>
-        <button class="btn-view active" id="btn-toggle-action" onclick="toggleColumn('action')" title="显示/隐藏 操作列">操作</button>
-        <div class="divider"></div>
-        <button class="btn-reset-all" onclick="clearAllFilters()" title="清除所有筛选与搜索">🌪️ 重置筛选</button>
-        <button class="btn-compare" id="btn-compare" onclick="toggleShowSelected()">📊 只看选中 (0)</button>
-    </div>
-
-    <div id="input-container">
-        <div id="input-panel">
-            <input type="hidden" id="editCode" value="">
-            <div class="input-row">
-                <div class="group-box" style="background: #fff; border-color: #ddd;">
-                    <div><label>1. 股票名称</label><div style="display:flex; gap:5px;"><input type="text" id="inName" placeholder="如: 腾讯" style="width:110px"><button class="btn-search" onclick="searchStockCode()">🔍 匹配</button></div></div>
-                    <div><label>2. 代码 (自动)</label><input type="text" id="inCode" readonly placeholder="等待匹配" style="width:90px"></div>
-                    <div style="flex-grow: 1; min-width: 200px;"><label>🏷️ 属性/赛道 (空格分隔)</label><input type="text" id="inTags" placeholder="如: 消费电子 华为链 绩优" style="width: 98%;"></div>
-                    <div style="flex-grow: 1; min-width: 200px;"><label>📝 备注 (日志用)</label><input type="text" id="inNote" placeholder="输入想法，如：调高估值上限" style="width: 98%;"></div>
-                </div>
+    <!-- ★★★ 可折叠区域容器 ★★★ -->
+    <div id="top-area">
+        <div class="header-bar">
+            <h2>📈 股票估值复盘系统</h2>
+            <div style="width: 100%; display:flex; gap:5px; flex-wrap:wrap;">
+                <span id="status-msg" style="display:none;"></span> <!-- PC端Status在JS里处理，Mobile用mobile-status -->
+                <button class="btn-cloud-pull" onclick="syncFromGithub()">☁️ 拉取</button>
+                <button class="btn-cloud-push" onclick="uploadToGithub()">🚀 上传</button>
+                <span style="flex-grow:1"></span>
+                <button class="btn-control" onclick="startRealtime()">▶ 开启</button>
+                <button class="btn-control" onclick="stopRealtime()">⏹ 暂停</button>
             </div>
-            <div class="input-row">
-                <div class="group-box" style="border-left: 4px solid #28a745;">
-                    <div><span class="group-title" style="color:#28a745">① PE 估值</span></div>
-                    <div><label>净利(亿)</label><input type="number" id="inProfit" step="0.1"></div>
-                    <div><label>PE下限</label><input type="number" id="inLowPE"></div>
-                    <div><label>PE上限</label><input type="number" id="inHighPE"></div>
+        </div>
+
+        <div class="control-bar">
+            <button class="btn-toggle" onclick="toggleInputPanel()" id="toggle-btn">➕ 录入/管理</button>
+            
+            <div style="display:flex; gap:5px; width:100%">
+                <input type="text" id="findInput" placeholder="代码/名称" onkeydown="if(event.keyCode==13) updateTable()">
+                <input type="text" id="findTags" placeholder="属性/赛道" onkeydown="if(event.keyCode==13) updateTable()">
+                <button class="btn-find" onclick="updateTable()" style="width:auto;">Go</button>
+            </div>
+
+            <div style="display:flex; gap:5px; width:100%; flex-wrap: wrap;">
+                <button class="btn-reset-all" onclick="clearAllFilters()">🌪️ 重置</button>
+                <button class="btn-compare" id="btn-compare" onclick="toggleShowSelected()">📊 选中 (0)</button>
+            </div>
+            
+            <!-- 电脑端显示按钮组 (手机端可以用 CSS 隐藏或者折叠，这里保留) -->
+            <div style="display:flex; gap:5px; flex-wrap:wrap; justify-content: space-between;">
+                <button class="btn-view active" id="btn-toggle-code" onclick="toggleColumn('code')">代码</button>
+                <button class="btn-view active" id="btn-toggle-tags" onclick="toggleColumn('tags')">属性</button>
+                <button class="btn-view active" id="btn-toggle-update" onclick="toggleColumn('update')">更新</button>
+                <button class="btn-view active" id="btn-toggle-action" onclick="toggleColumn('action')">操作</button>
+            </div>
+        </div>
+
+        <!-- 录入面板 -->
+        <div id="input-container">
+            <div id="input-panel">
+                <input type="hidden" id="editCode" value="">
+                <div class="input-row">
+                    <div class="group-box" style="background: #fff; border-color: #ddd;">
+                        <div style="display:flex; gap:5px; width:100%; align-items:center;">
+                            <label style="width:40px;">名称</label>
+                            <input type="text" id="inName" placeholder="腾讯" style="flex:1">
+                            <button class="btn-search" onclick="searchStockCode()">🔍</button>
+                        </div>
+                        <div style="display:flex; gap:5px; width:100%; align-items:center; margin-top:5px;">
+                            <label style="width:40px;">代码</label>
+                            <input type="text" id="inCode" readonly placeholder="自动" style="flex:1; background:#eee">
+                        </div>
+                        <input type="text" id="inTags" placeholder="属性 (空格分隔)" style="width: 100%; margin-top:5px;">
+                        <input type="text" id="inNote" placeholder="备注 (日志)" style="width: 100%; margin-top:5px;">
+                    </div>
                 </div>
-                <div class="group-box" style="border-left: 4px solid #fd7e14;">
-                    <div><span class="group-title" style="color:#fd7e14">② PS 估值</span></div>
-                    <div><label>营收(亿)</label><input type="number" id="inRevenue" step="0.1"></div>
-                    <div><label>PS下限</label><input type="number" id="inLowPS" step="0.1"></div>
-                    <div><label>PS上限</label><input type="number" id="inHighPS" step="0.1"></div>
+                <div class="input-row">
+                    <div class="group-box" style="border-left: 4px solid #28a745;">
+                        <div style="width:100%; font-weight:bold; color:#28a745; margin-bottom:5px;">① PE 估值</div>
+                        <div style="display:flex; justify-content:space-between; width:100%">
+                            <div><label>净利</label><input type="number" id="inProfit" step="0.1" style="width:60px"></div>
+                            <div><label>PE下</label><input type="number" id="inLowPE" style="width:40px"></div>
+                            <div><label>PE上</label><input type="number" id="inHighPE" style="width:40px"></div>
+                        </div>
+                    </div>
+                    <div class="group-box" style="border-left: 4px solid #fd7e14;">
+                        <div style="width:100%; font-weight:bold; color:#fd7e14; margin-bottom:5px;">② PS 估值</div>
+                        <div style="display:flex; justify-content:space-between; width:100%">
+                            <div><label>营收</label><input type="number" id="inRevenue" step="0.1" style="width:60px"></div>
+                            <div><label>PS下</label><input type="number" id="inLowPS" style="width:40px"></div>
+                            <div><label>PS上</label><input type="number" id="inHighPS" style="width:40px"></div>
+                        </div>
+                    </div>
                 </div>
-                <div style="align-self: center;"><button class="btn-add" onclick="saveStock()" id="btn-save-text">💾 保存</button><button onclick="clearInput()" style="margin-left:5px;">重置</button></div>
+                <div style="text-align:center; margin-top:10px;">
+                    <button class="btn-add" onclick="saveStock()" id="btn-save-text" style="padding:10px 30px; font-size:14px;">💾 保存</button>
+                    <button onclick="clearInput()" style="padding:10px 20px; margin-left:10px;">重置</button>
+                </div>
             </div>
         </div>
     </div>
 
     <div id="result"></div>
 
-    <!-- 各种弹窗 -->
+    <!-- 弹窗 (保持不变) -->
     <div id="filter-menu">
         <h4 id="filter-title">筛选条件</h4>
         <div class="filter-row" id="filter-row-numeric">
-            <select id="filter-op"><option value=">">大于 (>)</option><option value="<">小于 (<)</option><option value=">=">大等 (≥)</option><option value="<=">小等 (≤)</option><option value="=">等于 (=)</option></select>
+            <select id="filter-op"><option value=">"> > </option><option value="<"> < </option><option value=">="> ≥ </option><option value="<="> ≤ </option><option value="="> = </option></select>
             <input type="number" id="filter-val" placeholder="数值">
         </div>
         <div class="filter-row" id="filter-row-text" style="display:none;">
-            <input type="text" id="filter-text-val" placeholder="包含的内容...">
+            <input type="text" id="filter-text-val" placeholder="包含...">
         </div>
         <div class="filter-actions"><button class="btn-cancel" onclick="clearCurrentFilter()" style="padding:4px 10px;">清空</button><button class="btn-add" onclick="confirmFilter()" style="padding:4px 10px;">确定</button></div>
         <input type="hidden" id="filter-col-key">
     </div>
 
-    <div id="log-modal" class="modal"><div class="modal-content" style="width: 600px;"><span class="close-btn" onclick="closeLogModal()">&times;</span><h3 id="modal-title" style="margin-top:0; border-bottom:2px solid #eee; padding-bottom:15px;">操作日志</h3><div id="modal-body" style="max-height: 60vh; overflow-y: auto;"></div></div></div>
-    <div id="delete-modal" class="modal"><div class="modal-content" style="width: 400px; text-align: center; padding-top: 30px;"><h3>⚠️ 确认删除？</h3><p id="delete-msg" style="color:#555; margin-bottom:30px;">...</p><div><button class="btn-confirm-del" onclick="confirmDeleteAction()">确定删除</button><button class="btn-cancel" onclick="closeDeleteModal()">取消</button></div></div></div>
-    
-    <!-- 新增：同步确认弹窗 -->
-    <div id="sync-modal" class="modal">
-        <div class="modal-content" style="width: 450px;">
-            <span class="close-btn" onclick="closeSyncModal()">&times;</span>
-            <h3 style="margin-top:0; border-bottom:2px solid #eee; padding-bottom:15px;">☁️ 云端同步确认</h3>
-            <div style="padding: 10px 0;">
-                <div class="sync-info-row">
-                    <span class="sync-label">云端数据时间:</span>
-                    <span class="sync-val" id="sync-cloud-date">加载中...</span>
-                </div>
-                <div class="sync-info-row">
-                    <span class="sync-label">本地数据时间:</span>
-                    <span class="sync-val" id="sync-local-date">...</span>
-                </div>
-                <div class="sync-info-row">
-                    <span class="sync-label">股票数量对比:</span>
-                    <span class="sync-val" id="sync-count">...</span>
-                </div>
-                <p style="color:#666; font-size:12px; background:#f8f9fa; padding:8px; border-radius:4px; margin-top:15px;">
-                    💡 提示：如果云端时间不是最新的，可能是 GitHub 缓存（无Token约延时5分钟）。<br>请稍后再试，或检查 GitHub Token 设置。
-                </p>
-            </div>
-            <div style="text-align:right; margin-top:20px;">
-                <button class="btn-cloud-pull" onclick="confirmSyncAction()" style="padding:8px 20px;">✅ 覆盖本地</button>
-                <button class="btn-cancel" onclick="closeSyncModal()" style="padding:8px 20px;">取消</button>
-            </div>
-        </div>
-    </div>
+    <div id="log-modal" class="modal"><div class="modal-content"><span class="close-btn" onclick="closeLogModal()">&times;</span><h3 id="modal-title" style="margin-top:0; border-bottom:2px solid #eee; padding-bottom:15px;">日志</h3><div id="modal-body"></div></div></div>
+    <div id="delete-modal" class="modal"><div class="modal-content" style="text-align: center; padding-top: 30px;"><h3>⚠️ 确认删除？</h3><p id="delete-msg" style="color:#555; margin-bottom:30px;">...</p><div><button class="btn-confirm-del" onclick="confirmDeleteAction()">删除</button><button class="btn-cancel" onclick="closeDeleteModal()">取消</button></div></div></div>
+    <div id="sync-modal" class="modal"><div class="modal-content"><span class="close-btn" onclick="closeSyncModal()">&times;</span><h3 style="margin-top:0; border-bottom:2px solid #eee; padding-bottom:15px;">☁️ 同步确认</h3><div style="padding: 10px 0;"><div class="sync-info-row"><span class="sync-label">云端:</span><span class="sync-val" id="sync-cloud-date">...</span></div><div class="sync-info-row"><span class="sync-label">本地:</span><span class="sync-val" id="sync-local-date">...</span></div><div class="sync-info-row"><span class="sync-label">数量:</span><span class="sync-val" id="sync-count">...</span></div></div><div style="text-align:right; margin-top:20px;"><button class="btn-cloud-pull" onclick="confirmSyncAction()" style="padding:8px 20px;">✅ 覆盖</button><button class="btn-cancel" onclick="closeSyncModal()" style="padding:8px 20px;">取消</button></div></div></div>
 
     <script>
+        // ★★★ 移动端菜单切换逻辑 ★★★
+        function toggleMobileMenu(forceState) {
+            const area = document.getElementById('top-area');
+            const btn = document.getElementById('mobile-menu-btn');
+            const isHidden = area.style.display === 'none' || getComputedStyle(area).display === 'none';
+            
+            // 如果 forceState 有值，则强制设置；否则切换
+            const shouldShow = forceState !== undefined ? forceState : isHidden;
+
+            if (shouldShow) {
+                area.style.display = 'block';
+                area.classList.add('show');
+                btn.innerText = '🔼 收起';
+            } else {
+                area.style.display = 'none';
+                area.classList.remove('show');
+                btn.innerText = '⚙️ 菜单';
+            }
+        }
+
+        // 初始化：如果屏幕小，隐藏顶部
+        if (window.innerWidth <= 768) {
+            document.getElementById('top-area').style.display = 'none';
+        }
+
         let stocks = JSON.parse(localStorage.getItem('valuationStocks')) || [];
         let defaultView = { showCode: true, showTags: true, showUpdate: true, showAction: true };
         let storedView = JSON.parse(localStorage.getItem('viewSettings')) || {};
@@ -252,7 +307,7 @@
         let isPanelOpen = false;
         let pendingDeleteCode = null;
         let pendingLogIndex = null;
-        let pendingSyncData = null; // 暂存云端数据
+        let pendingSyncData = null;
         let cachedMarketData = {};
         let selectedCodes = new Set();
         let columnFilters = {}; 
@@ -271,93 +326,76 @@
             if (!token) { token = prompt("🔑 请输入 GitHub Token:"); if (!token) return; localStorage.setItem("github_token", token); }
             const btn = document.querySelector('.btn-cloud-push');
             const originText = btn.innerText;
-            btn.innerText = "⏳ 连接中..."; btn.disabled = true;
+            btn.innerText = "⏳..."; btn.disabled = true;
             const apiUrl = `https://api.github.com/repos/${GITHUB_CONFIG.username}/${GITHUB_CONFIG.repo}/contents/${GITHUB_CONFIG.path}`;
             try {
                 const getRes = await fetch(apiUrl, { headers: { "Authorization": `token ${token}`, "Accept": "application/vnd.github.v3+json" }, cache: "no-store" });
-                let sha = null; if (getRes.ok) { const fileData = await getRes.json(); sha = fileData.sha; } else if (getRes.status !== 404) throw new Error(`API 错误: ${getRes.status}`);
-                btn.innerText = "🚀 上传中...";
+                let sha = null; if (getRes.ok) { const fileData = await getRes.json(); sha = fileData.sha; } else if (getRes.status !== 404) throw new Error(`API: ${getRes.status}`);
+                btn.innerText = "🚀...";
                 const putRes = await fetch(apiUrl, { method: "PUT", headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ message: `Update ${new Date().toLocaleString()}`, content: utf8_to_b64(JSON.stringify(stocks, null, 2)), branch: GITHUB_CONFIG.branch, sha: sha }) });
-                if (putRes.ok) alert("✅ 上传成功！"); else throw new Error((await putRes.json()).message);
-            } catch (e) { if (e.message.includes("401")) { alert("❌ Token 无效，请重试。"); localStorage.removeItem("github_token"); } else alert(`❌ 失败: ${e.message}`); } 
+                if (putRes.ok) alert("✅ 成功"); else throw new Error((await putRes.json()).message);
+            } catch (e) { if (e.message.includes("401")) { alert("❌ Token失效"); localStorage.removeItem("github_token"); } else alert(`❌ ${e.message}`); } 
             finally { btn.innerText = originText; btn.disabled = false; }
         }
 
-        // ★★★ 修复后：拉取数据使用弹窗，不依赖原生confirm ★★★
         async function syncFromGithub() {
             let token = localStorage.getItem("github_token");
             const btn = document.querySelector('.btn-cloud-pull');
             const originText = btn.innerText;
-            btn.innerText = "⌛ 下载中..."; btn.disabled = true;
+            btn.innerText = "⌛..."; btn.disabled = true;
             try {
                 let newData = null;
                 const apiUrl = `https://api.github.com/repos/${GITHUB_CONFIG.username}/${GITHUB_CONFIG.repo}/contents/${GITHUB_CONFIG.path}`;
-                
                 const headers = { "Accept": "application/vnd.github.v3+json" };
                 if (token) headers["Authorization"] = `token ${token}`;
-
                 const res = await fetch(apiUrl, { headers, cache: "no-store" });
-                
-                if (res.ok) {
-                    const json = await res.json();
-                    const content = b64_to_utf8(json.content);
-                    newData = JSON.parse(content);
-                } else {
-                    console.warn("API读取失败，尝试Raw链接");
+                if (res.ok) { const json = await res.json(); newData = JSON.parse(b64_to_utf8(json.content)); } 
+                else {
                     const rawUrl = `https://raw.githubusercontent.com/${GITHUB_CONFIG.username}/${GITHUB_CONFIG.repo}/${GITHUB_CONFIG.branch}/${GITHUB_CONFIG.path}`;
                     const resRaw = await fetch(rawUrl + "?t=" + Date.now());
-                    if (!resRaw.ok) throw new Error("文件不存在或无法访问");
+                    if (!resRaw.ok) throw new Error("无法访问");
                     newData = await resRaw.json();
                 }
-
                 if (Array.isArray(newData)) {
                     pendingSyncData = newData;
-                    // 获取版本信息
-                    const cloudDate = newData.length > 0 && newData[0].logs && newData[0].logs.length > 0 ? newData[0].logs[0].date : "无记录";
-                    const localDate = stocks.length > 0 && stocks[0].logs && stocks[0].logs.length > 0 ? stocks[0].logs[0].date : "无记录";
-                    
-                    // 填充并显示弹窗
+                    const cloudDate = newData.length > 0 && newData[0].logs?.length ? newData[0].logs[0].date : "无";
+                    const localDate = stocks.length > 0 && stocks[0].logs?.length ? stocks[0].logs[0].date : "无";
                     document.getElementById('sync-cloud-date').innerText = cloudDate;
                     document.getElementById('sync-local-date').innerText = localDate;
-                    document.getElementById('sync-count').innerText = `云端 ${newData.length} vs 本地 ${stocks.length}`;
-                    
-                    // 简单的颜色提示
+                    document.getElementById('sync-count').innerText = `${newData.length} vs ${stocks.length}`;
                     const cDate = document.getElementById('sync-cloud-date');
-                    if(cloudDate > localDate) { cDate.className = "sync-val new"; cDate.innerText += " (最新)"; }
-                    else if(cloudDate < localDate) { cDate.className = "sync-val old"; cDate.innerText += " (较旧)"; }
+                    if(cloudDate > localDate) { cDate.className = "sync-val new"; cDate.innerText += " (新)"; }
+                    else if(cloudDate < localDate) { cDate.className = "sync-val old"; cDate.innerText += " (旧)"; }
                     else { cDate.className = "sync-val"; }
-
                     document.getElementById('sync-modal').style.display = 'flex';
                 }
-            } catch (e) { alert(`❌ 失败: ${e.message}`); } 
+            } catch (e) { alert(`❌ ${e.message}`); } 
             finally { btn.innerText = originText; btn.disabled = false; }
         }
-
-        // 确认同步覆盖
-        function confirmSyncAction() {
-            if(pendingSyncData) {
-                stocks = pendingSyncData;
-                saveStorage(); 
-                updateTable(); 
-                closeSyncModal();
-            }
-        }
-        
+        function confirmSyncAction() { if(pendingSyncData) { stocks = pendingSyncData; saveStorage(); updateTable(); closeSyncModal(); } }
         function closeSyncModal() { document.getElementById('sync-modal').style.display = 'none'; pendingSyncData = null; }
 
         function getSecid(code) { if (code.endsWith('.SH')) return `1.${code.replace('.SH','')}`; if (code.endsWith('.SZ')) return `0.${code.replace('.SZ','')}`; if (code.endsWith('.HK')) return `116.${code.replace('.HK','')}`; return `105.${code}`; }
 
         async function updateTable() {
             const container = document.getElementById('result');
-            const statusMsg = document.getElementById('status-msg');
-            if (stocks.length === 0) { container.innerHTML = '<div style="padding:40px;text-align:center;color:#999;border:2px dashed #eee;border-radius:10px;">📭 列表为空</div>'; statusMsg.innerText = ""; return; }
+            const mobileStatus = document.getElementById('mobile-status');
+            const pcStatus = document.getElementById('status-msg');
+            
+            if (stocks.length === 0) { container.innerHTML = '<div style="padding:40px;text-align:center;color:#999;">📭 列表为空</div>'; mobileStatus.innerText=""; return; }
             const secids = stocks.map(s => getSecid(s.code)).join(',');
             const url = `https://push2.eastmoney.com/api/qt/ulist.np/get?secids=${secids}&fields=f12,f14,f2,f3,f18,f20&invt=2&fltt=2&_=${Date.now()}`;
             try {
                 const res = await fetch(url);
                 const json = await res.json();
-                if (json?.data?.diff) { (Array.isArray(json.data.diff) ? json.data.diff : Object.values(json.data.diff)).forEach(item => { cachedMarketData[item.f12] = item; }); statusMsg.innerHTML = `● 数据已更新 ${new Date().toLocaleTimeString()}`; statusMsg.style.color = "#007bff"; }
-            } catch (e) { statusMsg.innerHTML = `<span style="color:orange">⚠️ 缓存</span>`; }
+                if (json?.data?.diff) { 
+                    (Array.isArray(json.data.diff) ? json.data.diff : Object.values(json.data.diff)).forEach(item => { cachedMarketData[item.f12] = item; }); 
+                    const timeStr = new Date().toLocaleTimeString();
+                    mobileStatus.innerText = `● ${timeStr}`; 
+                    pcStatus.innerText = `● 已更新 ${timeStr}`;
+                }
+            } catch (e) { mobileStatus.innerText = "⚠️"; }
+            
             const data = stocks.map(s => {
                 const rawCode = s.code.split('.')[0]; const mItem = cachedMarketData[rawCode]; let market = { cap: 0, chg: 0, valid: false };
                 if (mItem) { let p = parseFloat(mItem.f2), last = parseFloat(mItem.f18), mCap = parseFloat(mItem.f20), chgPct = parseFloat(mItem.f3); market.cap = (mCap > 0 ? mCap : 0) / 100000000; market.chg = !isNaN(chgPct) ? chgPct.toFixed(2) : "0.00"; market.valid = true; }
@@ -433,7 +471,7 @@
                         <th onclick="setSort('ps_up')" class="sortable">上行% ${getFilterIcon('ps_up')}</th>
                     </tr></thead><tbody>`;
 
-            if(filteredData.length === 0) html += `<tr><td colspan="16" style="padding:30px;text-align:center;color:#999;">没有符合条件的股票</td></tr>`;
+            if(filteredData.length === 0) html += `<tr><td colspan="16" style="padding:30px;text-align:center;color:#999;">无数据</td></tr>`;
             else filteredData.forEach(item => {
                 const fmtPct = (v) => `<span style="color:${parseFloat(v)>=0?'#d32f2f':'#2e7d32'}; font-weight:${Math.abs(parseFloat(v))>30?'800':'bold'}">${v==='-'?'-':v+'%'}</span>`;
                 const lastDateRaw = (item.logs && item.logs.length > 0) ? item.logs[0].date : '';
@@ -506,49 +544,52 @@
                 <div class="log-entry">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <div class="log-time">${l.date}</div>
-                        <span class="log-del-btn" onclick="deleteLog('${c}', ${idx})" title="删除此条日志">🗑️</span>
+                        <span class="log-del-btn" onclick="deleteLog('${c}', ${idx})" title="删除">🗑️</span>
                     </div>
                     <div class="log-change">${l.content}</div>
                     ${l.note ? `<span class="log-note">${l.note}</span>` : ''}
                 </div>
-            `).join('') || '<div style="text-align:center;padding:20px;color:#999">暂无日志记录</div>'; 
+            `).join('') || '<div style="text-align:center;padding:20px;color:#999">无记录</div>'; 
             document.getElementById('log-modal').style.display = 'flex'; 
         }
         
-        function deleteLog(code, index) {
-            pendingDeleteCode = code; pendingLogIndex = index; 
-            document.getElementById('delete-msg').innerText = `确认删除这条日志吗？`;
-            document.getElementById('delete-modal').style.display = 'flex';
-        }
-
+        function deleteLog(code, index) { pendingDeleteCode = code; pendingLogIndex = index; document.getElementById('delete-msg').innerText = `确认删除这条日志吗？`; document.getElementById('delete-modal').style.display = 'flex'; }
         window.openDeleteModal = function(c) { pendingDeleteCode = c; pendingLogIndex = null; document.getElementById('delete-msg').innerText = `确认不再跟踪 ${c}?`; document.getElementById('delete-modal').style.display = 'flex'; };
-
         window.confirmDeleteAction = function() { 
             if(pendingDeleteCode) {
-                if (pendingLogIndex !== null) {
-                    const s = stocks.find(item => item.code === pendingDeleteCode);
-                    if(s && s.logs) { s.logs.splice(pendingLogIndex, 1); saveStorage(); showLogs(pendingDeleteCode); updateTable(); }
-                    pendingLogIndex = null;
-                } else {
-                    stocks = stocks.filter(s => s.code !== pendingDeleteCode); selectedCodes.delete(pendingDeleteCode); saveStorage(); updateTable(); 
-                }
+                if (pendingLogIndex !== null) { const s = stocks.find(item => item.code === pendingDeleteCode); if(s && s.logs) { s.logs.splice(pendingLogIndex, 1); saveStorage(); showLogs(pendingDeleteCode); updateTable(); } pendingLogIndex = null; } 
+                else { stocks = stocks.filter(s => s.code !== pendingDeleteCode); selectedCodes.delete(pendingDeleteCode); saveStorage(); updateTable(); }
             } 
             closeDeleteModal(); 
         };
-        
         function closeLogModal() { document.getElementById('log-modal').style.display='none'; }
         window.closeDeleteModal = function() { document.getElementById('delete-modal').style.display='none'; };
         
         function searchStockCode() { const name = document.getElementById('inName').value.trim(); if(!name) return; const btn = document.querySelector('.btn-search'); btn.innerText='...'; const sc = document.createElement('script'); window.handleSearch = function(d) { btn.innerText='🔍'; if(d?.QuotationCodeTable?.Data?.length) { const r = d.QuotationCodeTable.Data[0]; let suf = r.MarketType=="1"?".SH":(r.MarketType=="2"?".SZ":(r.Code.length===5?".HK":"")); if(!suf && r.Code.length===6) suf = r.Code.startsWith('6')?".SH":".SZ"; document.getElementById('inCode').value = r.Code+suf; document.getElementById('inName').value = r.Name; } else { alert("未找到"); } sc.remove(); }; sc.src = `https://searchapi.eastmoney.com/api/suggest/get?input=${encodeURIComponent(name)}&type=14&token=D43BF722C8E33BD5D50F639205545E43&cb=handleSearch`; document.body.appendChild(sc); }
         
-        function editStock(c) { if(!isPanelOpen) { toggleInputPanel(); } const container = document.getElementById('input-container'); container.scrollIntoView({ behavior: 'smooth', block: 'start' }); const s=stocks.find(i=>i.code===c); if(!s)return; document.getElementById('inName').value=s.name; document.getElementById('inCode').value=s.code; document.getElementById('inTags').value=s.tags||''; document.getElementById('inProfit').value=s.profit||''; document.getElementById('inLowPE').value=s.lowPE||''; document.getElementById('inHighPE').value=s.highPE||''; document.getElementById('inRevenue').value=s.revenue||''; document.getElementById('inLowPS').value=s.lowPS||''; document.getElementById('inHighPS').value=s.highPS||''; document.getElementById('btn-save-text').innerText="💾 确认修改"; }
-        function toggleInputPanel() { const c=document.getElementById('input-container'); isPanelOpen=!isPanelOpen; c.style.display=isPanelOpen?'block':'none'; document.getElementById('toggle-btn').innerText=isPanelOpen?'🔼 收起':'➕ 录入/管理 (展开)'; }
+        function editStock(c) { 
+            // 如果是移动端，确保菜单已展开
+            if (window.innerWidth <= 768) toggleMobileMenu(true);
+            else if (!isPanelOpen) toggleInputPanel();
+            
+            const container = document.getElementById('input-container'); 
+            // 确保容器可见
+            container.style.display = 'block';
+            
+            // 滚动
+            container.scrollIntoView({ behavior: 'smooth', block: 'start' }); 
+            
+            const s=stocks.find(i=>i.code===c); if(!s)return; 
+            document.getElementById('inName').value=s.name; document.getElementById('inCode').value=s.code; document.getElementById('inTags').value=s.tags||''; document.getElementById('inProfit').value=s.profit||''; document.getElementById('inLowPE').value=s.lowPE||''; document.getElementById('inHighPE').value=s.highPE||''; document.getElementById('inRevenue').value=s.revenue||''; document.getElementById('inLowPS').value=s.lowPS||''; document.getElementById('inHighPS').value=s.highPS||''; document.getElementById('btn-save-text').innerText="💾 修改"; 
+        }
+        
+        function toggleInputPanel() { const c=document.getElementById('input-container'); isPanelOpen=!isPanelOpen; c.style.display=isPanelOpen?'block':'none'; document.getElementById('toggle-btn').innerText=isPanelOpen?'🔼 收起':'➕ 录入/管理'; }
         function clearInput() { document.querySelectorAll('#input-panel input').forEach(i=>i.value=''); document.getElementById('editCode').value=''; document.getElementById('btn-save-text').innerText="💾 保存"; }
 
-        function startRealtime() { if(!intervalId) { updateTable(); intervalId=setInterval(updateTable, 5000); document.getElementById('status-msg').innerText="● 实时中"; } }
-        function stopRealtime() { clearInterval(intervalId); intervalId=null; document.getElementById('status-msg').innerText="⏸ 暂停"; }
+        function startRealtime() { if(!intervalId) { updateTable(); intervalId=setInterval(updateTable, 5000); document.getElementById('status-msg').innerText="● 实时中"; document.getElementById('mobile-status').innerText="●"; } }
+        function stopRealtime() { clearInterval(intervalId); intervalId=null; document.getElementById('status-msg').innerText="⏸ 暂停"; document.getElementById('mobile-status').innerText="⏸"; }
         function setSort(k) { if(sortState.key===k) sortState.dir=sortState.dir==='desc'?'asc':'desc'; else {sortState.key=k; sortState.dir='desc';} updateTable(); }
-        function getSortIcon(k) { return sortState.key!==k?'⇅':(sortState.dir==='desc'?'⬇':'⬆'); }
+        function getSortIcon(k) { return sortState.key!==k?'':(sortState.dir==='desc'?'⬇':'⬆'); }
         function getSortClass(k) { return sortState.key===k?'sort-icon sort-active':'sort-icon'; }
         function saveStorage() { localStorage.setItem('valuationStocks', JSON.stringify(stocks)); }
         window.onclick = function(e) { if(e.target.className==='modal') e.target.style.display='none'; }
