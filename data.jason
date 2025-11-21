@@ -1372,13 +1372,18 @@
     "code": "688981.SH",
     "name": "中芯国际",
     "tags": "半导体",
-    "profit": 0,
-    "lowPE": 0,
-    "highPE": 0,
-    "revenue": 680,
+    "profit": 51,
+    "lowPE": 130,
+    "highPE": 222,
+    "revenue": 670,
     "lowPS": 10,
-    "highPS": 15,
+    "highPS": 16,
     "logs": [
+      {
+        "date": "2025/11/21 14:33:07",
+        "content": "净利:0→51; PE下:0→130; PE上:0→222; 营收:680→670; PS上:15→16",
+        "note": ""
+      },
       {
         "date": "2025/11/20 21:12:50",
         "content": "属性:→半导体",
@@ -1464,13 +1469,18 @@
     "code": "603997.SH",
     "name": "继峰股份",
     "tags": "汽车零部件",
-    "profit": 0,
-    "lowPE": 0,
-    "highPE": 0,
+    "profit": 3.9,
+    "lowPE": 15,
+    "highPE": 25,
     "revenue": 245,
     "lowPS": 0.55,
     "highPS": 0.72,
     "logs": [
+      {
+        "date": "2025/11/21 14:30:55",
+        "content": "净利:0→3.9; PE下:0→15; PE上:0→25",
+        "note": ""
+      },
       {
         "date": "2025/11/20 21:13:01",
         "content": "属性:→汽车零部件",
@@ -1579,13 +1589,18 @@
     "code": "300476.SZ",
     "name": "胜宏科技",
     "tags": "AI",
-    "profit": 0,
-    "lowPE": 0,
-    "highPE": 0,
+    "profit": 85,
+    "lowPE": 35,
+    "highPE": 70,
     "revenue": 300,
     "lowPS": 4,
     "highPS": 8,
     "logs": [
+      {
+        "date": "2025/11/21 14:27:53",
+        "content": "净利:0→85; PE下:0→35; PE上:0→70",
+        "note": ""
+      },
       {
         "date": "2025/11/20 21:13:12",
         "content": "属性:→AI",
@@ -1648,13 +1663,18 @@
     "code": "300308.SZ",
     "name": "中际旭创",
     "tags": "AI 光模块",
-    "profit": 105,
-    "lowPE": 30,
-    "highPE": 50,
-    "revenue": 380,
+    "profit": 220,
+    "lowPE": 35,
+    "highPE": 70,
+    "revenue": 725,
     "lowPS": 6,
     "highPS": 10,
     "logs": [
+      {
+        "date": "2025/11/21 14:29:28",
+        "content": "净利:105→220; PE下:30→35; PE上:50→70; 营收:380→725",
+        "note": ""
+      },
       {
         "date": "2025/11/20 21:08:40",
         "content": "属性:→AI 光模块",
