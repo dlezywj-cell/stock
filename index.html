@@ -813,7 +813,31 @@
         function searchStockCode() { const name = document.getElementById('inName').value.trim(); if(!name) return; const btn = document.querySelector('.btn-search'); btn.innerText='...'; const sc = document.createElement('script'); window.handleSearch = function(d) { btn.innerText='🔍'; if(d?.QuotationCodeTable?.Data?.length) { const r = d.QuotationCodeTable.Data[0]; let suf = r.MarketType=="1"?".SH":(r.MarketType=="2"?".SZ":(r.Code.length===5?".HK":"")); if(!suf && r.Code.length===6) suf = r.Code.startsWith('6')?".SH":".SZ"; document.getElementById('inCode').value = r.Code+suf; document.getElementById('inName').value = r.Name; } else { alert("未找到"); } sc.remove(); }; sc.src = `https://searchapi.eastmoney.com/api/suggest/get?input=${encodeURIComponent(name)}&type=14&token=D43BF722C8E33BD5D50F639205545E43&cb=handleSearch`; document.body.appendChild(sc); }
         function toggleInputPanel() { const c=document.getElementById('input-container'); isPanelOpen=!isPanelOpen; c.style.display=isPanelOpen?'block':'none'; document.getElementById('toggle-btn').innerText=isPanelOpen?'🔼 收起':'➕ 录入/管理 (展开)'; }
         function clearInput() { document.querySelectorAll('#input-panel input').forEach(i=>i.value=''); document.getElementById('editCode').value=''; document.getElementById('btn-save-text').innerText="💾 保存"; }
-        function editStock(c) { toggleInputPanel(); isPanelOpen=true; document.getElementById('input-container').style.display='block'; const s=stocks.find(i=>i.code===c); if(!s)return; document.getElementById('inName').value=s.name; document.getElementById('inCode').value=s.code; document.getElementById('inTags').value=s.tags||''; document.getElementById('inProfit').value=s.profit||''; document.getElementById('inLowPE').value=s.lowPE||''; document.getElementById('inHighPE').value=s.highPE||''; document.getElementById('inRevenue').value=s.revenue||''; document.getElementById('inLowPS').value=s.lowPS||''; document.getElementById('inHighPS').value=s.highPS||''; document.getElementById('btn-save-text').innerText="💾 确认修改"; }
+        
+        // ★★★ 关键修改：点击修改时自动滚动到顶部 ★★★
+        function editStock(c) { 
+            // 1. 确保面板是打开的
+            if(!isPanelOpen) { toggleInputPanel(); }
+            
+            // 2. 找到输入框容器并平滑滚动到那里
+            const container = document.getElementById('input-container');
+            container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+            // 3. 填充数据
+            const s=stocks.find(i=>i.code===c); 
+            if(!s)return; 
+            document.getElementById('inName').value=s.name; 
+            document.getElementById('inCode').value=s.code; 
+            document.getElementById('inTags').value=s.tags||''; 
+            document.getElementById('inProfit').value=s.profit||''; 
+            document.getElementById('inLowPE').value=s.lowPE||''; 
+            document.getElementById('inHighPE').value=s.highPE||''; 
+            document.getElementById('inRevenue').value=s.revenue||''; 
+            document.getElementById('inLowPS').value=s.lowPS||''; 
+            document.getElementById('inHighPS').value=s.highPS||''; 
+            document.getElementById('btn-save-text').innerText="💾 确认修改"; 
+        }
+
         function startRealtime() { if(!intervalId) { updateTable(); intervalId=setInterval(updateTable, 5000); document.getElementById('status-msg').innerText="● 实时中"; } }
         function stopRealtime() { clearInterval(intervalId); intervalId=null; document.getElementById('status-msg').innerText="⏸ 暂停"; }
         function setSort(k) { if(sortState.key===k) sortState.dir=sortState.dir==='desc'?'asc':'desc'; else {sortState.key=k; sortState.dir='desc';} updateTable(); }
