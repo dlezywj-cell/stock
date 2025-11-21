@@ -1722,13 +1722,18 @@
     "code": "002371.SZ",
     "name": "北方华创",
     "tags": "半导体",
-    "profit": 0,
-    "lowPE": 0,
-    "highPE": 0,
+    "profit": 73,
+    "lowPE": 33,
+    "highPE": 44,
     "revenue": 390,
-    "lowPS": 5.5,
-    "highPS": 7.5,
+    "lowPS": 6.5,
+    "highPS": 8.5,
     "logs": [
+      {
+        "date": "2025/11/21 14:22:39",
+        "content": "净利:0→73; PE下:0→33; PE上:0→44; PS下:5.5→6.5; PS上:7.5→8.5",
+        "note": ""
+      },
       {
         "date": "2025/11/20 21:13:31",
         "content": "属性:→半导体",
