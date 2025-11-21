@@ -3,13 +3,23 @@
     "code": "01810.HK",
     "name": "小米集团-W",
     "tags": "汽车 港股 消费电子",
-    "profit": 520,
-    "lowPE": 15,
+    "profit": 450,
+    "lowPE": 20,
     "highPE": 30,
     "revenue": 5700,
     "lowPS": 1.5,
-    "highPS": 3,
+    "highPS": 2.5,
     "logs": [
+      {
+        "date": "2025/11/21 14:05:09",
+        "content": "PE下:15→20; PS上:3→2.5",
+        "note": ""
+      },
+      {
+        "date": "2025/11/21 14:01:16",
+        "content": "净利:520→450",
+        "note": "三季报后业绩下调"
+      },
       {
         "date": "2025/11/21 10:23:59",
         "content": "PE下:20→15",
@@ -1735,13 +1745,18 @@
     "code": "688361.SH",
     "name": "中科飞测",
     "tags": "半导体",
-    "profit": 0,
-    "lowPE": 0,
-    "highPE": 0,
-    "revenue": 21,
-    "lowPS": 12.5,
+    "profit": 1.2,
+    "lowPE": 150,
+    "highPE": 250,
+    "revenue": 20,
+    "lowPS": 15,
     "highPS": 20,
     "logs": [
+      {
+        "date": "2025/11/21 14:14:15",
+        "content": "净利:0→1.2; PE下:0→150; PE上:0→250; 营收:21→20; PS下:12.5→15",
+        "note": ""
+      },
       {
         "date": "2025/11/20 21:13:43",
         "content": "属性:→半导体",
@@ -1897,12 +1912,17 @@
     "name": "伟创电气",
     "tags": "工业控制 机器人",
     "profit": 2.8,
-    "lowPE": 25,
-    "highPE": 35,
+    "lowPE": 30,
+    "highPE": 60,
     "revenue": 20,
     "lowPS": 4,
-    "highPS": 6,
+    "highPS": 8,
     "logs": [
+      {
+        "date": "2025/11/21 14:07:47",
+        "content": "PE下:25→30; PE上:35→60; PS上:6→8",
+        "note": "25年利润2.8，26年3.5"
+      },
       {
         "date": "2025/11/20 21:10:56",
         "content": "属性:→工业控制 机器人",
