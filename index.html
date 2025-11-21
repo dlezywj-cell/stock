@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>股票估值复盘系统 (GitHub同步版)</title>
+    <title>股票估值系统 (GitHub云同步版)</title>
     <style>
         body { font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif; padding: 20px; max-width: 1700px; margin: 0 auto; background-color: #f4f6f9; font-size: 13px; color: #333; }
         
@@ -38,8 +38,11 @@
         .btn-edit { background-color: #ffc107; color: #333; }
         .btn-log { background-color: #6f42c1; color: white; }
         .btn-delete { background-color: #dc3545; color: white; }
-        .btn-sync { background-color: #007bff; color: white; }
-        .btn-cloud { background-color: #6610f2; color: white; } /* 新增云同步按钮颜色 */
+        
+        /* 云同步按钮样式 */
+        .btn-cloud-pull { background-color: #6610f2; color: white; } /* 紫色：拉取 */
+        .btn-cloud-push { background-color: #fd7e14; color: white; } /* 橙色：上传 */
+        
         .btn-control { background-color: #6c757d; color: white; }
         .btn-toggle { background-color: #f8f9fa; border: 1px solid #ccc; color: #333; margin-right: 10px; }
         .btn-find { background-color: #fd7e14; color: white; }
@@ -65,14 +68,14 @@
         .th-pe { border-top: 3px solid #28a745; background-color: #f3fdf6; }
         .th-ps { border-top: 3px solid #fd7e14; background-color: #fff8f3; }
         
-        /* === 最后一列：窄、边框分隔、居中 === */
+        /* === 最后一列专用样式：窄、分割线、居中、可点击 === */
         .th-select { 
             border-top: 3px solid #adb5bd; 
-            border-left: 2px solid #dee2e6 !important; 
+            border-left: 2px solid #dee2e6 !important; /* 明显的分割线 */
             background-color: #e9ecef;
             width: 40px !important;      
             max-width: 40px !important;
-            padding: 5px 0 !important;   
+            padding: 0 !important;   
             text-align: center;
             vertical-align: middle;
             cursor: pointer;
@@ -80,7 +83,7 @@
         .th-select:hover { background-color: #dde2e6; }
         
         .td-select { 
-            border-left: 2px solid #dee2e6 !important; 
+            border-left: 2px solid #dee2e6 !important; /* 明显的分割线 */
             background-color: #f8f9fa;
             width: 40px !important;
             max-width: 40px !important;
@@ -91,6 +94,7 @@
         }
         .td-select:hover { background-color: #e2e6ea; }
         
+        /* 复选框样式 */
         .row-checkbox { 
             cursor: pointer; 
             accent-color: #007bff; 
@@ -136,9 +140,9 @@
         <div>
             <span id="status-msg"></span>
             
-            <!-- 功能按钮区 -->
-            <button class="btn-cloud" onclick="syncFromGithub()" title="从GitHub地址加载 data.jason">☁️ 从 GitHub 同步</button>
-            <button class="btn-sync" onclick="downloadFile()" title="下载为 data.jason 方便上传">📤 存文件</button>
+            <!-- 云同步按钮组 -->
+            <button class="btn-cloud-pull" onclick="syncFromGithub()" title="从GitHub下载 data.jason 覆盖本地">☁️ 拉取数据</button>
+            <button class="btn-cloud-push" onclick="uploadToGithub()" title="将本地数据上传覆盖到 GitHub">🚀 保存到 GitHub</button>
             
             <span style="border-left:1px solid #ccc; margin:0 10px; height:20px; display:inline-block; vertical-align:middle;"></span>
             <button class="btn-control" onclick="startRealtime()">▶ 开启</button>
@@ -238,6 +242,128 @@
 
         updateViewButtons();
 
+        // ==========================================
+        // ★★★ 配置 GitHub 信息 ★★★
+        // ==========================================
+        const GITHUB_CONFIG = {
+            username: "dlezywj-cell",   // 用户名
+            repo: "stock",              // 仓库名
+            path: "data.jason",         // 文件名 (注意你的是 .jason)
+            branch: "main"              // 分支
+        };
+
+        // ------------------------------------------
+        //  功能 1: 从 GitHub 拉取 (下载)
+        // ------------------------------------------
+        async function syncFromGithub() {
+            const rawUrl = `https://raw.githubusercontent.com/${GITHUB_CONFIG.username}/${GITHUB_CONFIG.repo}/${GITHUB_CONFIG.branch}/${GITHUB_CONFIG.path}`;
+            const btn = document.querySelector('.btn-cloud-pull');
+            const originText = btn.innerText;
+            btn.innerText = "⌛ 下载中...";
+            btn.disabled = true;
+
+            try {
+                const res = await fetch(rawUrl + "?t=" + Date.now()); // 防缓存
+                if (!res.ok) throw new Error("文件不存在或网络错误");
+                
+                const newData = await res.json();
+
+                if (Array.isArray(newData)) {
+                    if(confirm(`☁️ 成功从云端获取 ${newData.length} 条数据。\n\n是否覆盖当前本地数据？`)) {
+                        stocks = newData;
+                        saveStorage(); 
+                        updateTable(); 
+                        alert("✅ 同步完成！");
+                    }
+                } else {
+                    alert("❌ 数据格式错误：不是数组");
+                }
+            } catch (e) {
+                console.error(e);
+                alert(`❌ 拉取失败: ${e.message}\n请检查文件 data.jason 是否在 GitHub 上存在。`);
+            } finally {
+                btn.innerText = originText;
+                btn.disabled = false;
+            }
+        }
+
+        // ------------------------------------------
+        //  功能 2: 上传到 GitHub (自动更新)
+        // ------------------------------------------
+        function utf8_to_b64(str) {
+            return window.btoa(unescape(encodeURIComponent(str)));
+        }
+
+        async function uploadToGithub() {
+            // 1. 获取/存储 Token
+            let token = localStorage.getItem("github_token");
+            if (!token) {
+                token = prompt("🔑 首次上传需要验证权限\n\n请输入 GitHub Personal Access Token (ghp_...):\n(Token将保存在本地，不会上传)");
+                if (!token) return;
+                localStorage.setItem("github_token", token);
+            }
+
+            const btn = document.querySelector('.btn-cloud-push');
+            const originText = btn.innerText;
+            btn.innerText = "⏳ 连接中...";
+            btn.disabled = true;
+
+            const apiUrl = `https://api.github.com/repos/${GITHUB_CONFIG.username}/${GITHUB_CONFIG.repo}/contents/${GITHUB_CONFIG.path}`;
+
+            try {
+                // A. 获取文件 SHA (更新文件必须步骤)
+                const getRes = await fetch(apiUrl, {
+                    headers: { "Authorization": `token ${token}`, "Accept": "application/vnd.github.v3+json" }
+                });
+
+                let sha = null;
+                if (getRes.ok) {
+                    const fileData = await getRes.json();
+                    sha = fileData.sha;
+                } else if (getRes.status !== 404) {
+                    throw new Error(`API 错误: ${getRes.status}`);
+                }
+
+                // B. 上传新数据
+                btn.innerText = "🚀 上传中...";
+                const contentStr = JSON.stringify(stocks, null, 2);
+                const putBody = {
+                    message: `Update data ${new Date().toLocaleString()}`,
+                    content: utf8_to_b64(contentStr),
+                    branch: GITHUB_CONFIG.branch
+                };
+                if (sha) putBody.sha = sha;
+
+                const putRes = await fetch(apiUrl, {
+                    method: "PUT",
+                    headers: {
+                        "Authorization": `token ${token}`,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(putBody)
+                });
+
+                if (putRes.ok) {
+                    alert("✅ 上传成功！\nGitHub上的 data.jason 已更新。");
+                } else {
+                    const err = await putRes.json();
+                    throw new Error(err.message);
+                }
+
+            } catch (e) {
+                console.error(e);
+                if (e.message.includes("401") || e.message.includes("Bad credentials")) {
+                    alert("❌ Token 无效或过期，已清除本地存储，请重试。");
+                    localStorage.removeItem("github_token");
+                } else {
+                    alert(`❌ 上传失败: ${e.message}`);
+                }
+            } finally {
+                btn.innerText = originText;
+                btn.disabled = false;
+            }
+        }
+
         function getSecid(code) {
             if (code.endsWith('.SH')) return `1.${code.replace('.SH','')}`;
             if (code.endsWith('.SZ')) return `0.${code.replace('.SZ','')}`;
@@ -245,71 +371,13 @@
             return `105.${code}`;
         }
 
-        // ==========================================
-        // ★★★ 核心功能：从 GitHub 同步数据 ★★★
-        // ==========================================
-        async function syncFromGithub() {
-            // 使用你提供的地址 (注意 .jason 扩展名)
-            const githubRawUrl = "https://raw.githubusercontent.com/dlezywj-cell/stock/refs/heads/main/data.jason";
-
-            const btn = document.querySelector('button[onclick="syncFromGithub()"]');
-            const originText = btn.innerText;
-            btn.innerText = "⌛ 下载中...";
-            btn.disabled = true;
-
-            try {
-                // 加上时间戳 ?t=... 防止浏览器缓存
-                const res = await fetch(githubRawUrl + "?t=" + Date.now());
-                if (!res.ok) throw new Error(`网络请求失败: ${res.status}`);
-                
-                const newData = await res.json();
-
-                if (Array.isArray(newData)) {
-                    if(confirm(`☁️ 云端数据下载成功！\n包含 ${newData.length} 条股票。\n\n是否覆盖当前本地数据？`)) {
-                        stocks = newData;
-                        saveStorage(); 
-                        updateTable(); 
-                        alert("✅ 同步完成！");
-                    }
-                } else {
-                    alert("❌ 数据格式错误：云端文件不是数组格式。");
-                }
-            } catch (e) {
-                console.error(e);
-                alert(`❌ 同步失败！\n请检查：\n1. GitHub文件是否存在 (data.jason)\n2. 网络是否能访问 GitHub\n错误信息: ${e.message}`);
-            } finally {
-                btn.innerText = originText;
-                btn.disabled = false;
-            }
-        }
-
-        // ==========================================
-        // ★★★ 文件导出功能 (适配 GitHub 文件名) ★★★
-        // ==========================================
-        window.downloadFile = function() {
-            const dataStr = JSON.stringify(stocks, null, 2);
-            const blob = new Blob([dataStr], { type: "application/json" });
-            const url = URL.createObjectURL(blob);
-            
-            const a = document.createElement('a');
-            a.href = url;
-            // 设置文件名为 data.jason，方便你直接上传覆盖 GitHub 文件
-            a.download = "data.jason"; 
-            document.body.appendChild(a);
-            a.click();
-            
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            alert("文件 data.jason 已下载。\n\n👉 请去 GitHub 上传并覆盖原文件。");
-        };
-
         // ---------------- 核心：数据获取与渲染 ----------------
         async function updateTable() {
             const container = document.getElementById('result');
             const statusMsg = document.getElementById('status-msg');
             
             if (stocks.length === 0) {
-                container.innerHTML = '<div style="padding:40px;text-align:center;color:#999;border:2px dashed #eee;border-radius:10px;">📭 列表为空，请添加股票或点击 "从 GitHub 同步"</div>';
+                container.innerHTML = '<div style="padding:40px;text-align:center;color:#999;border:2px dashed #eee;border-radius:10px;">📭 列表为空，请添加股票或点击 "☁️ 拉取数据"</div>';
                 statusMsg.innerText = ""; return;
             }
 
@@ -451,7 +519,7 @@
                             📅 更新 <span class="${getSortClass('last_update')}">${getSortIcon('last_update')}</span>
                         </th>
                         <th class="th-basic ${styleAction}" rowspan="2" style="vertical-align: middle;">⚙️ 操作</th>
-                        <th class="th-select" rowspan="2" onclick="toggleSelectAll()" title="全选/取消">
+                        <th class="th-select" rowspan="2" onclick="toggleSelectAll()" title="点击全选/取消">
                             <div style="display:flex; flex-direction:column; align-items:center; cursor:pointer;">
                                 <input type="checkbox" id="header-checkbox" ${isAllVisibleSelected ? 'checked' : ''} style="margin:0; cursor:pointer;">
                                 <div style="font-size:9px; font-weight:normal; color:#888; line-height:1; margin-top:2px;">全选</div>
