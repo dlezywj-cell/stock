@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>股票估值复盘系统 (电脑本地版)</title>
+    <title>股票估值复盘系统 (GitHub同步版)</title>
     <style>
         body { font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif; padding: 20px; max-width: 1700px; margin: 0 auto; background-color: #f4f6f9; font-size: 13px; color: #333; }
         
@@ -39,7 +39,7 @@
         .btn-log { background-color: #6f42c1; color: white; }
         .btn-delete { background-color: #dc3545; color: white; }
         .btn-sync { background-color: #007bff; color: white; }
-        .btn-import { background-color: #17a2b8; color: white; }
+        .btn-cloud { background-color: #6610f2; color: white; } /* 新增云同步按钮颜色 */
         .btn-control { background-color: #6c757d; color: white; }
         .btn-toggle { background-color: #f8f9fa; border: 1px solid #ccc; color: #333; margin-right: 10px; }
         .btn-find { background-color: #fd7e14; color: white; }
@@ -68,7 +68,7 @@
         /* === 最后一列：窄、边框分隔、居中 === */
         .th-select { 
             border-top: 3px solid #adb5bd; 
-            border-left: 2px solid #dee2e6 !important; /* 左边框分隔 */
+            border-left: 2px solid #dee2e6 !important; 
             background-color: #e9ecef;
             width: 40px !important;      
             max-width: 40px !important;
@@ -80,7 +80,7 @@
         .th-select:hover { background-color: #dde2e6; }
         
         .td-select { 
-            border-left: 2px solid #dee2e6 !important; /* 左边框分隔 */
+            border-left: 2px solid #dee2e6 !important; 
             background-color: #f8f9fa;
             width: 40px !important;
             max-width: 40px !important;
@@ -91,7 +91,6 @@
         }
         .td-select:hover { background-color: #e2e6ea; }
         
-        /* 复选框样式 */
         .row-checkbox { 
             cursor: pointer; 
             accent-color: #007bff; 
@@ -136,8 +135,11 @@
         <h2>📈 股票估值复盘系统</h2>
         <div>
             <span id="status-msg"></span>
-            <button class="btn-sync" onclick="exportData()">📤 导出</button>
-            <button class="btn-import" onclick="importData()">📥 导入</button>
+            
+            <!-- 功能按钮区 -->
+            <button class="btn-cloud" onclick="syncFromGithub()" title="从GitHub地址加载 data.jason">☁️ 从 GitHub 同步</button>
+            <button class="btn-sync" onclick="downloadFile()" title="下载为 data.jason 方便上传">📤 存文件</button>
+            
             <span style="border-left:1px solid #ccc; margin:0 10px; height:20px; display:inline-block; vertical-align:middle;"></span>
             <button class="btn-control" onclick="startRealtime()">▶ 开启</button>
             <button class="btn-control" onclick="stopRealtime()">⏹ 暂停</button>
@@ -216,15 +218,12 @@
     <!-- 弹窗区域 -->
     <div id="log-modal" class="modal"><div class="modal-content" style="width: 600px;"><span class="close-btn" onclick="closeLogModal()">&times;</span><h3 id="modal-title" style="margin-top:0; border-bottom:2px solid #eee; padding-bottom:15px;">操作日志</h3><div id="modal-body" style="max-height: 60vh; overflow-y: auto;"></div></div></div>
     <div id="delete-modal" class="modal"><div class="modal-content" style="width: 400px; text-align: center; padding-top: 30px;"><h3>⚠️ 确认删除？</h3><p id="delete-msg" style="color:#555; margin-bottom:30px;">...</p><div><button class="btn-confirm-del" onclick="confirmDeleteAction()">确定删除</button><button class="btn-cancel" onclick="closeDeleteModal()">取消</button></div></div></div>
-    <div id="import-modal" class="modal"><div class="modal-content" style="width: 500px;"><span class="close-btn" onclick="closeImportModal()">&times;</span><h3>📥 导入数据</h3><textarea id="import-area" style="width:100%; height:150px;" placeholder="粘贴数据..."></textarea><div style="margin-top:15px; text-align:right;"><button class="btn-sync" onclick="execImport()">开始合并导入</button></div></div></div>
 
     <script>
         // ★★★ 1. 初始化逻辑 ★★★
         let stocks = JSON.parse(localStorage.getItem('valuationStocks')) || [];
-        // 默认配置中加入 showUpdate 和 showAction
         let defaultView = { showCode: true, showTags: true, showUpdate: true, showAction: true };
         let storedView = JSON.parse(localStorage.getItem('viewSettings')) || {};
-        // 合并配置，确保老用户也有新字段的默认值
         let viewSettings = { ...defaultView, ...storedView };
         
         let intervalId = null;
@@ -233,7 +232,6 @@
         let pendingDeleteCode = null;
         let cachedMarketData = {};
         let selectedCodes = new Set();
-        
         let columnFilters = {}; 
         let onlySelectedMode = false;
         let currentVisibleStocks = [];
@@ -247,13 +245,71 @@
             return `105.${code}`;
         }
 
+        // ==========================================
+        // ★★★ 核心功能：从 GitHub 同步数据 ★★★
+        // ==========================================
+        async function syncFromGithub() {
+            // 使用你提供的地址 (注意 .jason 扩展名)
+            const githubRawUrl = "https://raw.githubusercontent.com/dlezywj-cell/stock/refs/heads/main/data.jason";
+
+            const btn = document.querySelector('button[onclick="syncFromGithub()"]');
+            const originText = btn.innerText;
+            btn.innerText = "⌛ 下载中...";
+            btn.disabled = true;
+
+            try {
+                // 加上时间戳 ?t=... 防止浏览器缓存
+                const res = await fetch(githubRawUrl + "?t=" + Date.now());
+                if (!res.ok) throw new Error(`网络请求失败: ${res.status}`);
+                
+                const newData = await res.json();
+
+                if (Array.isArray(newData)) {
+                    if(confirm(`☁️ 云端数据下载成功！\n包含 ${newData.length} 条股票。\n\n是否覆盖当前本地数据？`)) {
+                        stocks = newData;
+                        saveStorage(); 
+                        updateTable(); 
+                        alert("✅ 同步完成！");
+                    }
+                } else {
+                    alert("❌ 数据格式错误：云端文件不是数组格式。");
+                }
+            } catch (e) {
+                console.error(e);
+                alert(`❌ 同步失败！\n请检查：\n1. GitHub文件是否存在 (data.jason)\n2. 网络是否能访问 GitHub\n错误信息: ${e.message}`);
+            } finally {
+                btn.innerText = originText;
+                btn.disabled = false;
+            }
+        }
+
+        // ==========================================
+        // ★★★ 文件导出功能 (适配 GitHub 文件名) ★★★
+        // ==========================================
+        window.downloadFile = function() {
+            const dataStr = JSON.stringify(stocks, null, 2);
+            const blob = new Blob([dataStr], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            // 设置文件名为 data.jason，方便你直接上传覆盖 GitHub 文件
+            a.download = "data.jason"; 
+            document.body.appendChild(a);
+            a.click();
+            
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            alert("文件 data.jason 已下载。\n\n👉 请去 GitHub 上传并覆盖原文件。");
+        };
+
         // ---------------- 核心：数据获取与渲染 ----------------
         async function updateTable() {
             const container = document.getElementById('result');
             const statusMsg = document.getElementById('status-msg');
             
             if (stocks.length === 0) {
-                container.innerHTML = '<div style="padding:40px;text-align:center;color:#999;border:2px dashed #eee;border-radius:10px;">📭 列表为空，请点击上方 "录入/管理" 添加股票</div>';
+                container.innerHTML = '<div style="padding:40px;text-align:center;color:#999;border:2px dashed #eee;border-radius:10px;">📭 列表为空，请添加股票或点击 "从 GitHub 同步"</div>';
                 statusMsg.innerText = ""; return;
             }
 
@@ -649,10 +705,6 @@
         window.openDeleteModal = function(c) { pendingDeleteCode = c; document.getElementById('delete-msg').innerText=`确认不再跟踪 ${c}?`; document.getElementById('delete-modal').style.display='flex'; };
         window.confirmDeleteAction = function() { if(pendingDeleteCode) { stocks=stocks.filter(s=>s.code!==pendingDeleteCode); selectedCodes.delete(pendingDeleteCode); saveStorage(); updateTable(); } closeDeleteModal(); };
         window.closeDeleteModal = function() { document.getElementById('delete-modal').style.display='none'; };
-        window.exportData = function() { navigator.clipboard.writeText(JSON.stringify(stocks)).then(()=>alert("已复制"), ()=>prompt("复制:", JSON.stringify(stocks))); };
-        window.importData = function() { document.getElementById('import-modal').style.display='flex'; };
-        window.closeImportModal = function() { document.getElementById('import-modal').style.display='none'; };
-        window.execImport = function() { try { const str = document.getElementById('import-area').value; const parsed = JSON.parse(str); if(Array.isArray(parsed)) { let ad=0,up=0; parsed.forEach(n => { const idx = stocks.findIndex(s => s.code === n.code); if(idx > -1) { stocks[idx] = { ...stocks[idx], ...n }; up++; } else { stocks.push(n); ad++; } }); saveStorage(); updateTable(); closeImportModal(); alert(`完成: 新增${ad}, 更新${up}`); } else alert("格式错误"); } catch(e) { alert("解析失败"); } };
         
         function searchStockCode() { const name = document.getElementById('inName').value.trim(); if(!name) return; const btn = document.querySelector('.btn-search'); btn.innerText='...'; const sc = document.createElement('script'); window.handleSearch = function(d) { btn.innerText='🔍'; if(d?.QuotationCodeTable?.Data?.length) { const r = d.QuotationCodeTable.Data[0]; let suf = r.MarketType=="1"?".SH":(r.MarketType=="2"?".SZ":(r.Code.length===5?".HK":"")); if(!suf && r.Code.length===6) suf = r.Code.startsWith('6')?".SH":".SZ"; document.getElementById('inCode').value = r.Code+suf; document.getElementById('inName').value = r.Name; } else { alert("未找到"); } sc.remove(); }; sc.src = `https://searchapi.eastmoney.com/api/suggest/get?input=${encodeURIComponent(name)}&type=14&token=D43BF722C8E33BD5D50F639205545E43&cb=handleSearch`; document.body.appendChild(sc); }
         function toggleInputPanel() { const c=document.getElementById('input-container'); isPanelOpen=!isPanelOpen; c.style.display=isPanelOpen?'block':'none'; document.getElementById('toggle-btn').innerText=isPanelOpen?'🔼 收起':'➕ 录入/管理 (展开)'; }
