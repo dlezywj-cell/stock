@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>股票估值系统 (交互修复版)</title>
+    <title>股票估值系统 (实时同步版)</title>
     <style>
         /* === 基础布局 === */
         body { font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif; padding: 20px; max-width: 100%; margin: 0 auto; background-color: #f4f6f9; font-size: 13px; color: #333; height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; }
@@ -108,10 +108,9 @@
         .sort-icon { font-size: 10px; margin-left: 4px; color: #adb5bd; }
         .sort-active { color: #007bff; }
 
-        /* 弹窗样式调整 */
+        /* 弹窗样式 */
         .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(2px); justify-content: center; align-items: center; }
-        /* 删除弹窗层级必须高于日志弹窗 */
-        #delete-modal { z-index: 2100; }
+        #delete-modal { z-index: 2100; } /* 删除弹窗层级最高 */
         
         .modal-content { background-color: white; padding: 25px; border-radius: 12px; width: 500px; box-shadow: 0 15px 40px rgba(0,0,0,0.3); position: relative; animation: slideDown 0.2s ease-out; }
         .close-btn { position: absolute; top: 15px; right: 20px; font-size: 24px; cursor: pointer; color: #aaa; }
@@ -120,10 +119,7 @@
         .log-change { color: #2c3e50; font-weight: 600; }
         .log-note { display: block; margin-top: 6px; color: #555; background: #fff3cd; padding: 6px 10px; border-radius: 4px; border-left: 3px solid #ffc107; }
         
-        /* 日志删除按钮样式 */
-        .log-del-btn { 
-            cursor: pointer; color: #dc3545; opacity: 0.6; transition: all 0.2s; font-size: 14px; 
-        }
+        .log-del-btn { cursor: pointer; color: #dc3545; opacity: 0.6; transition: all 0.2s; font-size: 14px; }
         .log-del-btn:hover { opacity: 1; transform: scale(1.1); }
     </style>
 </head>
@@ -133,8 +129,8 @@
         <h2>📈 股票估值复盘系统</h2>
         <div>
             <span id="status-msg"></span>
-            <button class="btn-cloud-pull" onclick="syncFromGithub()" title="从GitHub下载 data.jason 覆盖本地">☁️ 拉取数据</button>
-            <button class="btn-cloud-push" onclick="uploadToGithub()" title="将本地数据上传覆盖到 GitHub">🚀 保存到 GitHub</button>
+            <button class="btn-cloud-pull" onclick="syncFromGithub()" title="从GitHub下载">☁️ 拉取数据</button>
+            <button class="btn-cloud-push" onclick="uploadToGithub()" title="保存到 GitHub">🚀 保存到 GitHub</button>
             <span style="border-left:1px solid #ccc; margin:0 10px; height:20px; display:inline-block; vertical-align:middle;"></span>
             <button class="btn-control" onclick="startRealtime()">▶ 开启</button>
             <button class="btn-control" onclick="stopRealtime()">⏹ 暂停</button>
@@ -216,7 +212,7 @@
         let sortState = { key: 'pe_up', dir: 'desc' };
         let isPanelOpen = false;
         let pendingDeleteCode = null;
-        let pendingLogIndex = null; // 新增：用于记录待删除日志的索引
+        let pendingLogIndex = null;
         let cachedMarketData = {};
         let selectedCodes = new Set();
         let columnFilters = {}; 
@@ -247,6 +243,7 @@
             finally { btn.innerText = originText; btn.disabled = false; }
         }
 
+        // ★★★ 极速同步逻辑修复 ★★★
         async function syncFromGithub() {
             let token = localStorage.getItem("github_token");
             const btn = document.querySelector('.btn-cloud-pull');
@@ -254,18 +251,37 @@
             btn.innerText = "⌛ 下载中..."; btn.disabled = true;
             try {
                 let newData = null;
-                if (token) {
-                    const apiUrl = `https://api.github.com/repos/${GITHUB_CONFIG.username}/${GITHUB_CONFIG.repo}/contents/${GITHUB_CONFIG.path}`;
-                    const res = await fetch(apiUrl, { headers: { "Authorization": `token ${token}`, "Accept": "application/vnd.github.v3+json" }, cache: "no-store" });
-                    if (res.ok) newData = JSON.parse(b64_to_utf8((await res.json()).content));
-                }
-                if (!newData) {
+                const apiUrl = `https://api.github.com/repos/${GITHUB_CONFIG.username}/${GITHUB_CONFIG.repo}/contents/${GITHUB_CONFIG.path}`;
+                
+                // 优先尝试 API 读取 (实时无缓存)
+                // 如果是公开库，不带 Token 也能访问 (60次/小时)
+                const headers = { "Accept": "application/vnd.github.v3+json" };
+                if (token) headers["Authorization"] = `token ${token}`;
+
+                const res = await fetch(apiUrl, { headers, cache: "no-store" });
+                
+                if (res.ok) {
+                    const json = await res.json();
+                    const content = b64_to_utf8(json.content);
+                    newData = JSON.parse(content);
+                } else {
+                    console.warn("API读取失败，尝试Raw链接");
+                    // API 失败 (如私有库且无Token) 才走 Raw (有延迟)
                     const rawUrl = `https://raw.githubusercontent.com/${GITHUB_CONFIG.username}/${GITHUB_CONFIG.repo}/${GITHUB_CONFIG.branch}/${GITHUB_CONFIG.path}`;
-                    const res = await fetch(rawUrl + "?t=" + Date.now());
-                    if (!res.ok) throw new Error("文件不存在");
-                    newData = await res.json();
+                    const resRaw = await fetch(rawUrl + "?t=" + Date.now());
+                    if (!resRaw.ok) throw new Error("文件不存在或无法访问");
+                    newData = await resRaw.json();
                 }
-                if (Array.isArray(newData) && confirm(`☁️ 获取到 ${newData.length} 条数据，覆盖本地？`)) { stocks = newData; saveStorage(); updateTable(); alert("✅ 同步完成！"); }
+
+                if (Array.isArray(newData)) {
+                    // 简单的版本比较提示
+                    const cloudVer = newData.length > 0 && newData[0].logs && newData[0].logs.length > 0 ? newData[0].logs[0].date : "未知";
+                    const localVer = stocks.length > 0 && stocks[0].logs && stocks[0].logs.length > 0 ? stocks[0].logs[0].date : "未知";
+                    
+                    if(confirm(`☁️ 云端最新记录: ${cloudVer}\n💻 本地最新记录: ${localVer}\n\n确定覆盖本地数据吗？`)) { 
+                        stocks = newData; saveStorage(); updateTable(); alert("✅ 同步完成！"); 
+                    }
+                }
             } catch (e) { alert(`❌ 失败: ${e.message}`); } 
             finally { btn.innerText = originText; btn.disabled = false; }
         }
@@ -440,41 +456,22 @@
             document.getElementById('log-modal').style.display = 'flex'; 
         }
         
-        // ★★★ 删除日志触发逻辑 (复用弹窗) ★★★
         function deleteLog(code, index) {
-            pendingDeleteCode = code;
-            pendingLogIndex = index; // 标记为删除日志
+            pendingDeleteCode = code; pendingLogIndex = index; 
             document.getElementById('delete-msg').innerText = `确认删除这条日志吗？`;
             document.getElementById('delete-modal').style.display = 'flex';
         }
 
-        // ★★★ 删除股票触发逻辑 ★★★
-        window.openDeleteModal = function(c) { 
-            pendingDeleteCode = c; 
-            pendingLogIndex = null; // 标记为删除股票
-            document.getElementById('delete-msg').innerText = `确认不再跟踪 ${c}?`; 
-            document.getElementById('delete-modal').style.display = 'flex'; 
-        };
+        window.openDeleteModal = function(c) { pendingDeleteCode = c; pendingLogIndex = null; document.getElementById('delete-msg').innerText = `确认不再跟踪 ${c}?`; document.getElementById('delete-modal').style.display = 'flex'; };
 
-        // ★★★ 统一删除执行逻辑 ★★★
         window.confirmDeleteAction = function() { 
             if(pendingDeleteCode) {
                 if (pendingLogIndex !== null) {
-                    // 执行删除日志
                     const s = stocks.find(item => item.code === pendingDeleteCode);
-                    if(s && s.logs) {
-                        s.logs.splice(pendingLogIndex, 1);
-                        saveStorage();
-                        showLogs(pendingDeleteCode); // 刷新日志弹窗
-                        updateTable(); // 刷新主表
-                    }
+                    if(s && s.logs) { s.logs.splice(pendingLogIndex, 1); saveStorage(); showLogs(pendingDeleteCode); updateTable(); }
                     pendingLogIndex = null;
                 } else {
-                    // 执行删除股票
-                    stocks = stocks.filter(s => s.code !== pendingDeleteCode); 
-                    selectedCodes.delete(pendingDeleteCode); 
-                    saveStorage(); 
-                    updateTable(); 
+                    stocks = stocks.filter(s => s.code !== pendingDeleteCode); selectedCodes.delete(pendingDeleteCode); saveStorage(); updateTable(); 
                 }
             } 
             closeDeleteModal(); 
