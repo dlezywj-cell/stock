@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>股票估值系统 (GitHub云同步版)</title>
+    <title>股票估值系统 (极速同步版)</title>
     <style>
         body { font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif; padding: 20px; max-width: 1700px; margin: 0 auto; background-color: #f4f6f9; font-size: 13px; color: #333; }
         
@@ -68,10 +68,10 @@
         .th-pe { border-top: 3px solid #28a745; background-color: #f3fdf6; }
         .th-ps { border-top: 3px solid #fd7e14; background-color: #fff8f3; }
         
-        /* === 最后一列专用样式：窄、分割线、居中、可点击 === */
+        /* === 最后一列专用样式 === */
         .th-select { 
             border-top: 3px solid #adb5bd; 
-            border-left: 2px solid #dee2e6 !important; /* 明显的分割线 */
+            border-left: 2px solid #dee2e6 !important; 
             background-color: #e9ecef;
             width: 40px !important;      
             max-width: 40px !important;
@@ -83,7 +83,7 @@
         .th-select:hover { background-color: #dde2e6; }
         
         .td-select { 
-            border-left: 2px solid #dee2e6 !important; /* 明显的分割线 */
+            border-left: 2px solid #dee2e6 !important; 
             background-color: #f8f9fa;
             width: 40px !important;
             max-width: 40px !important;
@@ -94,7 +94,6 @@
         }
         .td-select:hover { background-color: #e2e6ea; }
         
-        /* 复选框样式 */
         .row-checkbox { 
             cursor: pointer; 
             accent-color: #007bff; 
@@ -252,50 +251,20 @@
             branch: "main"              // 分支
         };
 
-        // ------------------------------------------
-        //  功能 1: 从 GitHub 拉取 (下载)
-        // ------------------------------------------
-        async function syncFromGithub() {
-            const rawUrl = `https://raw.githubusercontent.com/${GITHUB_CONFIG.username}/${GITHUB_CONFIG.repo}/${GITHUB_CONFIG.branch}/${GITHUB_CONFIG.path}`;
-            const btn = document.querySelector('.btn-cloud-pull');
-            const originText = btn.innerText;
-            btn.innerText = "⌛ 下载中...";
-            btn.disabled = true;
-
-            try {
-                const res = await fetch(rawUrl + "?t=" + Date.now()); // 防缓存
-                if (!res.ok) throw new Error("文件不存在或网络错误");
-                
-                const newData = await res.json();
-
-                if (Array.isArray(newData)) {
-                    if(confirm(`☁️ 成功从云端获取 ${newData.length} 条数据。\n\n是否覆盖当前本地数据？`)) {
-                        stocks = newData;
-                        saveStorage(); 
-                        updateTable(); 
-                        alert("✅ 同步完成！");
-                    }
-                } else {
-                    alert("❌ 数据格式错误：不是数组");
-                }
-            } catch (e) {
-                console.error(e);
-                alert(`❌ 拉取失败: ${e.message}\n请检查文件 data.jason 是否在 GitHub 上存在。`);
-            } finally {
-                btn.innerText = originText;
-                btn.disabled = false;
-            }
-        }
-
-        // ------------------------------------------
-        //  功能 2: 上传到 GitHub (自动更新)
-        // ------------------------------------------
+        // 处理中文 Base64 编码
         function utf8_to_b64(str) {
             return window.btoa(unescape(encodeURIComponent(str)));
         }
+        
+        // 处理 Base64 解码
+        function b64_to_utf8(str) {
+            return decodeURIComponent(escape(window.atob(str)));
+        }
 
+        // ------------------------------------------
+        //  功能 1: 上传到 GitHub (自动更新)
+        // ------------------------------------------
         async function uploadToGithub() {
-            // 1. 获取/存储 Token
             let token = localStorage.getItem("github_token");
             if (!token) {
                 token = prompt("🔑 首次上传需要验证权限\n\n请输入 GitHub Personal Access Token (ghp_...):\n(Token将保存在本地，不会上传)");
@@ -308,12 +277,17 @@
             btn.innerText = "⏳ 连接中...";
             btn.disabled = true;
 
+            // 使用 API 地址而非 Raw 地址
             const apiUrl = `https://api.github.com/repos/${GITHUB_CONFIG.username}/${GITHUB_CONFIG.repo}/contents/${GITHUB_CONFIG.path}`;
 
             try {
-                // A. 获取文件 SHA (更新文件必须步骤)
+                // A. 获取文件 SHA
                 const getRes = await fetch(apiUrl, {
-                    headers: { "Authorization": `token ${token}`, "Accept": "application/vnd.github.v3+json" }
+                    headers: { 
+                        "Authorization": `token ${token}`, 
+                        "Accept": "application/vnd.github.v3+json" 
+                    },
+                    cache: "no-store" // 禁用缓存
                 });
 
                 let sha = null;
@@ -344,7 +318,7 @@
                 });
 
                 if (putRes.ok) {
-                    alert("✅ 上传成功！\nGitHub上的 data.jason 已更新。");
+                    alert("✅ 上传成功！\nGitHub上的 data.jason 已更新。\n\n其他设备点击【☁️ 拉取数据】即可同步。");
                 } else {
                     const err = await putRes.json();
                     throw new Error(err.message);
@@ -358,6 +332,68 @@
                 } else {
                     alert(`❌ 上传失败: ${e.message}`);
                 }
+            } finally {
+                btn.innerText = originText;
+                btn.disabled = false;
+            }
+        }
+
+        // ------------------------------------------
+        //  功能 2: 从 GitHub 拉取 (走 API，无延迟)
+        // ------------------------------------------
+        async function syncFromGithub() {
+            // 优先尝试使用 Token 走 API 拉取（无缓存，秒更新）
+            let token = localStorage.getItem("github_token");
+            const btn = document.querySelector('.btn-cloud-pull');
+            const originText = btn.innerText;
+            btn.innerText = "⌛ 下载中...";
+            btn.disabled = true;
+
+            try {
+                let newData = null;
+
+                // 方式 A: 如果有 Token，走 API 读取 (推荐，无延迟)
+                if (token) {
+                    const apiUrl = `https://api.github.com/repos/${GITHUB_CONFIG.username}/${GITHUB_CONFIG.repo}/contents/${GITHUB_CONFIG.path}`;
+                    const res = await fetch(apiUrl, {
+                        headers: { 
+                            "Authorization": `token ${token}`, 
+                            "Accept": "application/vnd.github.v3+json" 
+                        },
+                        cache: "no-store"
+                    });
+
+                    if (res.ok) {
+                        const json = await res.json();
+                        // GitHub API 返回的内容是 Base64 编码的
+                        const content = b64_to_utf8(json.content);
+                        newData = JSON.parse(content);
+                    }
+                }
+
+                // 方式 B: 如果没有 Token 或者 API 失败，走 Raw URL (可能有延迟)
+                if (!newData) {
+                    console.log("API 拉取失败或无Token，尝试 Raw 链接...");
+                    const rawUrl = `https://raw.githubusercontent.com/${GITHUB_CONFIG.username}/${GITHUB_CONFIG.repo}/${GITHUB_CONFIG.branch}/${GITHUB_CONFIG.path}`;
+                    const res = await fetch(rawUrl + "?t=" + Date.now());
+                    if (!res.ok) throw new Error("文件不存在或网络错误");
+                    newData = await res.json();
+                }
+
+                if (Array.isArray(newData)) {
+                    if(confirm(`☁️ 成功从云端获取 ${newData.length} 条数据。\n\n是否覆盖当前本地数据？`)) {
+                        stocks = newData;
+                        saveStorage(); 
+                        updateTable(); 
+                        alert("✅ 同步完成！");
+                    }
+                } else {
+                    alert("❌ 数据格式错误：不是数组");
+                }
+
+            } catch (e) {
+                console.error(e);
+                alert(`❌ 拉取失败: ${e.message}\n请检查 Token 是否正确，或文件是否存在。`);
             } finally {
                 btn.innerText = originText;
                 btn.disabled = false;
