@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>股票估值系统 (实时同步版)</title>
+    <title>股票估值系统 (全弹窗交互版)</title>
     <style>
         /* === 基础布局 === */
         body { font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif; padding: 20px; max-width: 100%; margin: 0 auto; background-color: #f4f6f9; font-size: 13px; color: #333; height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; }
@@ -66,7 +66,6 @@
         table { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 1300px; }
         th, td { padding: 10px 12px; text-align: center; border-bottom: 1px solid #ebebeb; border-right: 1px solid #ebebeb; white-space: nowrap; }
         
-        /* 锁定逻辑 */
         th { background-color: #f1f3f5; color: #495057; font-weight: 700; user-select: none; position: sticky; z-index: 20; }
         thead tr:nth-child(1) th { top: 0; border-bottom: 1px solid #ccc; height: 22px; }
         thead tr:nth-child(2) th { top: 43px; box-shadow: 0 2px 2px rgba(0,0,0,0.05); }
@@ -108,19 +107,29 @@
         .sort-icon { font-size: 10px; margin-left: 4px; color: #adb5bd; }
         .sort-active { color: #007bff; }
 
-        /* 弹窗样式 */
+        /* 弹窗通用样式 */
         .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(2px); justify-content: center; align-items: center; }
-        #delete-modal { z-index: 2100; } /* 删除弹窗层级最高 */
-        
         .modal-content { background-color: white; padding: 25px; border-radius: 12px; width: 500px; box-shadow: 0 15px 40px rgba(0,0,0,0.3); position: relative; animation: slideDown 0.2s ease-out; }
         .close-btn { position: absolute; top: 15px; right: 20px; font-size: 24px; cursor: pointer; color: #aaa; }
+        
+        /* 层级管理：删除弹窗 > 同步弹窗 > 日志弹窗 */
+        #delete-modal { z-index: 2200; }
+        #sync-modal { z-index: 2100; }
+        #log-modal { z-index: 2000; }
+
         .log-entry { border-bottom: 1px solid #eee; padding: 12px 0; font-size: 13px; color: #444; }
         .log-time { color: #999; font-size: 12px; margin-bottom: 4px; }
         .log-change { color: #2c3e50; font-weight: 600; }
         .log-note { display: block; margin-top: 6px; color: #555; background: #fff3cd; padding: 6px 10px; border-radius: 4px; border-left: 3px solid #ffc107; }
-        
         .log-del-btn { cursor: pointer; color: #dc3545; opacity: 0.6; transition: all 0.2s; font-size: 14px; }
         .log-del-btn:hover { opacity: 1; transform: scale(1.1); }
+
+        /* 同步弹窗专用样式 */
+        .sync-info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f1f1; }
+        .sync-label { color: #666; }
+        .sync-val { font-weight: bold; color: #333; }
+        .sync-val.new { color: #28a745; }
+        .sync-val.old { color: #dc3545; }
     </style>
 </head>
 <body>
@@ -186,6 +195,7 @@
 
     <div id="result"></div>
 
+    <!-- 各种弹窗 -->
     <div id="filter-menu">
         <h4 id="filter-title">筛选条件</h4>
         <div class="filter-row" id="filter-row-numeric">
@@ -201,6 +211,35 @@
 
     <div id="log-modal" class="modal"><div class="modal-content" style="width: 600px;"><span class="close-btn" onclick="closeLogModal()">&times;</span><h3 id="modal-title" style="margin-top:0; border-bottom:2px solid #eee; padding-bottom:15px;">操作日志</h3><div id="modal-body" style="max-height: 60vh; overflow-y: auto;"></div></div></div>
     <div id="delete-modal" class="modal"><div class="modal-content" style="width: 400px; text-align: center; padding-top: 30px;"><h3>⚠️ 确认删除？</h3><p id="delete-msg" style="color:#555; margin-bottom:30px;">...</p><div><button class="btn-confirm-del" onclick="confirmDeleteAction()">确定删除</button><button class="btn-cancel" onclick="closeDeleteModal()">取消</button></div></div></div>
+    
+    <!-- 新增：同步确认弹窗 -->
+    <div id="sync-modal" class="modal">
+        <div class="modal-content" style="width: 450px;">
+            <span class="close-btn" onclick="closeSyncModal()">&times;</span>
+            <h3 style="margin-top:0; border-bottom:2px solid #eee; padding-bottom:15px;">☁️ 云端同步确认</h3>
+            <div style="padding: 10px 0;">
+                <div class="sync-info-row">
+                    <span class="sync-label">云端数据时间:</span>
+                    <span class="sync-val" id="sync-cloud-date">加载中...</span>
+                </div>
+                <div class="sync-info-row">
+                    <span class="sync-label">本地数据时间:</span>
+                    <span class="sync-val" id="sync-local-date">...</span>
+                </div>
+                <div class="sync-info-row">
+                    <span class="sync-label">股票数量对比:</span>
+                    <span class="sync-val" id="sync-count">...</span>
+                </div>
+                <p style="color:#666; font-size:12px; background:#f8f9fa; padding:8px; border-radius:4px; margin-top:15px;">
+                    💡 提示：如果云端时间不是最新的，可能是 GitHub 缓存（无Token约延时5分钟）。<br>请稍后再试，或检查 GitHub Token 设置。
+                </p>
+            </div>
+            <div style="text-align:right; margin-top:20px;">
+                <button class="btn-cloud-pull" onclick="confirmSyncAction()" style="padding:8px 20px;">✅ 覆盖本地</button>
+                <button class="btn-cancel" onclick="closeSyncModal()" style="padding:8px 20px;">取消</button>
+            </div>
+        </div>
+    </div>
 
     <script>
         let stocks = JSON.parse(localStorage.getItem('valuationStocks')) || [];
@@ -213,6 +252,7 @@
         let isPanelOpen = false;
         let pendingDeleteCode = null;
         let pendingLogIndex = null;
+        let pendingSyncData = null; // 暂存云端数据
         let cachedMarketData = {};
         let selectedCodes = new Set();
         let columnFilters = {}; 
@@ -243,7 +283,7 @@
             finally { btn.innerText = originText; btn.disabled = false; }
         }
 
-        // ★★★ 极速同步逻辑修复 ★★★
+        // ★★★ 修复后：拉取数据使用弹窗，不依赖原生confirm ★★★
         async function syncFromGithub() {
             let token = localStorage.getItem("github_token");
             const btn = document.querySelector('.btn-cloud-pull');
@@ -253,8 +293,6 @@
                 let newData = null;
                 const apiUrl = `https://api.github.com/repos/${GITHUB_CONFIG.username}/${GITHUB_CONFIG.repo}/contents/${GITHUB_CONFIG.path}`;
                 
-                // 优先尝试 API 读取 (实时无缓存)
-                // 如果是公开库，不带 Token 也能访问 (60次/小时)
                 const headers = { "Accept": "application/vnd.github.v3+json" };
                 if (token) headers["Authorization"] = `token ${token}`;
 
@@ -266,7 +304,6 @@
                     newData = JSON.parse(content);
                 } else {
                     console.warn("API读取失败，尝试Raw链接");
-                    // API 失败 (如私有库且无Token) 才走 Raw (有延迟)
                     const rawUrl = `https://raw.githubusercontent.com/${GITHUB_CONFIG.username}/${GITHUB_CONFIG.repo}/${GITHUB_CONFIG.branch}/${GITHUB_CONFIG.path}`;
                     const resRaw = await fetch(rawUrl + "?t=" + Date.now());
                     if (!resRaw.ok) throw new Error("文件不存在或无法访问");
@@ -274,17 +311,39 @@
                 }
 
                 if (Array.isArray(newData)) {
-                    // 简单的版本比较提示
-                    const cloudVer = newData.length > 0 && newData[0].logs && newData[0].logs.length > 0 ? newData[0].logs[0].date : "未知";
-                    const localVer = stocks.length > 0 && stocks[0].logs && stocks[0].logs.length > 0 ? stocks[0].logs[0].date : "未知";
+                    pendingSyncData = newData;
+                    // 获取版本信息
+                    const cloudDate = newData.length > 0 && newData[0].logs && newData[0].logs.length > 0 ? newData[0].logs[0].date : "无记录";
+                    const localDate = stocks.length > 0 && stocks[0].logs && stocks[0].logs.length > 0 ? stocks[0].logs[0].date : "无记录";
                     
-                    if(confirm(`☁️ 云端最新记录: ${cloudVer}\n💻 本地最新记录: ${localVer}\n\n确定覆盖本地数据吗？`)) { 
-                        stocks = newData; saveStorage(); updateTable(); alert("✅ 同步完成！"); 
-                    }
+                    // 填充并显示弹窗
+                    document.getElementById('sync-cloud-date').innerText = cloudDate;
+                    document.getElementById('sync-local-date').innerText = localDate;
+                    document.getElementById('sync-count').innerText = `云端 ${newData.length} vs 本地 ${stocks.length}`;
+                    
+                    // 简单的颜色提示
+                    const cDate = document.getElementById('sync-cloud-date');
+                    if(cloudDate > localDate) { cDate.className = "sync-val new"; cDate.innerText += " (最新)"; }
+                    else if(cloudDate < localDate) { cDate.className = "sync-val old"; cDate.innerText += " (较旧)"; }
+                    else { cDate.className = "sync-val"; }
+
+                    document.getElementById('sync-modal').style.display = 'flex';
                 }
             } catch (e) { alert(`❌ 失败: ${e.message}`); } 
             finally { btn.innerText = originText; btn.disabled = false; }
         }
+
+        // 确认同步覆盖
+        function confirmSyncAction() {
+            if(pendingSyncData) {
+                stocks = pendingSyncData;
+                saveStorage(); 
+                updateTable(); 
+                closeSyncModal();
+            }
+        }
+        
+        function closeSyncModal() { document.getElementById('sync-modal').style.display = 'none'; pendingSyncData = null; }
 
         function getSecid(code) { if (code.endsWith('.SH')) return `1.${code.replace('.SH','')}`; if (code.endsWith('.SZ')) return `0.${code.replace('.SZ','')}`; if (code.endsWith('.HK')) return `116.${code.replace('.HK','')}`; return `105.${code}`; }
 
