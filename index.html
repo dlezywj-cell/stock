@@ -92,6 +92,7 @@
         .log-entry { border-bottom: 1px solid #eee; padding: 12px 0; font-size: 13px; color: #444; }
         .log-time { color: #999; font-size: 12px; margin-bottom: 4px; }
         .log-change { color: #2c3e50; font-weight: 600; }
+        /* 核心修复：确保备注有漂亮的黄色背景框显示 */
         .log-note { display: block; margin-top: 6px; color: #555; background: #fff3cd; padding: 6px 10px; border-radius: 4px; border-left: 3px solid #ffc107; }
     </style>
 </head>
@@ -139,7 +140,7 @@
                     <div><label>1. 股票名称</label><div style="display:flex; gap:5px;"><input type="text" id="inName" placeholder="如: 腾讯" style="width:110px"><button class="btn-search" onclick="searchStockCode()">🔍 匹配</button></div></div>
                     <div><label>2. 代码 (自动)</label><input type="text" id="inCode" readonly placeholder="等待匹配" style="width:90px"></div>
                     <div style="flex-grow: 1; min-width: 200px;"><label>🏷️ 属性/赛道 (空格分隔)</label><input type="text" id="inTags" placeholder="如: 消费电子 华为链 绩优" style="width: 98%;"></div>
-                    <div style="flex-grow: 1; min-width: 200px;"><label>📝 备注 (日志用)</label><input type="text" id="inNote" placeholder="修改原因..." style="width: 98%;"></div>
+                    <div style="flex-grow: 1; min-width: 200px;"><label>📝 备注 (日志用)</label><input type="text" id="inNote" placeholder="输入想法，如：调高估值上限" style="width: 98%;"></div>
                 </div>
             </div>
             <div class="input-row">
@@ -197,7 +198,6 @@
         let onlySelectedMode = false;
         let currentVisibleStocks = [];
 
-        // 初始化按钮状态
         updateViewButtons();
 
         function getSecid(code) {
@@ -495,11 +495,6 @@
         function clearCurrentFilter() { const colKey = document.getElementById('filter-col-key').value; delete columnFilters[colKey]; document.getElementById('filter-menu').style.display = 'none'; document.removeEventListener('click', closeFilterMenuOutside); updateTable(); }
         function getColName(key) { if(key=='pe_up') return 'PE上行'; if(key=='pe_down') return 'PE下行'; if(key=='ps_up') return 'PS上行'; if(key=='ps_down') return 'PS下行'; return key; }
 
-        function findInList() {
-            updateTable();
-        }
-
-        // ★★★ 修复：完善的保存逻辑，监听所有字段变化 ★★★
         function saveStock() {
             const code = document.getElementById('inCode').value.trim();
             const name = document.getElementById('inName').value.trim();
@@ -523,7 +518,6 @@
                 const old = stocks[idx];
                 stockData.logs = old.logs || [];
                 
-                // 修复点：全量比对所有数值字段
                 if (old.profit !== p) changes.push(`净利:${old.profit}→${p}`);
                 if (old.lowPE !== lpe) changes.push(`PE下:${old.lowPE}→${lpe}`);
                 if (old.highPE !== hpe) changes.push(`PE上:${old.highPE}→${hpe}`);
@@ -533,7 +527,11 @@
                 if ((old.tags||"") !== tags) changes.push(`属性:${old.tags||""}→${tags}`);
 
                 if (changes.length > 0 || note) {
-                    newLog = { date: now, content: changes.length > 0 ? changes.join('; ') : "更新参数", note: note };
+                    newLog = { 
+                        date: now, 
+                        content: changes.length > 0 ? changes.join('; ') : "添加备注", 
+                        note: note 
+                    };
                     stockData.logs.unshift(newLog);
                 }
                 stocks[idx] = stockData;
@@ -546,7 +544,24 @@
             clearInput();
             updateTable();
         }
+
+        // ★★★ 核心修复：日志展示现在会正确渲染 note 字段了 ★★★
+        function showLogs(c) { 
+            const s = stocks.find(i=>i.code===c); 
+            if(!s) return; 
+            document.getElementById('modal-title').innerText = `${s.name} 日志`; 
+            document.getElementById('modal-body').innerHTML = s.logs?.map(l => `
+                <div class="log-entry">
+                    <div class="log-time">${l.date}</div>
+                    <div class="log-change">${l.content}</div>
+                    ${l.note ? `<span class="log-note">${l.note}</span>` : ''}
+                </div>
+            `).join('') || '<div style="text-align:center;padding:20px;color:#999">暂无日志记录</div>'; 
+            document.getElementById('log-modal').style.display = 'flex'; 
+        }
         
+        function closeLogModal() { document.getElementById('log-modal').style.display='none'; }
+
         window.openDeleteModal = function(c) { pendingDeleteCode = c; document.getElementById('delete-msg').innerText=`确认不再跟踪 ${c}?`; document.getElementById('delete-modal').style.display='flex'; };
         window.confirmDeleteAction = function() { if(pendingDeleteCode) { stocks=stocks.filter(s=>s.code!==pendingDeleteCode); selectedCodes.delete(pendingDeleteCode); saveStorage(); updateTable(); } closeDeleteModal(); };
         window.closeDeleteModal = function() { document.getElementById('delete-modal').style.display='none'; };
@@ -559,8 +574,6 @@
         function toggleInputPanel() { const c=document.getElementById('input-container'); isPanelOpen=!isPanelOpen; c.style.display=isPanelOpen?'block':'none'; document.getElementById('toggle-btn').innerText=isPanelOpen?'🔼 收起':'➕ 录入/管理 (展开)'; }
         function clearInput() { document.querySelectorAll('#input-panel input').forEach(i=>i.value=''); document.getElementById('editCode').value=''; document.getElementById('btn-save-text').innerText="💾 保存"; }
         function editStock(c) { toggleInputPanel(); isPanelOpen=true; document.getElementById('input-container').style.display='block'; const s=stocks.find(i=>i.code===c); if(!s)return; document.getElementById('inName').value=s.name; document.getElementById('inCode').value=s.code; document.getElementById('inTags').value=s.tags||''; document.getElementById('inProfit').value=s.profit||''; document.getElementById('inLowPE').value=s.lowPE||''; document.getElementById('inHighPE').value=s.highPE||''; document.getElementById('inRevenue').value=s.revenue||''; document.getElementById('inLowPS').value=s.lowPS||''; document.getElementById('inHighPS').value=s.highPS||''; document.getElementById('btn-save-text').innerText="💾 确认修改"; }
-        function showLogs(c) { const s=stocks.find(i=>i.code===c); if(!s)return; document.getElementById('modal-title').innerText=`${s.name} 日志`; document.getElementById('modal-body').innerHTML = s.logs?.map(l=>`<div class="log-entry"><div class="log-time">${l.date}</div><div>${l.content}</div></div>`).join('')||'无记录'; document.getElementById('log-modal').style.display='flex'; }
-        function closeLogModal() { document.getElementById('log-modal').style.display='none'; }
         function startRealtime() { if(!intervalId) { updateTable(); intervalId=setInterval(updateTable, 5000); document.getElementById('status-msg').innerText="● 实时中"; } }
         function stopRealtime() { clearInterval(intervalId); intervalId=null; document.getElementById('status-msg').innerText="⏸ 暂停"; }
         function setSort(k) { if(sortState.key===k) sortState.dir=sortState.dir==='desc'?'asc':'desc'; else {sortState.key=k; sortState.dir='desc';} updateTable(); }
