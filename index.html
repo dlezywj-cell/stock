@@ -92,7 +92,6 @@
         .log-entry { border-bottom: 1px solid #eee; padding: 12px 0; font-size: 13px; color: #444; }
         .log-time { color: #999; font-size: 12px; margin-bottom: 4px; }
         .log-change { color: #2c3e50; font-weight: 600; }
-        /* 核心修复：确保备注有漂亮的黄色背景框显示 */
         .log-note { display: block; margin-top: 6px; color: #555; background: #fff3cd; padding: 6px 10px; border-radius: 4px; border-left: 3px solid #ffc107; }
     </style>
 </head>
@@ -124,6 +123,8 @@
         <span class="control-label">👁️ 显示:</span>
         <button class="btn-view active" id="btn-toggle-code" onclick="toggleColumn('code')" title="显示/隐藏 代码列">代码</button>
         <button class="btn-view active" id="btn-toggle-tags" onclick="toggleColumn('tags')" title="显示/隐藏 属性列">属性</button>
+        <button class="btn-view active" id="btn-toggle-update" onclick="toggleColumn('update')" title="显示/隐藏 更新列">更新</button>
+        <button class="btn-view active" id="btn-toggle-action" onclick="toggleColumn('action')" title="显示/隐藏 操作列">操作</button>
 
         <div class="divider"></div>
         
@@ -183,9 +184,13 @@
     <div id="import-modal" class="modal"><div class="modal-content" style="width: 500px;"><span class="close-btn" onclick="closeImportModal()">&times;</span><h3>📥 导入数据</h3><textarea id="import-area" style="width:100%; height:150px;" placeholder="粘贴数据..."></textarea><div style="margin-top:15px; text-align:right;"><button class="btn-sync" onclick="execImport()">开始合并导入</button></div></div></div>
 
     <script>
-        // ★★★ 1. 初始化逻辑：纯净版，不含硬编码数据 ★★★
+        // ★★★ 1. 初始化逻辑 ★★★
         let stocks = JSON.parse(localStorage.getItem('valuationStocks')) || [];
-        let viewSettings = JSON.parse(localStorage.getItem('viewSettings')) || { showCode: true, showTags: true };
+        // 默认配置中加入 showUpdate 和 showAction
+        let defaultView = { showCode: true, showTags: true, showUpdate: true, showAction: true };
+        let storedView = JSON.parse(localStorage.getItem('viewSettings')) || {};
+        // 合并配置，确保老用户也有新字段的默认值
+        let viewSettings = { ...defaultView, ...storedView };
         
         let intervalId = null;
         let sortState = { key: 'pe_up', dir: 'desc' };
@@ -312,8 +317,19 @@
                         if(k=='chg') return parseFloat(obj.chg);
                         if(k.includes('pe')) return parseFloat(obj.peRes[k.split('_')[1]]) || -9999;
                         if(k.includes('ps')) return parseFloat(obj.psRes[k.split('_')[1]]) || -9999;
+                        if(k==='last_update') {
+                            const d1 = obj.logs && obj.logs.length > 0 ? obj.logs[0].date : "0";
+                            const d2 = b.logs && b.logs.length > 0 ? b.logs[0].date : "0";
+                            return sortState.dir === 'desc' ? (d1 < d2 ? 1 : -1) : (d1 > d2 ? 1 : -1);
+                        }
                         return 0;
                     };
+                    if (sortState.key === 'last_update') {
+                        const d1 = a.logs && a.logs.length ? a.logs[0].date : "";
+                        const d2 = b.logs && b.logs.length ? b.logs[0].date : "";
+                        if(d1 === d2) return 0;
+                        return sortState.dir === 'desc' ? (d1 < d2 ? 1 : -1) : (d1 > d2 ? 1 : -1);
+                    }
                     return sortState.dir === 'desc' ? getVal(b, sortState.key) - getVal(a, sortState.key) : getVal(a, sortState.key) - getVal(b, sortState.key);
                 });
             }
@@ -327,6 +343,9 @@
 
             const styleCode = viewSettings.showCode ? '' : 'col-hidden';
             const styleTags = viewSettings.showTags ? '' : 'col-hidden';
+            const styleUpdate = viewSettings.showUpdate ? '' : 'col-hidden';
+            const styleAction = viewSettings.showAction ? '' : 'col-hidden';
+
             const isAllVisibleSelected = filteredData.length > 0 && filteredData.every(item => selectedCodes.has(item.code));
             const basicColsSpan = 3 + (viewSettings.showCode ? 1 : 0) + (viewSettings.showTags ? 1 : 0);
 
@@ -340,7 +359,10 @@
                         <th class="th-basic" colspan="${basicColsSpan}">📊 基础行情</th>
                         <th class="th-pe" colspan="4">💰 PE 估值模型 (利润)</th>
                         <th class="th-ps" colspan="4">🚀 PS 估值模型 (营收)</th>
-                        <th class="th-basic" rowspan="2" style="vertical-align: middle;">⚙️ 操作</th>
+                        <th rowspan="2" class="sortable ${styleUpdate}" onclick="setSort('last_update')" style="vertical-align: middle; width:70px; font-size:12px;">
+                            📅 更新 <span class="${getSortClass('last_update')}">${getSortIcon('last_update')}</span>
+                        </th>
+                        <th class="th-basic ${styleAction}" rowspan="2" style="vertical-align: middle;">⚙️ 操作</th>
                     </tr>
                     <tr>
                         <th>名称</th>
@@ -362,7 +384,7 @@
             `;
 
             if(filteredData.length === 0) {
-                html += `<tr><td colspan="15" style="padding:30px;text-align:center;color:#999;">没有符合条件的股票</td></tr>`;
+                html += `<tr><td colspan="16" style="padding:30px;text-align:center;color:#999;">没有符合条件的股票</td></tr>`;
             } else {
                 filteredData.forEach(item => {
                     const fmtPct = (v) => {
@@ -375,6 +397,17 @@
 
                     let tagsHtml = '';
                     if(item.tags) tagsHtml = item.tags.split(' ').map(t => t.trim()).filter(t=>t).map(t => `<span class="tag-badge">${t}</span>`).join('');
+
+                    const lastDateRaw = (item.logs && item.logs.length > 0) ? item.logs[0].date : '';
+                    let updateHtml = '<span class="data-empty" style="font-size:11px;">-</span>';
+                    if(lastDateRaw) {
+                        const parts = lastDateRaw.split(' ');
+                        if(parts.length >= 2) {
+                            updateHtml = `<span style="font-size:11px; color:#666; display:block; line-height:1.2;">${parts[0]}<br><span style="color:#999; font-size:10px;">${parts[1].slice(0,5)}</span></span>`;
+                        } else {
+                            updateHtml = `<span style="font-size:11px; color:#666;">${lastDateRaw}</span>`;
+                        }
+                    }
 
                     const rowId = 'row-' + item.code.replace(/\./g, '-');
                     const isChecked = selectedCodes.has(item.code) ? 'checked' : '';
@@ -396,7 +429,8 @@
                             <td style="font-size:12px;">${item.lowPS||'-'}~${item.highPS||'-'}</td>
                             <td>${fmtPct(item.psRes.down)}</td>
                             <td>${fmtPct(item.psRes.up)}</td>
-                            <td style="white-space:nowrap;">
+                            <td class="${styleUpdate}">${updateHtml}</td>
+                            <td style="white-space:nowrap;" class="${styleAction}">
                                 <button class="btn-log" onclick="showLogs('${item.code}')" title="日志">📝</button>
                                 <button class="btn-edit" onclick="editStock('${item.code}')" title="修改">✏️</button>
                                 <button class="btn-delete" onclick="openDeleteModal('${item.code}')" title="删除">✕</button>
@@ -442,14 +476,21 @@
         function toggleColumn(colType) {
             if(colType === 'code') viewSettings.showCode = !viewSettings.showCode;
             if(colType === 'tags') viewSettings.showTags = !viewSettings.showTags;
+            if(colType === 'update') viewSettings.showUpdate = !viewSettings.showUpdate;
+            if(colType === 'action') viewSettings.showAction = !viewSettings.showAction;
             localStorage.setItem('viewSettings', JSON.stringify(viewSettings));
             updateViewButtons(); updateTable();
         }
         function updateViewButtons() {
             const btnCode = document.getElementById('btn-toggle-code');
             const btnTags = document.getElementById('btn-toggle-tags');
+            const btnUpdate = document.getElementById('btn-toggle-update');
+            const btnAction = document.getElementById('btn-toggle-action');
+            
             if(viewSettings.showCode) btnCode.classList.add('active'); else btnCode.classList.remove('active');
             if(viewSettings.showTags) btnTags.classList.add('active'); else btnTags.classList.remove('active');
+            if(viewSettings.showUpdate) btnUpdate.classList.add('active'); else btnUpdate.classList.remove('active');
+            if(viewSettings.showAction) btnAction.classList.add('active'); else btnAction.classList.remove('active');
         }
 
         function openFilterMenu(colKey, event) {
@@ -545,7 +586,6 @@
             updateTable();
         }
 
-        // ★★★ 核心修复：日志展示现在会正确渲染 note 字段了 ★★★
         function showLogs(c) { 
             const s = stocks.find(i=>i.code===c); 
             if(!s) return; 
