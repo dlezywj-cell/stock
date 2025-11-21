@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>股票估值系统 (最终完善版)</title>
+    <title>股票估值系统 (最终稳定版)</title>
     <style>
         /* === 全局重置 === */
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft YaHei', sans-serif; padding: 20px; max-width: 1700px; margin: 0 auto; background-color: #f4f6f9; font-size: 13px; color: #333; height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; }
         
-        /* === 移动端专属导航 (PC默认隐藏) === */
+        /* === 移动端专属导航 === */
         #mobile-nav { display: none; justify-content: space-between; align-items: center; background: #fff; padding: 10px 15px; border-radius: 8px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); flex-shrink: 0; }
         #mobile-nav h3 { margin: 0; color: #2c3e50; font-size: 16px; display: flex; align-items: center; gap: 8px; }
         #mobile-status { font-size: 11px; color: #007bff; font-family: monospace; }
@@ -34,7 +34,6 @@
         #input-container { background: #fff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); overflow: hidden; transition: all 0.3s ease; margin-bottom: 15px; display: none; }
         #input-panel { padding: 20px; border-top: 3px solid #007bff; }
         .input-row { display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-end; margin-bottom: 15px; }
-        
         .group-box { border: 1px solid #e9ecef; padding: 15px; border-radius: 6px; background: #f8f9fa; display: flex; gap: 10px; }
         
         label { font-size: 12px; color: #666; display: block; margin-bottom: 4px; font-weight: 500; }
@@ -71,49 +70,17 @@
         table { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 1300px; }
         th, td { padding: 10px 12px; text-align: center; border-bottom: 1px solid #ebebeb; border-right: 1px solid #ebebeb; white-space: nowrap; }
         
-        /* === 锁定逻辑 (修正版) === */
-        
-        /* 1. 所有表头：垂直锁定 (Sticky Top) */
-        th { 
-            background-color: #f1f3f5; 
-            color: #495057; 
-            font-weight: 700; 
-            user-select: none; 
-            position: sticky; 
-            z-index: 20; 
-        }
+        /* === 锁定逻辑 === */
+        th { background-color: #f1f3f5; color: #495057; font-weight: 700; user-select: none; position: sticky; z-index: 20; }
         thead tr:nth-child(1) th { top: 0; border-bottom: 1px solid #ccc; height: 22px; }
         thead tr:nth-child(2) th { top: 43px; box-shadow: 0 2px 2px rgba(0,0,0,0.05); }
 
-        /* 2. 第一列表体 ("名称"列)：水平锁定 (Sticky Left) */
-        tbody td:first-child { 
-            position: sticky; 
-            left: 0; 
-            z-index: 15; 
-            background-color: #fff; 
-            border-right: 2px solid #d1d1d1; 
-        }
+        tbody td:first-child { position: sticky; left: 0; z-index: 15; background-color: #fff; border-right: 2px solid #d1d1d1; }
         tbody tr:nth-child(even) td:first-child { background-color: #f8f9fa; }
         tbody tr:hover td:first-child { background-color: #e9ecef; }
 
-        /* 3. 左上角表头处理 */
-        
-        /* 第一行第一列 ("基础行情")：取消水平锁定，让它能滑走 */
-        thead tr:nth-child(1) th:first-child { 
-            position: sticky; 
-            top: 0; 
-            /* left: 0; Removed */
-            z-index: 20; 
-        }
-
-        /* 第二行第一列 ("名称"标题)：保持双重锁定 */
-        thead tr:nth-child(2) th:first-child { 
-            position: sticky; 
-            left: 0; 
-            top: 43px; 
-            z-index: 30; 
-            border-right: 2px solid #d1d1d1; 
-        }
+        thead tr:nth-child(1) th:first-child { position: sticky; top: 0; z-index: 20; }
+        thead tr:nth-child(2) th:first-child { position: sticky; left: 0; top: 43px; z-index: 30; border-right: 2px solid #d1d1d1; }
         
         .col-hidden { display: none !important; }
         .tag-badge { display: inline-block; background: #e7f5ff; color: #007bff; padding: 2px 6px; border-radius: 4px; font-size: 11px; margin: 1px; border: 1px solid #d0ebff; }
@@ -149,39 +116,31 @@
         .sync-info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f1f1; }
         .sync-val.new { color: #28a745; } .sync-val.old { color: #dc3545; }
 
-        /* ★★★ 移动端适配 (Mobile Only) ★★★ */
+        /* ★★★ 移动端适配 ★★★ */
         @media (max-width: 768px) {
             body { padding: 10px; }
             #mobile-nav { display: flex; }
             #top-area { display: none; }
             #top-area.show { display: block; animation: slideDown 0.2s ease-out; }
-            
             .header-bar { flex-direction: column; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
             .header-bar h2 { display: none; }
             .header-actions { width: 100%; display: flex; justify-content: space-between; flex-wrap: wrap; }
             .header-actions button { flex: 1; justify-content: center; }
-            
             .control-bar { flex-direction: column; align-items: stretch; gap: 8px; padding: 10px; }
             .control-bar > * { width: 100%; margin: 0; }
             .spacer, .divider { display: none; }
-            
             .search-row { display: flex; gap: 5px; }
             .search-row input { flex: 1; width: auto !important; }
-            
             .action-row { display: flex; gap: 5px; flex-wrap: wrap; }
             .action-row button { flex: 1; justify-content: center; }
-            
             #input-panel { padding: 15px 10px; }
             .input-row { flex-direction: column; gap: 10px; margin-bottom: 10px; }
             .group-box { width: 100%; box-sizing: border-box; }
             input { width: 100% !important; box-sizing: border-box; }
-            
             .modal-content { width: 90%; padding: 20px; }
         }
-
         .search-row { display: flex; align-items: center; gap: 5px; }
         .action-row { display: flex; align-items: center; gap: 5px; }
-
         @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
@@ -289,6 +248,13 @@
     <div id="sync-modal" class="modal"><div class="modal-content"><span class="close-btn" onclick="closeSyncModal()">&times;</span><h3 style="margin-top:0; border-bottom:2px solid #eee; padding-bottom:15px;">☁️ 同步确认</h3><div style="padding: 10px 0;"><div class="sync-info-row"><span class="sync-label">云端:</span><span class="sync-val" id="sync-cloud-date">...</span></div><div class="sync-info-row"><span class="sync-label">本地:</span><span class="sync-val" id="sync-local-date">...</span></div><div class="sync-info-row"><span class="sync-label">数量:</span><span class="sync-val" id="sync-count">...</span></div></div><div style="text-align:right; margin-top:20px;"><button class="btn-cloud-pull" onclick="confirmSyncAction()" style="padding:8px 20px;">✅ 覆盖</button><button class="btn-cancel" onclick="closeSyncModal()" style="padding:8px 20px;">取消</button></div></div></div>
 
     <script>
+        // ★★★ 核心修复：统一时间格式函数 (YYYY/MM/DD HH:mm:ss) ★★★
+        function getNowStr() {
+            const d = new Date();
+            const pad = (n) => n.toString().padStart(2, '0');
+            return `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+        }
+
         function toggleMobileMenu(force) {
             const area = document.getElementById('top-area');
             const btn = document.getElementById('mobile-menu-btn');
@@ -396,16 +362,14 @@
             });
             currentVisibleStocks = rows;
             
-            // ★★★ 排序逻辑修正 ★★★
             if (sortState.key) {
                 rows.sort((a, b) => {
-                    // 1. 日期特殊处理：字符串比较
+                    // ★★★ 修复逻辑：对更新时间进行字符串/数字兼容比较 ★★★
                     if (sortState.key === 'last_update') {
                         const dA = a.logs?.[0]?.date || "";
                         const dB = b.logs?.[0]?.date || "";
                         return sortState.dir === 'desc' ? dB.localeCompare(dA) : dA.localeCompare(dB);
                     }
-                    // 2. 其他数值比较
                     const val = (o) => {
                         if(sortState.key=='chg') return parseFloat(o.chg);
                         if(sortState.key.includes('pe')) return parseFloat(o.peRes[sortState.key.split('_')[1]])||-9999;
@@ -470,7 +434,8 @@
             if(!code) { alert("请先搜索"); return; }
             const s = { code, name, tags:document.getElementById('inTags').value.trim(), profit:parseFloat(document.getElementById('inProfit').value)||0, lowPE:parseFloat(document.getElementById('inLowPE').value)||0, highPE:parseFloat(document.getElementById('inHighPE').value)||0, revenue:parseFloat(document.getElementById('inRevenue').value)||0, lowPS:parseFloat(document.getElementById('inLowPS').value)||0, highPS:parseFloat(document.getElementById('inHighPS').value)||0, logs:[] };
             const idx = stocks.findIndex(i=>i.code===code);
-            const now = new Date().toLocaleString('zh-CN',{hour12:false});
+            // ★★★ 修复点：使用统一的日期生成函数 ★★★
+            const now = getNowStr();
             const note = document.getElementById('inNote').value.trim();
             
             let log = { date: now, content: "更新数据", note: note };
