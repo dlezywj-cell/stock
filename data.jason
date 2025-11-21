@@ -2016,8 +2016,13 @@
     "highPE": 70,
     "revenue": 3000,
     "lowPS": 20,
-    "highPS": 3,
+    "highPS": 40,
     "logs": [
+      {
+        "date": "2025/11/21 13:53:19",
+        "content": "PS上:3→40",
+        "note": ""
+      },
       {
         "date": "2025/11/21 13:48:03",
         "content": "PS上:35→3",
