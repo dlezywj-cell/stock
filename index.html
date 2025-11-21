@@ -269,24 +269,15 @@
             const container = document.getElementById('result');
             
             let filteredData = data.filter(item => {
-                // 1. 只看选中
                 if (onlySelectedMode && !selectedCodes.has(item.code)) return false;
-                
-                // 2. 搜索框筛选 (代码/名称)
                 const searchKey = document.getElementById('findInput').value.trim().toUpperCase();
-                if (searchKey && !item.code.includes(searchKey) && !item.name.includes(searchKey)) {
-                    return false;
-                }
-
-                // 3. 属性筛选
+                if (searchKey && !item.code.includes(searchKey) && !item.name.includes(searchKey)) return false;
                 const searchTags = document.getElementById('findTags').value.trim().toLowerCase();
                 if (searchTags) {
                     const itemTags = (item.tags || "").toLowerCase();
                     const keywords = searchTags.split(/\s+/); 
                     if (!keywords.every(k => itemTags.includes(k))) return false;
                 }
-
-                // 4. 列筛选
                 for (let colKey in columnFilters) {
                     const rule = columnFilters[colKey];
                     if (!rule) continue;
@@ -337,19 +328,21 @@
             const styleCode = viewSettings.showCode ? '' : 'col-hidden';
             const styleTags = viewSettings.showTags ? '' : 'col-hidden';
             const isAllVisibleSelected = filteredData.length > 0 && filteredData.every(item => selectedCodes.has(item.code));
+            const basicColsSpan = 3 + (viewSettings.showCode ? 1 : 0) + (viewSettings.showTags ? 1 : 0);
 
             let html = `
             <table>
                 <thead>
                     <tr>
-                        <th style="width:30px;">选</th>
-                        <th class="th-basic" colspan="${2 + (viewSettings.showCode?1:0) + (viewSettings.showTags?1:0)}">📊 基础行情</th>
+                        <th rowspan="2" style="width:30px; vertical-align: middle;">
+                            <input type="checkbox" id="header-checkbox" onclick="toggleSelectAll()" ${isAllVisibleSelected ? 'checked' : ''}>
+                        </th>
+                        <th class="th-basic" colspan="${basicColsSpan}">📊 基础行情</th>
                         <th class="th-pe" colspan="4">💰 PE 估值模型 (利润)</th>
                         <th class="th-ps" colspan="4">🚀 PS 估值模型 (营收)</th>
-                        <th class="th-basic">⚙️ 操作</th>
+                        <th class="th-basic" rowspan="2" style="vertical-align: middle;">⚙️ 操作</th>
                     </tr>
                     <tr>
-                        <th><input type="checkbox" id="header-checkbox" onclick="toggleSelectAll()" ${isAllVisibleSelected ? 'checked' : ''}></th>
                         <th>名称</th>
                         <th class="${styleCode}">代码</th>
                         <th class="${styleTags}" style="max-width:150px;">属性 ${getFilterIcon('tags')}</th>
@@ -363,7 +356,6 @@
                         <th>合理PS</th>
                         <th onclick="setSort('ps_down')" class="sortable">下行% ${getFilterIcon('ps_down')} <span class="${getSortClass('ps_down')}">${getSortIcon('ps_down')}</span></th>
                         <th onclick="setSort('ps_up')" class="sortable">上行% ${getFilterIcon('ps_up')} <span class="${getSortClass('ps_up')}">${getSortIcon('ps_up')}</span></th>
-                        <th>功能</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -417,7 +409,6 @@
             container.innerHTML = html;
         }
 
-        // ★★★ 修复：全选/反选逻辑 ★★★
         function toggleSelectRow(code, checkbox) {
             if (checkbox.checked) selectedCodes.add(code); else selectedCodes.delete(code);
             updateTable();
@@ -425,26 +416,17 @@
 
         function toggleSelectAll() {
             if (currentVisibleStocks.length === 0) return;
-
-            // 检查当前可见的是否全都已选中
             const allSelected = currentVisibleStocks.every(item => selectedCodes.has(item.code));
-
-            if (allSelected) {
-                // 如果全选了，则取消全选（只针对当前可见的）
-                currentVisibleStocks.forEach(item => selectedCodes.delete(item.code));
-            } else {
-                // 否则，把没选中的都选中
-                currentVisibleStocks.forEach(item => selectedCodes.add(item.code));
-            }
+            if (allSelected) currentVisibleStocks.forEach(item => selectedCodes.delete(item.code));
+            else currentVisibleStocks.forEach(item => selectedCodes.add(item.code));
             updateTable();
         }
 
-        // ★★★ 修复：重置筛选 ★★★
         function clearAllFilters() {
-            columnFilters = {}; // 清空列筛选
-            document.getElementById('findInput').value = ''; // 清空搜索框
+            columnFilters = {}; 
+            document.getElementById('findInput').value = ''; 
             document.getElementById('findTags').value = '';
-            if (onlySelectedMode) toggleShowSelected(); // 如果在“只看选中”模式，退出
+            if (onlySelectedMode) toggleShowSelected(); 
             updateTable();
         }
 
@@ -470,7 +452,6 @@
             if(viewSettings.showTags) btnTags.classList.add('active'); else btnTags.classList.remove('active');
         }
 
-        // 筛选菜单
         function openFilterMenu(colKey, event) {
             const menu = document.getElementById('filter-menu');
             const input = document.getElementById('filter-val');
@@ -515,11 +496,10 @@
         function getColName(key) { if(key=='pe_up') return 'PE上行'; if(key=='pe_down') return 'PE下行'; if(key=='ps_up') return 'PS上行'; if(key=='ps_down') return 'PS下行'; return key; }
 
         function findInList() {
-            // 这个功能现在其实就是简单的触发 updateTable (因为 updateTable 里读取了 input)
             updateTable();
         }
 
-        // ---------------- 基础功能 ----------------
+        // ★★★ 修复：完善的保存逻辑，监听所有字段变化 ★★★
         function saveStock() {
             const code = document.getElementById('inCode').value.trim();
             const name = document.getElementById('inName').value.trim();
@@ -537,12 +517,21 @@
             let changes = [];
             let newLog = null;
             const stockData = { code, name, tags, profit: p, lowPE: lpe, highPE: hpe, revenue: rev, lowPS: lps, highPS: hps, logs: [] };
+            
             const idx = stocks.findIndex(s => s.code === code);
             if (idx >= 0) {
                 const old = stocks[idx];
                 stockData.logs = old.logs || [];
+                
+                // 修复点：全量比对所有数值字段
                 if (old.profit !== p) changes.push(`净利:${old.profit}→${p}`);
+                if (old.lowPE !== lpe) changes.push(`PE下:${old.lowPE}→${lpe}`);
+                if (old.highPE !== hpe) changes.push(`PE上:${old.highPE}→${hpe}`);
+                if (old.revenue !== rev) changes.push(`营收:${old.revenue}→${rev}`);
+                if (old.lowPS !== lps) changes.push(`PS下:${old.lowPS}→${lps}`);
+                if (old.highPS !== hps) changes.push(`PS上:${old.highPS}→${hps}`);
                 if ((old.tags||"") !== tags) changes.push(`属性:${old.tags||""}→${tags}`);
+
                 if (changes.length > 0 || note) {
                     newLog = { date: now, content: changes.length > 0 ? changes.join('; ') : "更新参数", note: note };
                     stockData.logs.unshift(newLog);
