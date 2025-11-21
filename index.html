@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <!-- 视口设置 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="股票复盘">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2422/2422269.png">
+
+    <title>股票估值复盘系统 (数据预置版)</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 10px; margin: 0; background-color: #f4f6f9; font-size: 14px; color: #333; -webkit-tap-highlight-color: transparent; }
+        
+        .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 5px; background: #fff; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        h2 { margin: 0; font-size: 16px; border-left: 4px solid #007bff; padding-left: 8px; color: #2c3e50; }
+
+        .control-bar { 
+            margin-bottom: 10px; display: flex; gap: 8px; align-items: center; 
+            background: #fff; padding: 10px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); 
+            flex-wrap: wrap; 
+        }
+        .divider { border-left: 1px solid #eee; height: 20px; margin: 0 2px; }
+        
+        #input-container { display: none; } 
+        #input-panel { padding: 15px; border-top: 3px solid #007bff; }
+        .input-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; margin-bottom: 15px; }
+        
+        /* 手机端适配 */
+        @media (max-width: 600px) {
+            .input-row { flex-direction: column; align-items: stretch; }
+            .group-box { flex-direction: column; }
+            .group-box > div { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+            .group-box input { width: 60% !important; }
+            .control-bar { justify-content: space-between; }
+            .btn-toggle { width: 100%; text-align: center; padding: 10px; }
+            .btn-view { padding: 6px 8px; }
+        }
+
+        .group-box { border: 1px solid #e9ecef; padding: 10px; border-radius: 6px; background: #f8f9fa; display: flex; gap: 10px; flex-wrap: wrap; }
+        .group-title { font-weight: bold; color: #555; margin-right: 5px; font-size: 13px; width: 100%; border-bottom: 1px solid #ddd; margin-bottom: 5px; padding-bottom: 3px; }
+        
+        label { font-size: 12px; color: #666; font-weight: 500; }
+        input { padding: 8px; border: 1px solid #ced4da; border-radius: 4px; width: 90px; transition: border-color 0.2s; font-size: 14px; }
+        
+        button { padding: 8px 12px; cursor: pointer; border: none; border-radius: 6px; font-weight: 600; font-size: 13px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; touch-action: manipulation; }
+        button:active { opacity: 0.7; transform: scale(0.98); }
+
+        .btn-search { background-color: #17a2b8; color: white; }
+        .btn-add { background-color: #28a745; color: white; }
+        .btn-edit { background-color: #ffc107; color: #333; }
+        .btn-log { background-color: #6f42c1; color: white; }
+        .btn-delete { background-color: #dc3545; color: white; }
+        .btn-sync { background-color: #007bff; color: white; }
+        .btn-import { background-color: #17a2b8; color: white; }
+        .btn-control { background-color: #6c757d; color: white; }
+        .btn-toggle { background-color: #f8f9fa; border: 1px solid #ccc; color: #333; }
+        .btn-find { background-color: #fd7e14; color: white; }
+        
+        .btn-view { background-color: #e9ecef; color: #adb5bd; border: 1px solid transparent; }
+        .btn-view.active { background-color: #007bff; color: white; }
+        .btn-compare { background-color: #6f42c1; color: white; }
+        .btn-compare.active { background-color: #4a2c85; }
+        .btn-reset-all { background-color: #6c757d; color: white; }
+        .btn-confirm-del { background-color: #dc3545; color: white; font-size: 14px; padding: 10px 30px; }
+        .btn-cancel { background-color: #6c757d; color: white; font-size: 14px; padding: 10px 30px; }
+
+        #result { overflow-x: auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #e9ecef; -webkit-overflow-scrolling: touch; min-height: 300px; }
+        table { border-collapse: collapse; width: 100%; min-width: 1000px; } 
+        th, td { padding: 12px 8px; text-align: center; border: 1px solid #ebebeb; white-space: nowrap; font-size: 13px; }
+        th { background-color: #f1f3f5; color: #495057; font-weight: 700; position: sticky; top: 0; z-index: 10; }
+        tbody tr:nth-child(even) { background-color: #f8f9fa; } 
+        
+        .col-hidden { display: none !important; }
+        .tag-badge { display: inline-block; background: #e7f5ff; color: #007bff; padding: 2px 6px; border-radius: 4px; font-size: 10px; margin: 1px; border: 1px solid #d0ebff; }
+        .th-basic { border-top: 3px solid #6c757d; }
+        .th-pe { border-top: 3px solid #28a745; background-color: #f3fdf6; }
+        .th-ps { border-top: 3px solid #fd7e14; background-color: #fff8f3; }
+        
+        .filter-icon { font-size: 14px; color: #adb5bd; padding: 4px; margin-left: 2px; }
+        .filter-active { color: #dc3545 !important; font-weight: bold; }
+
+        #filter-menu { display: none; position: absolute; background: white; border: 1px solid #ccc; box-shadow: 0 4px 15px rgba(0,0,0,0.2); border-radius: 8px; padding: 15px; z-index: 3000; min-width: 220px; }
+        #filter-menu h4 { margin: 0 0 10px 0; font-size: 14px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        .filter-row { display: flex; gap: 5px; margin-bottom: 10px; align-items: center; }
+        .filter-row select, .filter-row input { height: 30px; box-sizing: border-box; }
+        .filter-actions { display: flex; justify-content: flex-end; gap: 10px; }
+        
+        .row-checkbox { transform: scale(1.3); }
+        .row-selected { background-color: #e8f0fe !important; }
+        .row-highlight { animation: highlightFade 2.5s ease-out forwards; }
+        @keyframes highlightFade { 0% { background-color: #ffeb3b; } 100% { background-color: transparent; } }
+        
+        #status-msg { font-size: 12px; color: #007bff; margin-right: 10px; display: block; margin-top: 5px; }
+        .sort-icon { font-size: 10px; margin-left: 4px; color: #adb5bd; }
+        .sort-active { color: #007bff; }
+
+        .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(2px); justify-content: center; align-items: center; }
+        .modal-content { background-color: white; padding: 20px; border-radius: 12px; width: 90%; max-width: 500px; box-shadow: 0 15px 40px rgba(0,0,0,0.3); position: relative; max-height: 80vh; overflow-y: auto; }
+        .close-btn { position: absolute; top: 15px; right: 15px; font-size: 28px; color: #aaa; padding: 5px; }
+        .log-entry { border-bottom: 1px solid #eee; padding: 12px 0; font-size: 13px; color: #444; }
+        .log-time { color: #999; font-size: 12px; margin-bottom: 4px; }
+        .log-change { color: #2c3e50; font-weight: 600; }
+        .log-note { display: block; margin-top: 6px; color: #555; background: #fff3cd; padding: 6px 10px; border-radius: 4px; border-left: 3px solid #ffc107; }
+    </style>
+</head>
+<body>
+
+    <div class="header-bar">
+        <h2>🚀 股票复盘</h2>
+        <div>
+            <span id="status-msg"></span>
+            <button class="btn-sync" onclick="exportData()">📤</button>
+            <button class="btn-import" onclick="importData()">📥</button>
+            <span style="border-left:1px solid #ccc; margin:0 5px; height:15px; display:inline-block; vertical-align:middle;"></span>
+            <button class="btn-control" onclick="startRealtime()">▶</button>
+            <button class="btn-control" onclick="stopRealtime()">⏹</button>
+        </div>
+    </div>
+
+    <div class="control-bar">
+        <button class="btn-toggle" onclick="toggleInputPanel()" id="toggle-btn" style="flex-grow:1;">➕ 录入/管理</button>
+        
+        <div style="display:flex; gap:5px; align-items:center;">
+            <input type="text" id="findInput" placeholder="搜代码..." style="width: 80px;" onkeydown="if(event.keyCode==13) findInList()">
+            <button class="btn-find" onclick="findInList()">Go</button>
+        </div>
+    </div>
+    
+    <div class="control-bar" style="justify-content: space-between;">
+        <div style="display:flex; gap:5px; align-items:center;">
+            <span style="color:#666;font-size:12px;">显示:</span>
+            <button class="btn-view active" id="btn-toggle-code" onclick="toggleColumn('code')">代码</button>
+            <button class="btn-view active" id="btn-toggle-tags" onclick="toggleColumn('tags')">属性</button>
+        </div>
+        <div style="display:flex; gap:5px;">
+            <button class="btn-reset-all" onclick="clearAllFilters()">🌪️</button>
+            <button class="btn-compare" id="btn-compare" onclick="toggleShowSelected()">📊 (0)</button>
+        </div>
+    </div>
+
+    <!-- 录入面板 -->
+    <div id="input-container">
+        <div id="input-panel">
+            <input type="hidden" id="editCode" value="">
+            <div class="input-row">
+                <div class="group-box">
+                    <div style="width:100%"><span class="group-title">基础信息</span></div>
+                    <div><label>名称</label><div style="display:flex;gap:5px;flex-grow:1"><input type="text" id="inName" style="width:100%"><button class="btn-search" onclick="searchStockCode()">🔍</button></div></div>
+                    <div><label>代码</label><input type="text" id="inCode" readonly></div>
+                    <div style="width:100%"><label>属性</label><input type="text" id="inTags" placeholder="空格分隔" style="width:100%"></div>
+                    <div style="width:100%"><label>备注</label><input type="text" id="inNote" placeholder="日志备注" style="width:100%"></div>
+                </div>
+            </div>
+            <div class="input-row">
+                <div class="group-box" style="border-left: 4px solid #28a745;">
+                    <div style="width:100%"><span class="group-title" style="color:#28a745">① PE 估值</span></div>
+                    <div><label>净利(亿)</label><input type="number" id="inProfit" step="0.1"></div>
+                    <div><label>PE下限</label><input type="number" id="inLowPE"></div>
+                    <div><label>PE上限</label><input type="number" id="inHighPE"></div>
+                </div>
+                <div class="group-box" style="border-left: 4px solid #fd7e14;">
+                    <div style="width:100%"><span class="group-title" style="color:#fd7e14">② PS 估值</span></div>
+                    <div><label>营收(亿)</label><input type="number" id="inRevenue" step="0.1"></div>
+                    <div><label>PS下限</label><input type="number" id="inLowPS" step="0.1"></div>
+                    <div><label>PS上限</label><input type="number" id="inHighPS" step="0.1"></div>
+                </div>
+            </div>
+            <div style="text-align:center; margin-top:10px;">
+                <button class="btn-add" onclick="saveStock()" id="btn-save-text" style="width:60%; padding:10px;">💾 保存股票数据</button>
+                <button onclick="clearInput()" style="padding:10px;">重置</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="result"></div>
+
+    <!-- 筛选菜单 -->
+    <div id="filter-menu">
+        <h4 id="filter-title">筛选条件</h4>
+        <div class="filter-row" id="filter-row-numeric">
+            <select id="filter-op"><option value=">">></option><option value="<"><</option><option value=">=">≥</option><option value="<=">≤</option><option value="=">=</option></select>
+            <input type="number" id="filter-val" placeholder="数值">
+        </div>
+        <div class="filter-row" id="filter-row-text" style="display:none;">
+            <input type="text" id="filter-text-val" placeholder="内容...">
+        </div>
+        <div class="filter-actions"><button class="btn-cancel" onclick="clearCurrentFilter()">清空</button><button class="btn-add" onclick="confirmFilter()">确定</button></div>
+        <input type="hidden" id="filter-col-key">
+    </div>
+
+    <!-- 弹窗 -->
+    <div id="log-modal" class="modal"><div class="modal-content"><span class="close-btn" onclick="closeLogModal()">&times;</span><h3 id="modal-title" style="margin-top:0;">操作日志</h3><div id="modal-body"></div></div></div>
+    <div id="delete-modal" class="modal"><div class="modal-content" style="text-align: center; padding-top:30px;"><h3>⚠️ 确认删除？</h3><p id="delete-msg" style="margin-bottom:30px;">...</p><div><button class="btn-confirm-del" onclick="confirmDeleteAction()">确定删除</button><button class="btn-cancel" onclick="closeDeleteModal()">取消</button></div></div></div>
+    <div id="import-modal" class="modal"><div class="modal-content"><span class="close-btn" onclick="closeImportModal()">&times;</span><h3>📥 导入数据</h3><textarea id="import-area" style="width:100%; height:150px; font-size:12px;" placeholder="在此粘贴..."></textarea><div style="margin-top:15px; text-align:right;"><button class="btn-sync" onclick="execImport()">合并导入</button></div></div></div>
+
+    <script>
+        // ★★★ 预置数据 (如果本地缓存为空，则加载这些数据) ★★★
+        const PRELOADED_DATA = [{"code":"01810.HK","name":"小米集团-W","tags":"汽车 港股 消费电子","profit":520,"lowPE":30,"highPE":40,"revenue":5700,"lowPS":1.5,"highPS":3,"logs":[{"date":"2025/11/20 17:12:48","content":"属性:→汽车 港股 消费电子","note":""},{"date":"2025/11/20 09:58:08","content":"净利: 680➝520, 营收: 6900➝5700","note":"三季报后调整"}]},{"code":"09896.HK","name":"名创优品","tags":"消费","profit":36,"lowPE":15,"highPE":25,"revenue":230,"lowPS":2,"highPS":4,"logs":[{"date":"2025/11/20 17:45:54","content":"属性:→消费","note":""}]},{"code":"002602.SZ","name":"世纪华通","tags":"游戏","profit":55,"lowPE":20,"highPE":40,"revenue":490,"lowPS":2.5,"highPS":3.5,"logs":[{"date":"2025/11/20 20:54:45","content":"属性:→游戏","note":""},{"date":"2025/11/20 11:05:22","content":"首次创建","note":"初始化估值模型"}]},{"code":"02020.HK","name":"安踏体育","tags":"消费","profit":145,"lowPE":18.5,"highPE":25,"revenue":860,"lowPS":3,"highPS":4,"logs":[{"date":"2025/11/20 20:54:56","content":"属性:→消费","note":""},{"date":"2025/11/20 11:20:01","content":"首次创建","note":"初始化估值模型"}]},{"code":"300502.SZ","name":"新易盛","tags":"AI 光模块","profit":100,"lowPE":30,"highPE":50,"revenue":250,"lowPS":10,"highPS":16,"logs":[{"date":"2025/11/20 20:55:12","content":"属性:→AI 光模块","note":""},{"date":"2025/11/20 11:20:55","content":"首次创建","note":"初始化估值模型"}]},{"code":"002484.SZ","name":"江海股份","tags":"AI","profit":8,"lowPE":27,"highPE":45,"revenue":57,"lowPS":3.5,"highPS":6,"logs":[{"date":"2025/11/20 20:55:25","content":"属性:→AI","note":""},{"date":"2025/11/20 11:21:40","content":"首次创建","note":"初始化估值模型"}]},{"code":"002222.SZ","name":"福晶科技","profit":2.9,"lowPE":57,"highPE":90,"revenue":11,"lowPS":15,"highPS":27,"logs":[{"date":"2025/11/20 11:22:49","content":"首次创建","note":"初始化估值模型"}]},{"code":"09985.HK","name":"卫龙美味","tags":"消费","profit":15.5,"lowPE":17,"highPE":25,"revenue":82,"lowPS":2.7,"highPS":4.5,"logs":[{"date":"2025/11/20 20:55:39","content":"属性:→消费","note":""},{"date":"2025/11/20 11:24:03","content":"首次创建","note":"初始化估值模型"}]},{"code":"002384.SZ","name":"东山精密","tags":"消费电子 光模块 PCB AI","profit":60,"lowPE":20,"highPE":40,"revenue":0,"lowPS":0,"highPS":0,"logs":[{"date":"2025/11/20 17:37:59","content":"属性:→消费电子 光模块 PCB AI","note":""},{"date":"2025/11/20 11:25:13","content":"首次创建","note":"初始化估值模型"}]},{"code":"300866.SZ","name":"安克创新","tags":"出口","profit":26,"lowPE":20,"highPE":30,"revenue":315,"lowPS":2,"highPS":2.5,"logs":[{"date":"2025/11/20 20:56:36","content":"属性:→出口","note":""},{"date":"2025/11/20 11:26:14","content":"首次创建","note":"初始化估值模型"}]},{"code":"301061.SZ","name":"匠心家居","tags":"出口","profit":8.9,"lowPE":20,"highPE":30,"revenue":34,"lowPS":5,"highPS":8,"logs":[{"date":"2025/11/20 21:00:41","content":"属性:→出口","note":""},{"date":"2025/11/20 11:27:25","content":"首次创建","note":"初始化估值模型"}]},{"code":"002558.SZ","name":"巨人网络","tags":"游戏","profit":24,"lowPE":20,"highPE":40,"revenue":50,"lowPS":8.5,"highPS":16,"logs":[{"date":"2025/11/20 20:57:01","content":"属性:→游戏","note":""},{"date":"2025/11/20 11:28:26","content":"首次创建","note":"初始化估值模型"}]},{"code":"600563.SH","name":"法拉电子","tags":"元件","profit":13,"lowPE":17.5,"highPE":27,"revenue":58,"lowPS":4,"highPS":6,"logs":[{"date":"2025/11/20 20:56:00","content":"属性:→元件","note":""},{"date":"2025/11/20 11:29:35","content":"首次创建","note":"初始化估值模型"}]},{"code":"603596.SH","name":"伯特利","tags":"汽车零部件","profit":14.2,"lowPE":19,"highPE":27,"revenue":124,"lowPS":2.25,"highPS":3,"logs":[{"date":"2025/11/20 20:57:24","content":"属性:→汽车零部件","note":""},{"date":"2025/11/20 11:30:38","content":"首次创建","note":"初始化估值模型"}]},{"code":"301029.SZ","name":"怡合达","profit":5.6,"lowPE":28,"highPE":40,"revenue":30,"lowPS":5,"highPS":7,"logs":[{"date":"2025/11/20 11:31:28","content":"首次创建","note":"初始化估值模型"}]},{"code":"688052.SH","name":"纳芯微","tags":"半导体 模拟芯片","profit":0,"lowPE":0,"highPE":0,"revenue":30,"lowPS":8.5,"highPS":9.5,"logs":[{"date":"2025/11/20 21:11:49","content":"属性:→半导体 模拟芯片","note":""},{"date":"2025/11/20 11:32:23","content":"首次创建","note":"初始化估值模型"}]},{"code":"689009.SH","name":"九号公司-WD","tags":"出口 两轮车","profit":20,"lowPE":20,"highPE":27,"revenue":215,"lowPS":1.8,"highPS":2.4,"logs":[{"date":"2025/11/20 20:56:49","content":"属性:→出口 两轮车","note":""},{"date":"2025/11/20 11:33:24","content":"首次创建","note":"初始化估值模型"}]},{"code":"002472.SZ","name":"双环传动","tags":"汽车零部件 机器人","profit":12.5,"lowPE":24,"highPE":35,"revenue":100,"lowPS":2.5,"highPS":4.4,"logs":[{"date":"2025/11/20 20:58:56","content":"属性:→汽车零部件 机器人","note":""},{"date":"2025/11/20 11:34:20","content":"首次创建","note":"初始化估值模型"}]},{"code":"688208.SH","name":"道通科技","tags":"出口 充电桩","profit":9,"lowPE":20,"highPE":35,"revenue":50,"lowPS":4.77,"highPS":6,"logs":[{"date":"2025/11/20 20:56:25","content":"属性:→出口 充电桩","note":""},{"date":"2025/11/20 11:35:28","content":"首次创建","note":"初始化估值模型"}]},{"code":"603298.SH","name":"杭叉集团","tags":"出口 机器人","profit":22.5,"lowPE":15,"highPE":20,"revenue":180,"lowPS":1.4,"highPS":2,"logs":[{"date":"2025/11/20 20:58:35","content":"属性:→出口 机器人","note":""},{"date":"2025/11/20 11:36:22","content":"首次创建","note":"初始化估值模型"}]},{"code":"300777.SZ","name":"中简科技","profit":4.5,"lowPE":25,"highPE":45,"revenue":10,"lowPS":12,"highPS":18,"logs":[{"date":"2025/11/20 11:37:31","content":"首次创建","note":"初始化估值模型"}]},{"code":"601689.SH","name":"拓普集团","tags":"汽车零部件 机器人","profit":0,"lowPE":0,"highPE":0,"revenue":300,"lowPS":3.5,"highPS":4.7,"logs":[{"date":"2025/11/20 21:12:02","content":"属性:→汽车零部件 机器人","note":""},{"date":"2025/11/20 12:22:23","content":"首次创建","note":"初始化估值模型"}]},{"code":"688169.SH","name":"石头科技","tags":"出口 扫地机","profit":0,"lowPE":0,"highPE":0,"revenue":180,"lowPS":2.2,"highPS":3,"logs":[{"date":"2025/11/20 21:12:23","content":"属性:→出口 扫地机","note":""},{"date":"2025/11/20 14:00:12","content":"首次创建","note":"初始化估值模型"}]},{"code":"00388.HK","name":"香港交易所","profit":175,"lowPE":28,"highPE":40,"revenue":280,"lowPS":15,"highPS":22,"logs":[{"date":"2025/11/20 14:01:57","content":"首次创建","note":"初始化估值模型"}]},{"code":"603345.SH","name":"安井食品","tags":"消费","profit":14,"lowPE":16,"highPE":25,"revenue":157,"lowPS":1.5,"highPS":2,"logs":[{"date":"2025/11/20 20:59:34","content":"属性:→消费","note":""},{"date":"2025/11/20 14:03:54","content":"首次创建","note":"初始化估值模型"}]},{"code":"603486.SH","name":"科沃斯","tags":"出口 家电 扫地机","profit":21,"lowPE":20,"highPE":27,"revenue":225,"lowPS":1.6,"highPS":2.7,"logs":[{"date":"2025/11/20 21:03:09","content":"属性:→出口 家电 扫地机","note":""},{"date":"2025/11/20 14:05:21","content":"首次创建","note":"初始化估值模型"}]},{"code":"300124.SZ","name":"汇川技术","tags":"工控 自动化","profit":56,"lowPE":27,"highPE":40,"revenue":0,"lowPS":0,"highPS":0,"logs":[{"date":"2025/11/20 21:04:24","content":"属性:→工控 自动化","note":""},{"date":"2025/11/20 14:06:03","content":"首次创建","note":"初始化估值模型"}]},{"code":"300627.SZ","name":"华测导航","profit":7.6,"lowPE":30,"highPE":42,"revenue":41,"lowPS":5,"highPS":7,"logs":[{"date":"2025/11/20 14:06:59","content":"首次创建","note":"初始化估值模型"}]},{"code":"002920.SZ","name":"德赛西威","tags":"汽车零部件 智驾","profit":29,"lowPE":21,"highPE":30,"revenue":350,"lowPS":1.6,"highPS":2.4,"logs":[{"date":"2025/11/20 20:59:22","content":"属性:→汽车零部件 智驾","note":""},{"date":"2025/11/20 14:08:36","content":"首次创建","note":"初始化估值模型"}]},{"code":"002202.SZ","name":"金风科技","tags":"风电","profit":41,"lowPE":15,"highPE":20,"revenue":800,"lowPS":0.6,"highPS":1,"logs":[{"date":"2025/11/20 21:00:03","content":"属性:→风电","note":""},{"date":"2025/11/20 14:09:37","content":"首次创建","note":"初始化估值模型"}]},{"code":"002938.SZ","name":"鹏鼎控股","tags":"果链","profit":44,"lowPE":15,"highPE":30,"revenue":410,"lowPS":1.6,"highPS":3.2,"logs":[{"date":"2025/11/20 21:00:17","content":"属性:→果链","note":""},{"date":"2025/11/20 14:10:43","content":"首次创建","note":"初始化估值模型"}]},{"code":"002138.SZ","name":"顺络电子","tags":"元件","profit":11.2,"lowPE":24,"highPE":29,"revenue":73,"lowPS":3.5,"highPS":5,"logs":[{"date":"2025/11/20 21:05:24","content":"属性:→元件","note":""},{"date":"2025/11/20 14:11:47","content":"首次创建","note":"初始化估值模型"}]},{"code":"002475.SZ","name":"立讯精密","tags":"果链","profit":167,"lowPE":20,"highPE":30,"revenue":3300,"lowPS":1.1,"highPS":1.6,"logs":[{"date":"2025/11/20 21:01:17","content":"属性:→果链","note":""},{"date":"2025/11/20 14:12:53","content":"首次创建","note":"初始化估值模型"}]},{"code":"002126.SZ","name":"银轮股份","tags":"汽车零部件 机器人 液冷","profit":9.5,"lowPE":24,"highPE":35,"revenue":150,"lowPS":1.4,"highPS":2.2,"logs":[{"date":"2025/11/20 21:02:10","content":"属性:→汽车零部件 机器人 液冷","note":""},{"date":"2025/11/20 14:14:16","content":"首次创建","note":"Q3后下调25年业绩指引，10.5下调至9.5"}]},{"code":"300433.SZ","name":"蓝思科技","tags":"果链","profit":45,"lowPE":27,"highPE":37,"revenue":850,"lowPS":1.6,"highPS":2.1,"logs":[{"date":"2025/11/20 21:04:11","content":"属性:→果链","note":""},{"date":"2025/11/20 14:15:59","content":"首次创建","note":"初始化估值模型"}]},{"code":"000858.SZ","name":"五粮液","tags":"消费 白酒","profit":320,"lowPE":14,"highPE":18,"revenue":910,"lowPS":5,"highPS":6.5,"logs":[{"date":"2025/11/20 21:01:27","content":"属性:→消费 白酒","note":""},{"date":"2025/11/20 14:18:25","content":"首次创建","note":"初始化估值模型"}]},{"code":"000425.SZ","name":"徐工机械","tags":"工程机械 出口","profit":80,"lowPE":12,"highPE":20,"revenue":1000,"lowPS":0.93,"highPS":1.5,"logs":[{"date":"2025/11/20 20:59:46","content":"属性:→工程机械 出口","note":""},{"date":"2025/11/20 14:19:19","content":"首次创建","note":"初始化估值模型"}]},{"code":"688362.SH","name":"甬矽电子","tags":"半导体 高端封测","profit":1.9,"lowPE":60,"highPE":120,"revenue":45,"lowPS":2.7,"highPS":3.6,"logs":[{"date":"2025/11/20 17:45:44","content":"属性:→半导体 高端封测","note":""},{"date":"2025/11/20 14:20:22","content":"首次创建","note":"初始化估值模型"}]},{"code":"603501.SH","name":"豪威集团","tags":"半导体 消费电子","profit":44,"lowPE":32,"highPE":45,"revenue":305,"lowPS":5,"highPS":6,"logs":[{"date":"2025/11/20 20:57:36","content":"属性:→半导体 消费电子","note":""},{"date":"2025/11/20 14:21:47","content":"首次创建","note":"初始化估值模型"}]},{"code":"000333.SZ","name":"美的集团","tags":"消费 家电 红利","profit":490,"lowPE":12,"highPE":15,"revenue":4800,"lowPS":1.25,"highPS":1.5,"logs":[{"date":"2025/11/20 21:01:52","content":"属性:→消费 家电 红利","note":""},{"date":"2025/11/20 14:23:48","content":"PE:0-15→12-15","note":""},{"date":"2025/11/20 14:23:32","content":"净利:0→490; PE:0-0→0-15","note":""},{"date":"2025/11/20 14:22:57","content":"首次创建","note":"初始化估值模型"}]},{"code":"601799.SH","name":"星宇股份","tags":"汽车零部件","profit":16.5,"lowPE":20,"highPE":25,"revenue":160,"lowPS":2,"highPS":2.7,"logs":[{"date":"2025/11/20 21:04:34","content":"属性:→汽车零部件","note":""},{"date":"2025/11/20 14:24:54","content":"首次创建","note":"初始化估值模型"}]},{"code":"603129.SH","name":"春风动力","tags":"出口 摩托车","profit":18.6,"lowPE":19,"highPE":25,"revenue":205,"lowPS":1.6,"highPS":2.2,"logs":[{"date":"2025/11/20 21:03:23","content":"属性:→出口 摩托车","note":""},{"date":"2025/11/20 14:25:56","content":"首次创建","note":"初始化估值模型"}]},{"code":"688111.SH","name":"金山办公","tags":"AI 软件","profit":17,"lowPE":65,"highPE":100,"revenue":60,"lowPS":20,"highPS":30,"logs":[{"date":"2025/11/20 21:03:50","content":"属性:→AI 软件","note":""},{"date":"2025/11/20 14:27:25","content":"首次创建","note":"初始化估值模型"}]},{"code":"605499.SH","name":"东鹏饮料","tags":"消费","profit":45,"lowPE":30,"highPE":36,"revenue":215,"lowPS":7,"highPS":8,"logs":[{"date":"2025/11/20 21:02:21","content":"属性:→消费","note":""},{"date":"2025/11/20 14:30:19","content":"首次创建","note":"初始化估值模型"}]},{"code":"600031.SH","name":"三一重工","tags":"工程机械 出口","profit":90,"lowPE":19,"highPE":27,"revenue":903,"lowPS":1.8,"highPS":2.5,"logs":[{"date":"2025/11/20 21:00:29","content":"属性:→工程机械 出口","note":""},{"date":"2025/11/20 14:31:19","content":"首次创建","note":"初始化估值模型"}]},{"code":"601127.SH","name":"赛力斯","tags":"汽车 华为","profit":100,"lowPE":16,"highPE":23,"revenue":1800,"lowPS":1.2,"highPS":1.5,"logs":[{"date":"2025/11/20 21:06:44","content":"属性:→汽车 华为","note":""},{"date":"2025/11/20 14:32:58","content":"首次创建","note":"初始化估值模型"}]},{"code":"002444.SZ","name":"巨星科技","tags":"出口","profit":24,"lowPE":13.5,"highPE":18,"revenue":150,"lowPS":2,"highPS":2.8,"logs":[{"date":"2025/11/20 21:04:01","content":"属性:→出口","note":""},{"date":"2025/11/20 14:33:53","content":"首次创建","note":"初始化估值模型"}]},{"code":"603005.SH","name":"晶方科技","tags":"半导体","profit":3.9,"lowPE":45,"highPE":90,"revenue":15,"lowPS":11,"highPS":14,"logs":[{"date":"2025/11/20 17:37:30","content":"属性:→半导体","note":""},{"date":"2025/11/20 14:35:02","content":"首次创建","note":"初始化估值模型"}]},{"code":"603766.SH","name":"隆鑫通用","tags":"出口 摩托车","profit":18,"lowPE":13.3,"highPE":18,"revenue":195,"lowPS":1.25,"highPS":1.5,"logs":[{"date":"2025/11/20 21:02:36","content":"属性:→出口 摩托车","note":""},{"date":"2025/11/20 14:36:31","content":"首次创建","note":"初始化估值模型"}]},{"code":"600885.SH","name":"宏发股份","tags":"元件 继电器","profit":19,"lowPE":20,"highPE":27,"revenue":163,"lowPS":2.5,"highPS":3,"logs":[{"date":"2025/11/20 21:05:12","content":"属性:→元件 继电器","note":""},{"date":"2025/11/20 14:37:42","content":"首次创建","note":"初始化估值模型"}]},{"code":"600276.SH","name":"恒瑞医药","tags":"医药","profit":90,"lowPE":45,"highPE":63,"revenue":340,"lowPS":10,"highPS":14,"logs":[{"date":"2025/11/20 20:56:13","content":"属性:→医药","note":""},{"date":"2025/11/20 14:38:42","content":"首次创建","note":"初始化估值模型"}]},{"code":"605117.SH","name":"德业股份","tags":"出口 储能","profit":34,"lowPE":13,"highPE":25,"revenue":0,"lowPS":0,"highPS":0,"logs":[{"date":"2025/11/20 21:03:36","content":"属性:→出口 储能","note":""},{"date":"2025/11/20 14:39:30","content":"首次创建","note":"初始化估值模型"}]},{"code":"000651.SZ","name":"格力电器","tags":"消费 家电","profit":330,"lowPE":7,"highPE":8.3,"revenue":2000,"lowPS":1,"highPS":1.3,"logs":[{"date":"2025/11/20 21:02:48","content":"属性:→消费 家电","note":""},{"date":"2025/11/20 14:40:33","content":"首次创建","note":"初始化估值模型"}]},{"code":"002594.SZ","name":"比亚迪","tags":"汽车","profit":350,"lowPE":17.5,"highPE":25,"revenue":8200,"lowPS":1,"highPS":1.2,"logs":[{"date":"2025/11/20 21:07:10","content":"属性:→汽车","note":""},{"date":"2025/11/20 14:41:50","content":"首次创建","note":"初始化估值模型"}]},{"code":"600519.SH","name":"贵州茅台","tags":"消费 白酒","profit":940,"lowPE":19,"highPE":22,"revenue":1900,"lowPS":10,"highPS":12.5,"logs":[{"date":"2025/11/20 21:06:06","content":"属性:→消费 白酒","note":""},{"date":"2025/11/20 14:42:50","content":"首次创建","note":"初始化估值模型"}]},{"code":"002050.SZ","name":"三花智控","tags":"汽车零部件 机器人","profit":0,"lowPE":0,"highPE":0,"revenue":330,"lowPS":3,"highPS":6,"logs":[{"date":"2025/11/20 21:12:40","content":"属性:→汽车零部件 机器人","note":""},{"date":"2025/11/20 14:44:51","content":"净利:300→0; PE:3.5-4.66→0-0","note":""},{"date":"2025/11/20 14:44:00","content":"首次创建","note":"初始化估值模型"}]},{"code":"600114.SH","name":"东睦股份","tags":"消费电子","profit":5.2,"lowPE":22,"highPE":38,"revenue":61,"lowPS":2,"highPS":3,"logs":[{"date":"2025/11/20 21:04:47","content":"属性:→消费电子","note":""},{"date":"2025/11/20 14:45:57","content":"首次创建","note":"初始化估值模型"}]},{"code":"600584.SH","name":"长电科技","tags":"半导体 封测","profit":18,"lowPE":28,"highPE":40,"revenue":390,"lowPS":1.4,"highPS":2.2,"logs":[{"date":"2025/11/20 21:06:18","content":"属性:→半导体 封测","note":""},{"date":"2025/11/20 14:46:52","content":"首次创建","note":"初始化估值模型"}]},{"code":"688981.SH","name":"中芯国际","tags":"半导体","profit":0,"lowPE":0,"highPE":0,"revenue":680,"lowPS":10,"highPS":15,"logs":[{"date":"2025/11/20 21:12:50","content":"属性:→半导体","note":""},{"date":"2025/11/20 14:49:49","content":"首次创建","note":"初始化估值模型"}]},{"code":"000400.SZ","name":"许继电气","tags":"电力设备","profit":13.5,"lowPE":15,"highPE":25,"revenue":170,"lowPS":1.1,"highPS":1.75,"logs":[{"date":"2025/11/20 21:01:06","content":"属性:→电力设备","note":""},{"date":"2025/11/20 14:50:52","content":"首次创建","note":"初始化估值模型"}]},{"code":"002847.SZ","name":"盐津铺子","tags":"消费","profit":8,"lowPE":16,"highPE":30,"revenue":63.5,"lowPS":2,"highPS":3.5,"logs":[{"date":"2025/11/20 21:04:58","content":"属性:→消费","note":""},{"date":"2025/11/20 14:52:30","content":"首次创建","note":"初始化估值模型"}]},{"code":"688676.SH","name":"金盘科技","tags":"电器设备 出口","profit":7.3,"lowPE":25,"highPE":50,"revenue":88,"lowPS":2.2,"highPS":4.5,"logs":[{"date":"2025/11/20 21:07:00","content":"属性:→电器设备 出口","note":""},{"date":"2025/11/20 14:54:11","content":"首次创建","note":"初始化估值模型"}]},{"code":"603997.SH","name":"继峰股份","tags":"汽车零部件","profit":0,"lowPE":0,"highPE":0,"revenue":245,"lowPS":0.55,"highPS":0.72,"logs":[{"date":"2025/11/20 21:13:01","content":"属性:→汽车零部件","note":""},{"date":"2025/11/20 14:55:15","content":"首次创建","note":"初始化估值模型"}]},{"code":"002595.SZ","name":"豪迈科技","tags":"汽车零部件","profit":25,"lowPE":18,"highPE":22,"revenue":110,"lowPS":4,"highPS":5,"logs":[{"date":"2025/11/20 21:07:24","content":"属性:→汽车零部件","note":""},{"date":"2025/11/20 14:55:54","content":"首次创建","note":"初始化估值模型"}]},{"code":"00700.HK","name":"腾讯控股","tags":"互联网","profit":2400,"lowPE":18,"highPE":25,"revenue":8200,"lowPS":5.5,"highPS":7,"logs":[{"date":"2025/11/20 21:06:30","content":"属性:→互联网","note":""},{"date":"2025/11/20 14:56:36","content":"首次创建","note":"初始化估值模型"}]},{"code":"301345.SZ","name":"涛涛车业","tags":"出口","profit":7.5,"lowPE":18,"highPE":30,"revenue":40,"lowPS":2.5,"highPS":4.5,"logs":[{"date":"2025/11/20 21:07:34","content":"属性:→出口","note":""},{"date":"2025/11/20 14:57:19","content":"首次创建","note":"初始化估值模型"}]},{"code":"688518.SH","name":"联赢激光","tags":"光伏设备","profit":3,"lowPE":15,"highPE":25,"revenue":34,"lowPS":1.3,"highPS":2.6,"logs":[{"date":"2025/11/20 21:09:48","content":"属性:→光伏设备","note":""},{"date":"2025/11/20 14:58:20","content":"首次创建","note":"初始化估值模型"}]},{"code":"300476.SZ","name":"胜宏科技","tags":"AI","profit":0,"lowPE":0,"highPE":0,"revenue":300,"lowPS":4,"highPS":8,"logs":[{"date":"2025/11/20 21:13:12","content":"属性:→AI","note":""},{"date":"2025/11/20 14:59:35","content":"首次创建","note":"初始化估值模型"}]},{"code":"301656.SZ","name":"联合动力","tags":"汽车零部件","profit":0,"lowPE":0,"highPE":0,"revenue":215,"lowPS":1.5,"highPS":3,"logs":[{"date":"2025/11/20 21:13:22","content":"属性:→汽车零部件","note":""},{"date":"2025/11/20 15:00:10","content":"首次创建","note":"初始化估值模型"}]},{"code":"688305.SH","name":"科德数控","tags":"国产替代 数控机床","profit":1.4,"lowPE":36,"highPE":55,"revenue":7,"lowPS":8.5,"highPS":12,"logs":[{"date":"2025/11/20 21:08:27","content":"属性:→国产替代 数控机床","note":""},{"date":"2025/11/20 15:01:04","content":"首次创建","note":"初始化估值模型"}]},{"code":"300308.SZ","name":"中际旭创","tags":"AI 光模块","profit":105,"lowPE":30,"highPE":50,"revenue":380,"lowPS":6,"highPS":10,"logs":[{"date":"2025/11/20 21:08:40","content":"属性:→AI 光模块","note":""},{"date":"2025/11/20 15:01:50","content":"首次创建","note":"初始化估值模型"}]},{"code":"688411.SH","name":"海博思创","tags":"储能","profit":25,"lowPE":20,"highPE":30,"revenue":360,"lowPS":1,"highPS":1.5,"logs":[{"date":"2025/11/20 20:58:16","content":"属性:→储能","note":""},{"date":"2025/11/20 15:06:44","content":"净利:35→25","note":""},{"date":"2025/11/20 15:05:34","content":"首次创建","note":"初始化估值模型"}]},{"code":"300750.SZ","name":"宁德时代","tags":"电池","profit":680,"lowPE":18,"highPE":25,"revenue":0,"lowPS":0,"highPS":0,"logs":[{"date":"2025/11/20 21:08:08","content":"属性:→电池","note":""},{"date":"2025/11/20 15:07:47","content":"首次创建","note":"初始化估值模型"}]},{"code":"002371.SZ","name":"北方华创","tags":"半导体","profit":0,"lowPE":0,"highPE":0,"revenue":390,"lowPS":5.5,"highPS":7.5,"logs":[{"date":"2025/11/20 21:13:31","content":"属性:→半导体","note":""},{"date":"2025/11/20 15:08:22","content":"首次创建","note":"初始化估值模型"}]},{"code":"688361.SH","name":"中科飞测","tags":"半导体","profit":0,"lowPE":0,"highPE":0,"revenue":21,"lowPS":12.5,"highPS":20,"logs":[{"date":"2025/11/20 21:13:43","content":"属性:→半导体","note":""},{"date":"2025/11/20 15:09:34","content":"首次创建","note":"初始化估值模型"}]},{"code":"002600.SZ","name":"领益智造","tags":"果链","profit":25,"lowPE":25,"highPE":37,"revenue":500,"lowPS":1.3,"highPS":1.8,"logs":[{"date":"2025/11/20 21:08:53","content":"属性:→果链","note":""},{"date":"2025/11/20 15:12:02","content":"首次创建","note":"初始化估值模型"}]},{"code":"DDOG","name":"Datadog Inc-A","tags":"美股 软件","profit":0,"lowPE":0,"highPE":0,"revenue":34,"lowPS":13.5,"highPS":17,"logs":[{"date":"2025/11/20 21:13:54","content":"属性:→美股 软件","note":""},{"date":"2025/11/20 15:12:50","content":"首次创建","note":"初始化估值模型"}]},{"code":"603179.SH","name":"新泉股份","tags":"汽车零部件","profit":13.2,"lowPE":16,"highPE":22,"revenue":170,"lowPS":1.2,"highPS":1.8,"logs":[{"date":"2025/11/20 21:09:17","content":"属性:→汽车零部件","note":""},{"date":"2025/11/20 15:13:56","content":"首次创建","note":"初始化估值模型"}]},{"code":"300274.SZ","name":"阳光电源","tags":"储能","profit":145,"lowPE":13,"highPE":22,"revenue":970,"lowPS":1.75,"highPS":3.4,"logs":[{"date":"2025/11/20 21:10:00","content":"属性:→储能","note":""},{"date":"2025/11/20 15:15:04","content":"首次创建","note":"初始化估值模型"}]},{"code":"688072.SH","name":"拓荆科技","tags":"半导体","profit":10,"lowPE":43,"highPE":70,"revenue":57,"lowPS":8,"highPS":12,"logs":[{"date":"2025/11/20 21:10:28","content":"属性:→半导体","note":""},{"date":"2025/11/20 15:16:19","content":"首次创建","note":"初始化估值模型"}]},{"code":"603986.SH","name":"兆易创新","tags":"半导体 存储","profit":15,"lowPE":50,"highPE":80,"revenue":95,"lowPS":8,"highPS":11,"logs":[{"date":"2025/11/20 21:09:32","content":"属性:→半导体 存储","note":""},{"date":"2025/11/20 15:17:12","content":"首次创建","note":"初始化估值模型"}]},{"code":"688698.SH","name":"伟创电气","tags":"工业控制 机器人","profit":2.8,"lowPE":25,"highPE":35,"revenue":20,"lowPS":4,"highPS":6,"logs":[{"date":"2025/11/20 21:10:56","content":"属性:→工业控制 机器人","note":""},{"date":"2025/11/20 15:20:29","content":"首次创建","note":"初始化估值模型"}]},{"code":"002028.SZ","name":"思源电气","tags":"电力设备 出口","profit":30,"lowPE":23,"highPE":30,"revenue":195,"lowPS":3.1,"highPS":4,"logs":[{"date":"2025/11/20 21:10:14","content":"属性:→电力设备 出口","note":""},{"date":"2025/11/20 15:22:24","content":"首次创建","note":"初始化估值模型"}]},{"code":"601138.SH","name":"工业富联","tags":"果链 AI","profit":335,"lowPE":15,"highPE":25,"revenue":9200,"lowPS":0.6,"highPS":1,"logs":[{"date":"2025/11/20 21:10:41","content":"属性:→果链 AI","note":""},{"date":"2025/11/20 15:23:21","content":"首次创建","note":"初始化估值模型"}]},{"code":"002837.SZ","name":"英维克","tags":"液冷","profit":6.3,"lowPE":38,"highPE":65,"revenue":65,"lowPS":4,"highPS":7,"logs":[{"date":"2025/11/20 21:11:17","content":"属性:→液冷","note":""},{"date":"2025/11/20 15:23:58","content":"首次创建","note":"初始化估值模型"}]},{"code":"001309.SZ","name":"德明利","tags":"存储 阿里概念","profit":3.6,"lowPE":35,"highPE":60,"revenue":85,"lowPS":2.54,"highPS":3.2,"logs":[{"date":"2025/11/20 21:11:34","content":"属性:→存储 阿里概念","note":""},{"date":"2025/11/20 15:24:43","content":"首次创建","note":"初始化估值模型"}]},{"code":"NVDA","name":"英伟达","tags":"AI","profit":1700,"lowPE":35,"highPE":70,"revenue":3000,"lowPS":20,"highPS":40,"logs":[{"date":"2025/11/20 17:12:22","content":"属性:→AI","note":""},{"date":"2025/11/20 15:30:06","content":"净利:0→1700; PE:0-0→35-70","note":""},{"date":"2025/11/20 15:28:12","content":"首次创建","note":"初始化估值模型"}]}];
+
+        let stocks = JSON.parse(localStorage.getItem('valuationStocks'));
+        if (!stocks || stocks.length === 0) {
+            stocks = PRELOADED_DATA;
+            localStorage.setItem('valuationStocks', JSON.stringify(stocks));
+        }
+
+        let viewSettings = JSON.parse(localStorage.getItem('viewSettings')) || { showCode: true, showTags: true };
+        let intervalId = null;
+        let sortState = { key: 'pe_up', dir: 'desc' };
+        let isPanelOpen = false;
+        let pendingDeleteCode = null;
+        let cachedMarketData = {};
+        let selectedCodes = new Set();
+        let columnFilters = {}; 
+        let onlySelectedMode = false;
+        let currentVisibleStocks = [];
+
+        // 初始化按钮状态
+        updateViewButtons();
+
+        function getSecid(code) {
+            if (code.endsWith('.SH')) return `1.${code.replace('.SH','')}`;
+            if (code.endsWith('.SZ')) return `0.${code.replace('.SZ','')}`;
+            if (code.endsWith('.HK')) return `116.${code.replace('.HK','')}`;
+            return `105.${code}`;
+        }
+
+        async function updateTable() {
+            const container = document.getElementById('result');
+            const statusMsg = document.getElementById('status-msg');
+            
+            if (stocks.length === 0) {
+                container.innerHTML = '<div style="padding:40px;text-align:center;color:#999;border:2px dashed #eee;border-radius:10px;">📭 列表为空，请点击上方 "录入/管理" 添加股票</div>';
+                statusMsg.innerText = ""; return;
+            }
+
+            const secids = stocks.map(s => getSecid(s.code)).join(',');
+            const url = `https://push2.eastmoney.com/api/qt/ulist.np/get?secids=${secids}&fields=f12,f14,f2,f3,f18,f20&invt=2&fltt=2&_=${Date.now()}`;
+
+            try {
+                const res = await fetch(url);
+                const json = await res.json();
+                if (json?.data?.diff) {
+                    const list = Array.isArray(json.data.diff) ? json.data.diff : Object.values(json.data.diff);
+                    list.forEach(item => { cachedMarketData[item.f12] = item; });
+                    statusMsg.innerHTML = `● 数据已更新 ${new Date().toLocaleTimeString()}`;
+                    statusMsg.style.color = "#007bff";
+                }
+            } catch (e) { statusMsg.innerHTML = `<span style="color:orange">⚠️ 网络波动，显示缓存</span>`; }
+
+            const data = stocks.map(s => {
+                const rawCode = s.code.split('.')[0];
+                const mItem = cachedMarketData[rawCode];
+                let market = { cap: 0, chg: 0, valid: false };
+                if (mItem) {
+                    let p = parseFloat(mItem.f2); 
+                    let last = parseFloat(mItem.f18);
+                    let mCap = parseFloat(mItem.f20);
+                    let chgPct = parseFloat(mItem.f3);
+                    let validPrice = (p > 0) ? p : last;
+                    let validCap = (mCap > 0) ? mCap : 0;
+                    market.cap = validCap / 100000000; 
+                    if (!isNaN(chgPct)) market.chg = chgPct.toFixed(2); else market.chg = "0.00";
+                    market.valid = true;
+                }
+                let peRes = { down: '-', up: '-' };
+                let psRes = { down: '-', up: '-' };
+                if (market.valid && market.cap > 0) {
+                    if (s.profit && s.lowPE) {
+                        peRes.down = ((s.profit * s.lowPE / market.cap - 1) * 100).toFixed(2);
+                        peRes.up = ((s.profit * s.highPE - market.cap) / market.cap * 100).toFixed(2);
+                    }
+                    if (s.revenue && s.lowPS) {
+                        psRes.down = ((s.revenue * s.lowPS / market.cap - 1) * 100).toFixed(2);
+                        psRes.up = ((s.revenue * s.highPS - market.cap) / market.cap * 100).toFixed(2);
+                    }
+                }
+                return { ...s, ...market, peRes, psRes };
+            });
+
+            renderTable(data);
+            updateCompareBtn();
+        }
+
+        function renderTable(data) {
+            const container = document.getElementById('result');
+            
+            let filteredData = data.filter(item => {
+                if (onlySelectedMode && !selectedCodes.has(item.code)) return false;
+                const searchKey = document.getElementById('findInput').value.trim().toUpperCase();
+                if (searchKey && !item.code.includes(searchKey) && !item.name.includes(searchKey)) return false;
+
+                for (let colKey in columnFilters) {
+                    const rule = columnFilters[colKey];
+                    if (!rule) continue;
+                    if (rule.type === 'text') {
+                        const cellVal = (item[colKey] || "").toLowerCase();
+                        if (!cellVal.includes(rule.val.toLowerCase())) return false;
+                    } else {
+                        let val = -999999;
+                        if (colKey === 'pe_down') val = parseFloat(item.peRes.down);
+                        else if (colKey === 'pe_up') val = parseFloat(item.peRes.up);
+                        else if (colKey === 'ps_down') val = parseFloat(item.psRes.down);
+                        else if (colKey === 'ps_up') val = parseFloat(item.psRes.up);
+                        if (isNaN(val)) return false;
+                        const limit = rule.val;
+                        switch(rule.op) {
+                            case '>': if (!(val > limit)) return false; break;
+                            case '<': if (!(val < limit)) return false; break;
+                            case '>=': if (!(val >= limit)) return false; break;
+                            case '<=': if (!(val <= limit)) return false; break;
+                            case '=': if (Math.abs(val - limit) > 0.1) return false; break;
+                        }
+                    }
+                }
+                return true;
+            });
+            
+            currentVisibleStocks = filteredData;
+
+            if (sortState.key) {
+                filteredData.sort((a, b) => {
+                    const getVal = (obj, k) => {
+                        if(k=='chg') return parseFloat(obj.chg);
+                        if(k.includes('pe')) return parseFloat(obj.peRes[k.split('_')[1]]) || -9999;
+                        if(k.includes('ps')) return parseFloat(obj.psRes[k.split('_')[1]]) || -9999;
+                        return 0;
+                    };
+                    return sortState.dir === 'desc' ? getVal(b, sortState.key) - getVal(a, sortState.key) : getVal(a, sortState.key) - getVal(b, sortState.key);
+                });
+            }
+
+            const getFilterIcon = (key) => {
+                const isActive = columnFilters[key] != null;
+                const iconClass = isActive ? 'filter-icon filter-active' : 'filter-icon';
+                const symbol = isActive ? '▼' : '▽';
+                return `<span class="${iconClass}" onclick="event.stopPropagation(); openFilterMenu('${key}', event)">${symbol}</span>`;
+            };
+
+            const styleCode = viewSettings.showCode ? '' : 'col-hidden';
+            const styleTags = viewSettings.showTags ? '' : 'col-hidden';
+            const isAllVisibleSelected = filteredData.length > 0 && filteredData.every(item => selectedCodes.has(item.code));
+
+            let html = `
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width:30px;">选</th>
+                        <th class="th-basic" colspan="${2 + (viewSettings.showCode?1:0) + (viewSettings.showTags?1:0)}">📊 基础行情</th>
+                        <th class="th-pe" colspan="4">💰 PE 估值模型 (利润)</th>
+                        <th class="th-ps" colspan="4">🚀 PS 估值模型 (营收)</th>
+                        <th class="th-basic">⚙️ 操作</th>
+                    </tr>
+                    <tr>
+                        <th><input type="checkbox" id="header-checkbox" onclick="toggleSelectAll()" ${isAllVisibleSelected ? 'checked' : ''}></th>
+                        <th>名称</th>
+                        <th class="${styleCode}">代码</th>
+                        <th class="${styleTags}" style="max-width:150px;">属性 ${getFilterIcon('tags')}</th>
+                        <th onclick="setSort('chg')" class="sortable">涨跌 <span class="${getSortClass('chg')}">${getSortIcon('chg')}</span></th>
+                        <th>市值(亿)</th>
+                        <th>预期净利</th>
+                        <th>合理PE</th>
+                        <th onclick="setSort('pe_down')" class="sortable">下行% ${getFilterIcon('pe_down')} <span class="${getSortClass('pe_down')}">${getSortIcon('pe_down')}</span></th>
+                        <th onclick="setSort('pe_up')" class="sortable">上行% ${getFilterIcon('pe_up')} <span class="${getSortClass('pe_up')}">${getSortIcon('pe_up')}</span></th>
+                        <th>预期营收</th>
+                        <th>合理PS</th>
+                        <th onclick="setSort('ps_down')" class="sortable">下行% ${getFilterIcon('ps_down')} <span class="${getSortClass('ps_down')}">${getSortIcon('ps_down')}</span></th>
+                        <th onclick="setSort('ps_up')" class="sortable">上行% ${getFilterIcon('ps_up')} <span class="${getSortClass('ps_up')}">${getSortIcon('ps_up')}</span></th>
+                        <th>功能</th>
+                    </tr>
+                </thead>
+                <tbody>
+            `;
+
+            if(filteredData.length === 0) {
+                html += `<tr><td colspan="15" style="padding:30px;text-align:center;color:#999;">没有符合条件的股票</td></tr>`;
+            } else {
+                filteredData.forEach(item => {
+                    const fmtPct = (v) => {
+                        if(v==='-') return '<span class="data-empty">-</span>';
+                        const val = parseFloat(v);
+                        const color = val >= 0 ? '#d32f2f' : '#2e7d32';
+                        const weight = (val > 30) ? '800' : 'bold';
+                        return `<span style="color:${color}; font-weight:${weight}">${v}%</span>`;
+                    };
+
+                    let tagsHtml = '';
+                    if(item.tags) tagsHtml = item.tags.split(' ').map(t => t.trim()).filter(t=>t).map(t => `<span class="tag-badge">${t}</span>`).join('');
+
+                    const rowId = 'row-' + item.code.replace(/\./g, '-');
+                    const isChecked = selectedCodes.has(item.code) ? 'checked' : '';
+                    const rowClass = isChecked ? 'row-selected' : '';
+
+                    html += `
+                        <tr id="${rowId}" class="${rowClass}">
+                            <td><input type="checkbox" class="row-checkbox" data-code="${item.code}" ${isChecked} onclick="toggleSelectRow('${item.code}', this)"></td>
+                            <td style="font-weight:600; color:#343a40;">${item.name}</td>
+                            <td class="${styleCode}" style="color:#868e96; font-size:12px;">${item.code}</td>
+                            <td class="${styleTags}" style="text-align:left;">${tagsHtml}</td>
+                            <td style="font-weight:bold; color:${parseFloat(item.chg)>=0 ? '#e03131':'#099268'}">${item.chg}%</td>
+                            <td style="font-family:monospace; font-size:13px;">${item.cap ? item.cap.toFixed(2) : '-'}</td>
+                            <td>${item.profit || '<span class="data-empty">-</span>'}</td>
+                            <td style="font-size:12px;">${item.lowPE||'-'}~${item.highPE||'-'}</td>
+                            <td>${fmtPct(item.peRes.down)}</td>
+                            <td>${fmtPct(item.peRes.up)}</td>
+                            <td>${item.revenue || '<span class="data-empty">-</span>'}</td>
+                            <td style="font-size:12px;">${item.lowPS||'-'}~${item.highPS||'-'}</td>
+                            <td>${fmtPct(item.psRes.down)}</td>
+                            <td>${fmtPct(item.psRes.up)}</td>
+                            <td style="white-space:nowrap;">
+                                <button class="btn-log" onclick="showLogs('${item.code}')" title="日志">📝</button>
+                                <button class="btn-edit" onclick="editStock('${item.code}')" title="修改">✏️</button>
+                                <button class="btn-delete" onclick="openDeleteModal('${item.code}')" title="删除">✕</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+        function toggleSelectRow(code, checkbox) { if (checkbox.checked) selectedCodes.add(code); else selectedCodes.delete(code); updateTable(); }
+        
+        function toggleSelectAll() {
+            if (currentVisibleStocks.length === 0) return;
+            const allSelected = currentVisibleStocks.every(item => selectedCodes.has(item.code));
+            if (allSelected) currentVisibleStocks.forEach(item => selectedCodes.delete(item.code));
+            else currentVisibleStocks.forEach(item => selectedCodes.add(item.code));
+            updateTable();
+        }
+
+        function clearAllFilters() {
+            columnFilters = {}; 
+            document.getElementById('findInput').value = ''; 
+            if (onlySelectedMode) toggleShowSelected(); 
+            updateTable();
+        }
+
+        function toggleShowSelected() {
+            onlySelectedMode = !onlySelectedMode;
+            const btn = document.getElementById('btn-compare');
+            if (onlySelectedMode) { btn.classList.add('active'); btn.innerText = "🔙 显示全部"; }
+            else { btn.classList.remove('active'); updateCompareBtn(); }
+            updateTable();
+        }
+        function updateCompareBtn() { if (!onlySelectedMode) document.getElementById('btn-compare').innerText = `📊 只看选中 (${selectedCodes.size})`; }
+
+        function toggleColumn(colType) {
+            if(colType === 'code') viewSettings.showCode = !viewSettings.showCode;
+            if(colType === 'tags') viewSettings.showTags = !viewSettings.showTags;
+            localStorage.setItem('viewSettings', JSON.stringify(viewSettings));
+            updateViewButtons(); updateTable();
+        }
+        function updateViewButtons() {
+            const btnCode = document.getElementById('btn-toggle-code');
+            const btnTags = document.getElementById('btn-toggle-tags');
+            if(viewSettings.showCode) btnCode.classList.add('active'); else btnCode.classList.remove('active');
+            if(viewSettings.showTags) btnTags.classList.add('active'); else btnTags.classList.remove('active');
+        }
+
+        function openFilterMenu(colKey, event) {
+            const menu = document.getElementById('filter-menu');
+            const input = document.getElementById('filter-val');
+            const op = document.getElementById('filter-op');
+            const numRow = document.getElementById('filter-row-numeric');
+            const textRow = document.getElementById('filter-row-text');
+            const title = document.getElementById('filter-title');
+            const isText = colKey === 'tags';
+            numRow.style.display = isText ? 'none' : 'flex';
+            textRow.style.display = isText ? 'flex' : 'none';
+            title.innerText = isText ? "筛选包含" : "数值筛选";
+            const rect = event.target.getBoundingClientRect();
+            menu.style.top = (window.scrollY + rect.bottom + 5) + 'px';
+            menu.style.left = Math.min(window.innerWidth - 230, (window.scrollX + rect.left - 100)) + 'px';
+            menu.style.display = 'block';
+            document.getElementById('filter-col-key').value = colKey;
+            const existing = columnFilters[colKey];
+            if (isText) {
+                document.getElementById('filter-text-val').value = existing ? existing.val : "";
+                document.getElementById('filter-text-val').focus();
+            } else {
+                if (existing) { op.value = existing.op; input.value = existing.val; } else { op.value = ">"; input.value = ""; }
+                input.focus();
+            }
+            setTimeout(() => { document.addEventListener('click', closeFilterMenuOutside); }, 0);
+        }
+        function closeFilterMenuOutside(e) { const menu = document.getElementById('filter-menu'); if (!menu.contains(e.target)) { menu.style.display = 'none'; document.removeEventListener('click', closeFilterMenuOutside); } }
+        function confirmFilter() {
+            const colKey = document.getElementById('filter-col-key').value;
+            const isText = colKey === 'tags';
+            if (isText) {
+                const val = document.getElementById('filter-text-val').value.trim();
+                if (val === "") delete columnFilters[colKey]; else columnFilters[colKey] = { type: 'text', val: val };
+            } else {
+                const op = document.getElementById('filter-op').value;
+                const valStr = document.getElementById('filter-val').value;
+                if (valStr === "") delete columnFilters[colKey]; else columnFilters[colKey] = { type: 'num', op: op, val: parseFloat(valStr) };
+            }
+            document.getElementById('filter-menu').style.display = 'none'; document.removeEventListener('click', closeFilterMenuOutside); updateTable();
+        }
+        function clearCurrentFilter() { const colKey = document.getElementById('filter-col-key').value; delete columnFilters[colKey]; document.getElementById('filter-menu').style.display = 'none'; document.removeEventListener('click', closeFilterMenuOutside); updateTable(); }
+        function getColName(key) { if(key=='pe_up') return 'PE上行'; if(key=='pe_down') return 'PE下行'; if(key=='ps_up') return 'PS上行'; if(key=='ps_down') return 'PS下行'; return key; }
+
+        function findInList() { const k = document.getElementById('findInput').value.trim().toUpperCase(); if (!k) { updateTable(); return; } const t = stocks.find(s => s.code.includes(k) || s.name.includes(k)); if (t) { const r = document.getElementById('row-' + t.code.replace(/\./g, '-')); if (r) { r.scrollIntoView({ behavior: 'smooth', block: 'center' }); r.classList.remove('row-highlight'); void r.offsetWidth; r.classList.add('row-highlight'); } else alert("未显示(被筛选隐藏)"); } else alert("未找到"); }
+        function saveStock() { const c = document.getElementById('inCode').value.trim(); const n = document.getElementById('inName').value.trim(); const nt = document.getElementById('inNote').value.trim(); const tags = document.getElementById('inTags').value.trim(); const p = parseFloat(document.getElementById('inProfit').value)||0; const lpe = parseFloat(document.getElementById('inLowPE').value)||0; const hpe = parseFloat(document.getElementById('inHighPE').value)||0; const rev = parseFloat(document.getElementById('inRevenue').value)||0; const lps = parseFloat(document.getElementById('inLowPS').value)||0; const hps = parseFloat(document.getElementById('inHighPS').value)||0; if (!c || !n) { alert("代码/名称必填"); return; } const now = new Date().toLocaleString('zh-CN', { hour12: false }); let ch = []; const sd = { code: c, name: n, tags, profit: p, lowPE: lpe, highPE: hpe, revenue: rev, lowPS: lps, highPS: hps, logs: [] }; const idx = stocks.findIndex(s => s.code === c); if (idx >= 0) { const old = stocks[idx]; sd.logs = old.logs || []; if(old.profit!==p) ch.push(`净利:${old.profit}→${p}`); if((old.tags||"")!==tags) ch.push(`属性:${old.tags||""}→${tags}`); if (ch.length > 0 || nt) { sd.logs.unshift({ date: now, content: ch.join('; '), note: nt }); } stocks[idx] = sd; } else { newLog = { date: now, content: "首次创建", note: note || "初始化" }; sd.logs.push(newLog); stocks.push(sd); } saveStorage(); clearInput(); updateTable(); }
+        
+        window.openDeleteModal = function(c) { pendingDeleteCode = c; document.getElementById('delete-msg').innerText=`确认不再跟踪 ${c}?`; document.getElementById('delete-modal').style.display='flex'; };
+        window.confirmDeleteAction = function() { if(pendingDeleteCode) { stocks=stocks.filter(s=>s.code!==pendingDeleteCode); selectedCodes.delete(pendingDeleteCode); saveStorage(); updateTable(); } closeDeleteModal(); };
+        window.closeDeleteModal = function() { document.getElementById('delete-modal').style.display='none'; };
+        window.exportData = function() { navigator.clipboard.writeText(JSON.stringify(stocks)).then(()=>alert("已复制"), ()=>prompt("复制:", JSON.stringify(stocks))); };
+        window.importData = function() { document.getElementById('import-modal').style.display='flex'; };
+        window.closeImportModal = function() { document.getElementById('import-modal').style.display='none'; };
+        window.execImport = function() { try { const str = document.getElementById('import-area').value; const parsed = JSON.parse(str); if(Array.isArray(parsed)) { let ad=0,up=0; parsed.forEach(n => { const idx = stocks.findIndex(s => s.code === n.code); if(idx > -1) { stocks[idx] = { ...stocks[idx], ...n }; up++; } else { stocks.push(n); ad++; } }); saveStorage(); updateTable(); closeImportModal(); alert(`完成: 新增${ad}, 更新${up}`); } else alert("格式错误"); } catch(e) { alert("解析失败"); } };
+        
+        function searchStockCode() { const name = document.getElementById('inName').value.trim(); if(!name) return; const btn = document.querySelector('.btn-search'); btn.innerText='...'; const sc = document.createElement('script'); window.handleSearch = function(d) { btn.innerText='🔍'; if(d?.QuotationCodeTable?.Data?.length) { const r = d.QuotationCodeTable.Data[0]; let suf = r.MarketType=="1"?".SH":(r.MarketType=="2"?".SZ":(r.Code.length===5?".HK":"")); if(!suf && r.Code.length===6) suf = r.Code.startsWith('6')?".SH":".SZ"; document.getElementById('inCode').value = r.Code+suf; document.getElementById('inName').value = r.Name; } else { alert("未找到"); } sc.remove(); }; sc.src = `https://searchapi.eastmoney.com/api/suggest/get?input=${encodeURIComponent(name)}&type=14&token=D43BF722C8E33BD5D50F639205545E43&cb=handleSearch`; document.body.appendChild(sc); }
+        function toggleInputPanel() { const c=document.getElementById('input-container'); isPanelOpen=!isPanelOpen; c.style.display=isPanelOpen?'block':'none'; document.getElementById('toggle-btn').innerText=isPanelOpen?'🔼 收起':'➕ 录入/管理 (展开)'; }
+        function clearInput() { document.querySelectorAll('#input-panel input').forEach(i=>i.value=''); document.getElementById('editCode').value=''; document.getElementById('btn-save-text').innerText="💾 保存"; }
+        function editStock(c) { toggleInputPanel(); isPanelOpen=true; document.getElementById('input-container').style.display='block'; const s=stocks.find(i=>i.code===c); if(!s)return; document.getElementById('inName').value=s.name; document.getElementById('inCode').value=s.code; document.getElementById('inTags').value=s.tags||''; document.getElementById('inProfit').value=s.profit||''; document.getElementById('inLowPE').value=s.lowPE||''; document.getElementById('inHighPE').value=s.highPE||''; document.getElementById('inRevenue').value=s.revenue||''; document.getElementById('inLowPS').value=s.lowPS||''; document.getElementById('inHighPS').value=s.highPS||''; document.getElementById('btn-save-text').innerText="💾 确认修改"; }
+        function showLogs(c) { const s=stocks.find(i=>i.code===c); if(!s)return; document.getElementById('modal-title').innerText=`${s.name} 日志`; document.getElementById('modal-body').innerHTML = s.logs?.map(l=>`<div class="log-entry"><div class="log-time">${l.date}</div><div>${l.content}</div></div>`).join('')||'无记录'; document.getElementById('log-modal').style.display='flex'; }
+        function closeLogModal() { document.getElementById('log-modal').style.display='none'; }
+        function startRealtime() { if(!intervalId) { updateTable(); intervalId=setInterval(updateTable, 5000); document.getElementById('status-msg').innerText="● 实时中"; } }
+        function stopRealtime() { clearInterval(intervalId); intervalId=null; document.getElementById('status-msg').innerText="⏸ 暂停"; }
+        function setSort(k) { if(sortState.key===k) sortState.dir=sortState.dir==='desc'?'asc':'desc'; else {sortState.key=k; sortState.dir='desc';} updateTable(); }
+        function getSortIcon(k) { return sortState.key!==k?'⇅':(sortState.dir==='desc'?'⬇':'⬆'); }
+        function getSortClass(k) { return sortState.key===k?'sort-icon sort-active':'sort-icon'; }
+        function saveStorage() { localStorage.setItem('valuationStocks', JSON.stringify(stocks)); }
+        
+        window.onclick = function(e) { if(e.target.className==='modal') e.target.style.display='none'; }
+
+        updateTable();
+    </script>
+</body>
+</html>
