@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>股票估值系统 (极速同步版)</title>
+    <title>股票估值系统 (双行表头锁定版)</title>
     <style>
+        /* === 全局布局 === */
         body { font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif; padding: 15px; max-width: 100%; margin: 0 auto; background-color: #f4f6f9; font-size: 13px; color: #333; height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; }
         
-        /* === 头部和控制栏 === */
         .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-shrink: 0; }
         h2 { margin: 0; border-left: 5px solid #007bff; padding-left: 10px; color: #2c3e50; font-size: 18px; }
 
@@ -18,7 +18,7 @@
         }
         .divider { border-left: 1px solid #eee; height: 20px; margin: 0 2px; }
 
-        /* === 录入面板 (浮动层) === */
+        /* === 录入面板 === */
         #input-container { background: #fff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); overflow: hidden; transition: all 0.3s ease; margin-bottom: 10px; display: none; flex-shrink: 0; border: 1px solid #e0e0e0; }
         #input-panel { padding: 15px; border-top: 3px solid #007bff; }
         .input-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; margin-bottom: 10px; }
@@ -54,70 +54,91 @@
         .btn-confirm-del { background-color: #dc3545; color: white; font-size: 14px; padding: 8px 25px; }
         .btn-cancel { background-color: #6c757d; color: white; font-size: 14px; padding: 8px 25px; }
 
-        /* === 核心表格区域 (含锁定逻辑) === */
+        /* === 表格容器 === */
         #result { 
             background: #fff; 
             border-radius: 8px; 
             box-shadow: 0 2px 8px rgba(0,0,0,0.05); 
             border: 1px solid #e9ecef; 
-            
-            /* 关键：让表格区域独立滚动，并自适应剩余高度 */
             flex-grow: 1;
-            overflow: auto; 
+            overflow: auto; /* 独立滚动 */
             position: relative;
         }
 
         table { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 1300px; }
         
-        th, td { padding: 8px 10px; text-align: center; border-bottom: 1px solid #ebebeb; border-right: 1px solid #ebebeb; white-space: nowrap; }
-        
-        /* === 表头锁定 (Sticky Top) === */
+        /* 单元格基础 */
+        th, td { 
+            padding: 8px 10px; 
+            text-align: center; 
+            border-bottom: 1px solid #ebebeb; 
+            border-right: 1px solid #ebebeb; 
+            white-space: nowrap; 
+            height: 24px; /* 固定高度有助于计算锁定位置 */
+        }
+
+        /* =========================================
+           ★★★ 核心：双重锁定逻辑 (Sticky) ★★★ 
+           ========================================= */
+
+        /* 1. 所有表头基础样式 */
         th { 
             background-color: #f1f3f5; 
             color: #495057; 
             font-weight: 700; 
             user-select: none; 
             position: sticky; 
-            top: 0; 
             z-index: 20; 
             border-top: 1px solid #ddd;
-            /* 增加阴影增加层次感 */
             box-shadow: 0 1px 0 #dcdcdc;
         }
-        th.sortable:hover { background-color: #e2e6ea; cursor: pointer; color: #007bff; }
 
-        /* === 第一列 (名称) 锁定 (Sticky Left) === */
+        /* 2. 第一行表头 (大标题: 基础行情、PE...) 锁定在最顶部 */
+        thead tr:nth-child(1) th {
+            top: 0;
+        }
+
+        /* 3. 第二行表头 (具体列名: 市值、净利...) 锁定在第一行下面 */
+        /* 这里的 41px 是第一行的大致高度 (padding + border + font) */
+        thead tr:nth-child(2) th {
+            top: 41px; 
+        }
+
+        /* 4. 左侧“名称”列锁定 (第一列) */
         
-        /* 1. 表体第一列 (td) */
+        /* (A) 表体内容的第一列 */
         tbody td:first-child {
             position: sticky;
             left: 0;
-            z-index: 15; /* 层级高于普通td(0)，低于表头(20) */
-            border-right: 2px solid #d1d1d1; /* 加深右边框以区分 */
+            z-index: 15; /* 高于普通内容，低于表头 */
+            border-right: 2px solid #d1d1d1;
         }
-        /* 必须手动指定背景色，否则是透明的 */
+        /* 给左侧锁定列指定背景色，防止透明穿透 */
         tbody tr:nth-child(odd) td:first-child { background-color: #fff; }
         tbody tr:nth-child(even) td:first-child { background-color: #f8f9fa; }
         tbody tr:hover td:first-child { background-color: #e9ecef; }
+        .row-selected td:first-child { background-color: #e8f0fe !important; }
 
-        /* 2. 表头第一列 (包含两行) */
-        /* 第一行：基础行情 (跨列) */
+        /* (B) 表头左上角 (交叉区域) 锁定 */
+        /* 第一行第一列：基础行情 */
         thead tr:nth-child(1) th:first-child {
             position: sticky;
             left: 0;
-            z-index: 30; /* 最高层级：位于左上角 */
+            top: 0;
+            z-index: 30; /* 最高层级 */
             border-right: 2px solid #d1d1d1;
         }
-        /* 第二行：名称 */
+        /* 第二行第一列：名称 */
         thead tr:nth-child(2) th:first-child {
             position: sticky;
             left: 0;
-            top: 38px; /* 根据第一行的大致高度 */
-            z-index: 30;
+            top: 41px; /* 跟随第二行高度 */
+            z-index: 30; /* 最高层级 */
             border-right: 2px solid #d1d1d1;
         }
 
-        /* === 其他样式 === */
+        /* === 功能样式 === */
+        th.sortable:hover { background-color: #e2e6ea; cursor: pointer; color: #007bff; }
         .col-hidden { display: none !important; }
         .tag-badge { display: inline-block; background: #e7f5ff; color: #007bff; padding: 1px 4px; border-radius: 4px; font-size: 10px; margin: 1px; border: 1px solid #d0ebff; }
         
@@ -125,9 +146,12 @@
         .th-pe { border-top: 3px solid #28a745; background-color: #f3fdf6; }
         .th-ps { border-top: 3px solid #fd7e14; background-color: #fff8f3; }
         
-        /* 全选列样式 */
+        /* 全选列 */
         .th-select, .td-select { width: 30px !important; max-width: 30px !important; padding: 0 !important; cursor: pointer; }
-        .th-select { border-top: 3px solid #adb5bd; border-left: 2px solid #dee2e6 !important; background-color: #e9ecef; z-index: 20; }
+        .th-select { border-top: 3px solid #adb5bd; border-left: 2px solid #dee2e6 !important; background-color: #e9ecef; }
+        /* 特殊处理：最后一列的全选框也属于第一行，也需要 sticky top */
+        thead tr:nth-child(1) th.th-select { top: 0; z-index: 20; } 
+
         .td-select { border-left: 2px solid #dee2e6 !important; background-color: #f8f9fa; }
         
         .row-checkbox { cursor: pointer; accent-color: #007bff; width: 15px; height: 15px; margin: 0 auto; display: block; }
@@ -141,7 +165,6 @@
         .filter-actions { display: flex; justify-content: flex-end; gap: 8px; }
         
         .row-selected { background-color: #e8f0fe !important; }
-        .row-selected td:first-child { background-color: #e8f0fe !important; } /* 修正选中时左侧锁定列颜色 */
         
         .data-empty { color: #ccc; font-weight: normal; }
         #status-msg { font-size: 11px; color: #007bff; margin-left: 5px; font-family: monospace; }
@@ -154,13 +177,12 @@
         .log-entry { border-bottom: 1px solid #eee; padding: 10px 0; font-size: 12px; color: #444; }
         .log-note { display: block; margin-top: 4px; color: #555; background: #fff3cd; padding: 4px 8px; border-radius: 4px; border-left: 3px solid #ffc107; }
 
-        /* 移动端适配优化 */
         @media (max-width: 768px) {
             .control-bar input { width: 70px !important; }
             .header-bar h2 { font-size: 16px; }
             button { padding: 6px 8px; }
-            .btn-view { display: none; } /* 手机上隐藏显示切换按钮以节省空间 */
-            #btn-toggle-action { display: inline-flex; } /* 仅保留操作列切换 */
+            .btn-view { display: none; } 
+            #btn-toggle-action { display: inline-flex; } 
         }
     </style>
 </head>
@@ -188,7 +210,6 @@
         <button class="btn-compare" id="btn-compare" onclick="toggleShowSelected()">📊 选中 (0)</button>
         <button class="btn-reset-all" onclick="clearAllFilters()">🌪️</button>
         
-        <!-- 手机端隐藏部分显示按钮，但在代码中保留功能 -->
         <div style="display:none;">
             <button class="btn-view active" id="btn-toggle-code" onclick="toggleColumn('code')">代码</button>
             <button class="btn-view active" id="btn-toggle-tags" onclick="toggleColumn('tags')">属性</button>
@@ -253,12 +274,10 @@
         <input type="hidden" id="filter-col-key">
     </div>
 
-    <!-- 弹窗区域 -->
     <div id="log-modal" class="modal"><div class="modal-content"><span class="close-btn" onclick="closeLogModal()">&times;</span><h3 id="modal-title" style="margin-top:0; border-bottom:2px solid #eee; padding-bottom:15px;">操作日志</h3><div id="modal-body" style="max-height: 50vh; overflow-y: auto;"></div></div></div>
     <div id="delete-modal" class="modal"><div class="modal-content" style="text-align: center; padding-top: 30px;"><h3>⚠️ 确认删除？</h3><p id="delete-msg" style="color:#555; margin-bottom:30px;">...</p><div><button class="btn-confirm-del" onclick="confirmDeleteAction()">删除</button><button class="btn-cancel" onclick="closeDeleteModal()">取消</button></div></div></div>
 
     <script>
-        // ★★★ 初始化逻辑 ★★★
         let stocks = JSON.parse(localStorage.getItem('valuationStocks')) || [];
         let defaultView = { showCode: true, showTags: true, showUpdate: true, showAction: true };
         let storedView = JSON.parse(localStorage.getItem('viewSettings')) || {};
@@ -274,15 +293,7 @@
         let onlySelectedMode = false;
         let currentVisibleStocks = [];
 
-        // ==========================================
-        // ★★★ 配置 GitHub 信息 ★★★
-        // ==========================================
-        const GITHUB_CONFIG = {
-            username: "dlezywj-cell",
-            repo: "stock",
-            path: "data.jason",
-            branch: "main"
-        };
+        const GITHUB_CONFIG = { username: "dlezywj-cell", repo: "stock", path: "data.jason", branch: "main" };
 
         function utf8_to_b64(str) { return window.btoa(unescape(encodeURIComponent(str))); }
         function b64_to_utf8(str) { return decodeURIComponent(escape(window.atob(str))); }
@@ -547,12 +558,9 @@
             sc.src=`https://searchapi.eastmoney.com/api/suggest/get?input=${encodeURIComponent(n)}&type=14&token=D43BF722C8E33BD5D50F639205545E43&cb=handleSearch`; document.body.appendChild(sc);
         }
 
-        // ★★★ 自动滚动回顶部编辑 ★★★
         function editStock(c) {
             toggleInputPanel(true);
-            // 滚动到录入区域
             document.getElementById('input-container').scrollIntoView({ behavior: 'smooth', block: 'start' });
-            
             const s=stocks.find(i=>i.code===c); if(!s)return;
             document.getElementById('inName').value=s.name; document.getElementById('inCode').value=s.code;
             document.getElementById('inTags').value=s.tags||''; document.getElementById('inProfit').value=s.profit||'';
