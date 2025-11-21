@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>股票估值系统 (完美锁定优化版)</title>
+    <title>股票估值系统 (最终完善版)</title>
     <style>
         /* === 全局重置 === */
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft YaHei', sans-serif; padding: 20px; max-width: 1700px; margin: 0 auto; background-color: #f4f6f9; font-size: 13px; color: #333; height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; }
@@ -63,7 +63,7 @@
         .btn-confirm-del { background-color: #dc3545; color: white; font-size: 14px; padding: 8px 25px; }
         .btn-cancel { background-color: #6c757d; color: white; font-size: 14px; padding: 8px 25px; }
 
-        /* === 表格区域 (核心修改) === */
+        /* === 表格区域 === */
         #result { 
             background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); 
             border: 1px solid #e9ecef; flex-grow: 1; overflow: auto; position: relative; 
@@ -73,7 +73,7 @@
         
         /* === 锁定逻辑 (修正版) === */
         
-        /* 1. 所有表头：垂直锁定 (Sticky Top) - 向下滚动时表头不动 */
+        /* 1. 所有表头：垂直锁定 (Sticky Top) */
         th { 
             background-color: #f1f3f5; 
             color: #495057; 
@@ -85,7 +85,7 @@
         thead tr:nth-child(1) th { top: 0; border-bottom: 1px solid #ccc; height: 22px; }
         thead tr:nth-child(2) th { top: 43px; box-shadow: 0 2px 2px rgba(0,0,0,0.05); }
 
-        /* 2. 第一列表体 ("名称"列)：水平锁定 (Sticky Left) - 向右滚动时名称不动 */
+        /* 2. 第一列表体 ("名称"列)：水平锁定 (Sticky Left) */
         tbody td:first-child { 
             position: sticky; 
             left: 0; 
@@ -96,22 +96,22 @@
         tbody tr:nth-child(even) td:first-child { background-color: #f8f9fa; }
         tbody tr:hover td:first-child { background-color: #e9ecef; }
 
-        /* 3. 左上角表头处理 (关键修改) */
+        /* 3. 左上角表头处理 */
         
-        /* 第一行第一列 ("基础行情")：取消水平锁定！让它能滑走 */
+        /* 第一行第一列 ("基础行情")：取消水平锁定，让它能滑走 */
         thead tr:nth-child(1) th:first-child { 
             position: sticky; 
             top: 0; 
-            /* left: 0;  <-- 删掉了这行，让它随波逐流 */
+            /* left: 0; Removed */
             z-index: 20; 
         }
 
-        /* 第二行第一列 ("名称"标题)：保持双重锁定！它是真正的锚点 */
+        /* 第二行第一列 ("名称"标题)：保持双重锁定 */
         thead tr:nth-child(2) th:first-child { 
             position: sticky; 
             left: 0; 
             top: 43px; 
-            z-index: 30; /* 层级最高 */
+            z-index: 30; 
             border-right: 2px solid #d1d1d1; 
         }
         
@@ -395,13 +395,21 @@
                 return true;
             });
             currentVisibleStocks = rows;
+            
+            // ★★★ 排序逻辑修正 ★★★
             if (sortState.key) {
                 rows.sort((a, b) => {
+                    // 1. 日期特殊处理：字符串比较
+                    if (sortState.key === 'last_update') {
+                        const dA = a.logs?.[0]?.date || "";
+                        const dB = b.logs?.[0]?.date || "";
+                        return sortState.dir === 'desc' ? dB.localeCompare(dA) : dA.localeCompare(dB);
+                    }
+                    // 2. 其他数值比较
                     const val = (o) => {
                         if(sortState.key=='chg') return parseFloat(o.chg);
                         if(sortState.key.includes('pe')) return parseFloat(o.peRes[sortState.key.split('_')[1]])||-9999;
                         if(sortState.key.includes('ps')) return parseFloat(o.psRes[sortState.key.split('_')[1]])||-9999;
-                        if(sortState.key=='last_update') return o.logs?.[0]?.date||"0";
                         return 0;
                     };
                     return sortState.dir==='desc' ? val(b)-val(a) : val(a)-val(b);
