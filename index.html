@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>股票估值系统 (完美响应式版)</title>
+    <title>股票估值系统 (完美锁定优化版)</title>
     <style>
         /* === 全局重置 === */
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft YaHei', sans-serif; padding: 20px; max-width: 1700px; margin: 0 auto; background-color: #f4f6f9; font-size: 13px; color: #333; height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; }
@@ -25,10 +25,10 @@
         .control-bar { 
             margin-bottom: 10px; display: flex; gap: 10px; align-items: center; 
             background: #fff; padding: 10px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); 
-            flex-wrap: wrap; /* 允许换行但保持间距 */
+            flex-wrap: wrap; 
         }
         .divider { border-left: 1px solid #eee; height: 20px; margin: 0 5px; }
-        .spacer { flex-grow: 1; } /* 关键：用于撑开布局 */
+        .spacer { flex-grow: 1; } 
 
         /* === 录入面板 === */
         #input-container { background: #fff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); overflow: hidden; transition: all 0.3s ease; margin-bottom: 15px; display: none; }
@@ -42,7 +42,6 @@
         input:focus { border-color: #007bff; outline: none; }
         input[readonly] { background-color: #e9ecef; color: #495057; cursor: not-allowed; }
         
-        /* 按钮样式 */
         button { padding: 6px 12px; cursor: pointer; border: none; border-radius: 4px; font-weight: 600; transition: all 0.2s; font-size: 12px; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
         button:hover { opacity: 0.85; transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         
@@ -64,7 +63,7 @@
         .btn-confirm-del { background-color: #dc3545; color: white; font-size: 14px; padding: 8px 25px; }
         .btn-cancel { background-color: #6c757d; color: white; font-size: 14px; padding: 8px 25px; }
 
-        /* === 表格区域 === */
+        /* === 表格区域 (核心修改) === */
         #result { 
             background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); 
             border: 1px solid #e9ecef; flex-grow: 1; overflow: auto; position: relative; 
@@ -72,15 +71,49 @@
         table { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 1300px; }
         th, td { padding: 10px 12px; text-align: center; border-bottom: 1px solid #ebebeb; border-right: 1px solid #ebebeb; white-space: nowrap; }
         
-        /* 锁定逻辑 */
-        th { background-color: #f1f3f5; color: #495057; font-weight: 700; user-select: none; position: sticky; z-index: 20; }
+        /* === 锁定逻辑 (修正版) === */
+        
+        /* 1. 所有表头：垂直锁定 (Sticky Top) - 向下滚动时表头不动 */
+        th { 
+            background-color: #f1f3f5; 
+            color: #495057; 
+            font-weight: 700; 
+            user-select: none; 
+            position: sticky; 
+            z-index: 20; 
+        }
         thead tr:nth-child(1) th { top: 0; border-bottom: 1px solid #ccc; height: 22px; }
         thead tr:nth-child(2) th { top: 43px; box-shadow: 0 2px 2px rgba(0,0,0,0.05); }
-        tbody td:first-child { position: sticky; left: 0; z-index: 15; background-color: #fff; border-right: 2px solid #d1d1d1; }
+
+        /* 2. 第一列表体 ("名称"列)：水平锁定 (Sticky Left) - 向右滚动时名称不动 */
+        tbody td:first-child { 
+            position: sticky; 
+            left: 0; 
+            z-index: 15; 
+            background-color: #fff; 
+            border-right: 2px solid #d1d1d1; 
+        }
         tbody tr:nth-child(even) td:first-child { background-color: #f8f9fa; }
         tbody tr:hover td:first-child { background-color: #e9ecef; }
-        thead tr:nth-child(1) th:first-child { position: sticky; left: 0; top: 0; z-index: 30; border-right: 2px solid #d1d1d1; }
-        thead tr:nth-child(2) th:first-child { position: sticky; left: 0; top: 43px; z-index: 30; border-right: 2px solid #d1d1d1; }
+
+        /* 3. 左上角表头处理 (关键修改) */
+        
+        /* 第一行第一列 ("基础行情")：取消水平锁定！让它能滑走 */
+        thead tr:nth-child(1) th:first-child { 
+            position: sticky; 
+            top: 0; 
+            /* left: 0;  <-- 删掉了这行，让它随波逐流 */
+            z-index: 20; 
+        }
+
+        /* 第二行第一列 ("名称"标题)：保持双重锁定！它是真正的锚点 */
+        thead tr:nth-child(2) th:first-child { 
+            position: sticky; 
+            left: 0; 
+            top: 43px; 
+            z-index: 30; /* 层级最高 */
+            border-right: 2px solid #d1d1d1; 
+        }
         
         .col-hidden { display: none !important; }
         .tag-badge { display: inline-block; background: #e7f5ff; color: #007bff; padding: 2px 6px; border-radius: 4px; font-size: 11px; margin: 1px; border: 1px solid #d0ebff; }
@@ -100,6 +133,7 @@
         #status-msg { font-size: 12px; color: #007bff; margin-right: 10px; font-family: monospace; }
         .sort-icon { font-size: 10px; margin-left: 4px; color: #adb5bd; }
         .sort-active { color: #007bff; }
+        th.sortable:hover { background-color: #e2e6ea; cursor: pointer; color: #007bff; }
 
         /* 弹窗 */
         .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(2px); justify-content: center; align-items: center; }
@@ -118,32 +152,25 @@
         /* ★★★ 移动端适配 (Mobile Only) ★★★ */
         @media (max-width: 768px) {
             body { padding: 10px; }
-            /* 显示顶部抽屉导航 */
             #mobile-nav { display: flex; }
-            /* 默认隐藏功能区 */
             #top-area { display: none; }
             #top-area.show { display: block; animation: slideDown 0.2s ease-out; }
             
-            /* 重塑 header */
             .header-bar { flex-direction: column; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
-            .header-bar h2 { display: none; } /* 手机标题在 mobile-nav */
+            .header-bar h2 { display: none; }
             .header-actions { width: 100%; display: flex; justify-content: space-between; flex-wrap: wrap; }
             .header-actions button { flex: 1; justify-content: center; }
             
-            /* 重塑 control-bar */
             .control-bar { flex-direction: column; align-items: stretch; gap: 8px; padding: 10px; }
             .control-bar > * { width: 100%; margin: 0; }
-            .spacer, .divider { display: none; } /* 手机上隐藏分隔符和占位符 */
+            .spacer, .divider { display: none; }
             
-            /* 搜索行 */
             .search-row { display: flex; gap: 5px; }
             .search-row input { flex: 1; width: auto !important; }
             
-            /* 按钮行 */
             .action-row { display: flex; gap: 5px; flex-wrap: wrap; }
             .action-row button { flex: 1; justify-content: center; }
             
-            /* 录入面板 */
             #input-panel { padding: 15px 10px; }
             .input-row { flex-direction: column; gap: 10px; margin-bottom: 10px; }
             .group-box { width: 100%; box-sizing: border-box; }
@@ -152,7 +179,6 @@
             .modal-content { width: 90%; padding: 20px; }
         }
 
-        /* PC端辅助类 (用于HTML结构优化) */
         .search-row { display: flex; align-items: center; gap: 5px; }
         .action-row { display: flex; align-items: center; gap: 5px; }
 
@@ -161,14 +187,12 @@
 </head>
 <body>
 
-    <!-- 移动端导航 (PC隐藏) -->
     <div id="mobile-nav">
         <h3>📈 估值系统 <span id="mobile-status"></span></h3>
         <button class="btn-menu" onclick="toggleMobileMenu()" id="mobile-menu-btn">⚙️ 菜单</button>
     </div>
 
     <div id="top-area">
-        <!-- 顶部栏 -->
         <div class="header-bar">
             <h2>📈 股票估值复盘系统</h2>
             <div class="header-actions">
@@ -181,22 +205,16 @@
             </div>
         </div>
 
-        <!-- 控制栏 (PC宽屏布局恢复) -->
         <div class="control-bar">
             <button class="btn-toggle" onclick="toggleInputPanel()" id="toggle-btn">➕ 录入/管理</button>
-            
             <div class="divider"></div>
-            
             <div class="search-row">
                 <span style="font-size:12px; color:#666;" class="desktop-only">🔍:</span>
                 <input type="text" id="findInput" placeholder="代码/名称" style="width: 100px;" onkeydown="if(event.keyCode==13) updateTable()">
                 <input type="text" id="findTags" placeholder="属性/赛道" style="width: 100px;" onkeydown="if(event.keyCode==13) updateTable()">
                 <button class="btn-find" onclick="updateTable()">Go</button>
             </div>
-
-            <!-- 关键：占位符，把后面的按钮推到右边 -->
             <div class="spacer"></div>
-            
             <div class="action-row">
                 <span class="control-label desktop-only" style="margin-right:5px;font-size:12px;color:#666;">👁️:</span>
                 <button class="btn-view active" id="btn-toggle-code" onclick="toggleColumn('code')">代码</button>
@@ -204,16 +222,13 @@
                 <button class="btn-view active" id="btn-toggle-update" onclick="toggleColumn('update')">更新</button>
                 <button class="btn-view active" id="btn-toggle-action" onclick="toggleColumn('action')">操作</button>
             </div>
-
             <div class="divider"></div>
-            
             <div class="action-row">
                 <button class="btn-reset-all" onclick="clearAllFilters()">🌪️ 重置</button>
                 <button class="btn-compare" id="btn-compare" onclick="toggleShowSelected()">📊 选中 (0)</button>
             </div>
         </div>
 
-        <!-- 录入面板 -->
         <div id="input-container">
             <div id="input-panel">
                 <input type="hidden" id="editCode" value="">
@@ -268,7 +283,6 @@
 
     <div id="result"></div>
 
-    <!-- 各种弹窗 (保持不变) -->
     <div id="filter-menu"><h4 id="filter-title">筛选</h4><div class="filter-row" id="filter-row-numeric"><select id="filter-op"><option value=">">></option><option value="<"><</option><option value=">=">≥</option><option value="<=">≤</option><option value="=">=</option></select><input type="number" id="filter-val" placeholder="数值"></div><div class="filter-row" id="filter-row-text" style="display:none;"><input type="text" id="filter-text-val" placeholder="内容..."></div><div class="filter-actions"><button class="btn-cancel" onclick="clearCurrentFilter()">清空</button><button class="btn-add" onclick="confirmFilter()">确定</button></div><input type="hidden" id="filter-col-key"></div>
     <div id="log-modal" class="modal"><div class="modal-content"><span class="close-btn" onclick="closeLogModal()">&times;</span><h3 id="modal-title" style="margin-top:0; border-bottom:2px solid #eee; padding-bottom:15px;">日志</h3><div id="modal-body"></div></div></div>
     <div id="delete-modal" class="modal"><div class="modal-content" style="text-align: center; padding-top: 30px;"><h3>⚠️ 确认删除？</h3><p id="delete-msg" style="color:#555; margin-bottom:30px;">...</p><div><button class="btn-confirm-del" onclick="confirmDeleteAction()">删除</button><button class="btn-cancel" onclick="closeDeleteModal()">取消</button></div></div></div>
@@ -283,7 +297,6 @@
             if (show) { area.style.display = 'block'; area.classList.add('show'); btn.innerText = '🔼 收起'; } 
             else { area.style.display = 'none'; area.classList.remove('show'); btn.innerText = '⚙️ 菜单'; }
         }
-        // PC默认显示，手机默认隐藏
         if (window.innerWidth <= 768) document.getElementById('top-area').style.display = 'none';
 
         let stocks = JSON.parse(localStorage.getItem('valuationStocks')) || [];
@@ -459,7 +472,6 @@
                 let diff = [];
                 if(old.profit!=s.profit) diff.push(`净利${old.profit}→${s.profit}`);
                 if(old.lowPE!=s.lowPE) diff.push(`PE下${old.lowPE}→${s.lowPE}`);
-                // ... 可扩展更多对比
                 if(diff.length>0) log.content = diff.join(';');
                 if(diff.length>0 || note) s.logs.unshift(log);
                 stocks[idx] = s;
