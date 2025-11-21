@@ -1,1 +1,2048 @@
-[{"code":"01810.HK","name":"小米集团-W","tags":"汽车 港股 消费电子","profit":520,"lowPE":15,"highPE":30,"revenue":5700,"lowPS":1.5,"highPS":3,"logs":[{"date":"2025/11/21 10:23:59","content":"PE下:20→15","note":""},{"date":"2025/11/20 17:12:48","content":"属性:→汽车 港股 消费电子","note":""},{"date":"2025/11/20 09:58:08","content":"净利: 680➝520, 营收: 6900➝5700","note":"三季报后调整"}]},{"code":"09896.HK","name":"名创优品","tags":"消费","profit":26,"lowPE":16,"highPE":21,"revenue":230,"lowPS":2,"highPS":3,"logs":[{"date":"2025/11/21 11:29:11","content":"净利:36→26; PE下:15→16; PE上:25→21; PS上:4→3","note":""},{"date":"2025/11/20 17:45:54","content":"属性:→消费","note":""}]},{"code":"002602.SZ","name":"世纪华通","tags":"游戏","profit":55,"lowPE":20,"highPE":40,"revenue":490,"lowPS":2.5,"highPS":3.5,"logs":[{"date":"2025/11/20 20:54:45","content":"属性:→游戏","note":""},{"date":"2025/11/20 11:05:22","content":"首次创建","note":"初始化估值模型"}]},{"code":"02020.HK","name":"安踏体育","tags":"消费","profit":145,"lowPE":18.5,"highPE":25,"revenue":860,"lowPS":3,"highPS":4,"logs":[{"date":"2025/11/20 20:54:56","content":"属性:→消费","note":""},{"date":"2025/11/20 11:20:01","content":"首次创建","note":"初始化估值模型"}]},{"code":"300502.SZ","name":"新易盛","tags":"AI 光模块","profit":100,"lowPE":30,"highPE":50,"revenue":250,"lowPS":10,"highPS":16,"logs":[{"date":"2025/11/20 20:55:12","content":"属性:→AI 光模块","note":""},{"date":"2025/11/20 11:20:55","content":"首次创建","note":"初始化估值模型"}]},{"code":"002484.SZ","name":"江海股份","tags":"AI","profit":8,"lowPE":27,"highPE":45,"revenue":57,"lowPS":3.5,"highPS":6,"logs":[{"date":"2025/11/20 20:55:25","content":"属性:→AI","note":""},{"date":"2025/11/20 11:21:40","content":"首次创建","note":"初始化估值模型"}]},{"code":"002222.SZ","name":"福晶科技","profit":2.9,"lowPE":57,"highPE":90,"revenue":11,"lowPS":15,"highPS":27,"logs":[{"date":"2025/11/20 11:22:49","content":"首次创建","note":"初始化估值模型"}]},{"code":"09985.HK","name":"卫龙美味","tags":"消费","profit":15.5,"lowPE":17,"highPE":25,"revenue":82,"lowPS":2.7,"highPS":4.5,"logs":[{"date":"2025/11/20 20:55:39","content":"属性:→消费","note":""},{"date":"2025/11/20 11:24:03","content":"首次创建","note":"初始化估值模型"}]},{"code":"002384.SZ","name":"东山精密","tags":"消费电子 光模块 PCB AI","profit":60,"lowPE":20,"highPE":40,"revenue":535,"lowPS":2,"highPS":4,"logs":[{"date":"2025/11/21 11:13:48","content":"添加备注","note":"索尔斯1000亿，东山传统业务600亿，合计1600亿"},{"date":"2025/11/21 10:36:41","content":"营收:405→535","note":"收入加上索尔斯明年130亿+405"},{"date":"2025/11/21 10:25:56","content":"营收:0→405; PS下:0→2; PS上:0→4","note":""},{"date":"2025/11/20 17:37:59","content":"属性:→消费电子 光模块 PCB AI","note":""},{"date":"2025/11/20 11:25:13","content":"首次创建","note":"初始化估值模型"}]},{"code":"300866.SZ","name":"安克创新","tags":"出口","profit":26,"lowPE":20,"highPE":30,"revenue":315,"lowPS":2,"highPS":2.5,"logs":[{"date":"2025/11/20 20:56:36","content":"属性:→出口","note":""},{"date":"2025/11/20 11:26:14","content":"首次创建","note":"初始化估值模型"}]},{"code":"301061.SZ","name":"匠心家居","tags":"出口","profit":8.9,"lowPE":20,"highPE":30,"revenue":34,"lowPS":5,"highPS":8,"logs":[{"date":"2025/11/20 21:00:41","content":"属性:→出口","note":""},{"date":"2025/11/20 11:27:25","content":"首次创建","note":"初始化估值模型"}]},{"code":"002558.SZ","name":"巨人网络","tags":"游戏","profit":24,"lowPE":20,"highPE":40,"revenue":50,"lowPS":8.5,"highPS":16,"logs":[{"date":"2025/11/20 20:57:01","content":"属性:→游戏","note":""},{"date":"2025/11/20 11:28:26","content":"首次创建","note":"初始化估值模型"}]},{"code":"600563.SH","name":"法拉电子","tags":"元件","profit":13,"lowPE":17.5,"highPE":27,"revenue":58,"lowPS":4,"highPS":6,"logs":[{"date":"2025/11/20 20:56:00","content":"属性:→元件","note":""},{"date":"2025/11/20 11:29:35","content":"首次创建","note":"初始化估值模型"}]},{"code":"603596.SH","name":"伯特利","tags":"汽车零部件","profit":14.2,"lowPE":19,"highPE":27,"revenue":124,"lowPS":2.25,"highPS":3,"logs":[{"date":"2025/11/20 20:57:24","content":"属性:→汽车零部件","note":""},{"date":"2025/11/20 11:30:38","content":"首次创建","note":"初始化估值模型"}]},{"code":"301029.SZ","name":"怡合达","profit":5.6,"lowPE":28,"highPE":40,"revenue":30,"lowPS":5,"highPS":7,"logs":[{"date":"2025/11/20 11:31:28","content":"首次创建","note":"初始化估值模型"}]},{"code":"688052.SH","name":"纳芯微","tags":"半导体 模拟芯片","profit":0,"lowPE":0,"highPE":0,"revenue":30,"lowPS":8.5,"highPS":9.5,"logs":[{"date":"2025/11/20 21:11:49","content":"属性:→半导体 模拟芯片","note":""},{"date":"2025/11/20 11:32:23","content":"首次创建","note":"初始化估值模型"}]},{"code":"689009.SH","name":"九号公司-WD","tags":"出口 两轮车","profit":20,"lowPE":20,"highPE":27,"revenue":215,"lowPS":1.8,"highPS":2.4,"logs":[{"date":"2025/11/20 20:56:49","content":"属性:→出口 两轮车","note":""},{"date":"2025/11/20 11:33:24","content":"首次创建","note":"初始化估值模型"}]},{"code":"002472.SZ","name":"双环传动","tags":"汽车零部件 机器人","profit":12.5,"lowPE":24,"highPE":35,"revenue":100,"lowPS":2.5,"highPS":4.4,"logs":[{"date":"2025/11/20 20:58:56","content":"属性:→汽车零部件 机器人","note":""},{"date":"2025/11/20 11:34:20","content":"首次创建","note":"初始化估值模型"}]},{"code":"688208.SH","name":"道通科技","tags":"出口 充电桩","profit":9,"lowPE":20,"highPE":35,"revenue":50,"lowPS":4.77,"highPS":6,"logs":[{"date":"2025/11/20 20:56:25","content":"属性:→出口 充电桩","note":""},{"date":"2025/11/20 11:35:28","content":"首次创建","note":"初始化估值模型"}]},{"code":"603298.SH","name":"杭叉集团","tags":"出口 机器人","profit":22.5,"lowPE":15,"highPE":20,"revenue":180,"lowPS":1.4,"highPS":2,"logs":[{"date":"2025/11/20 20:58:35","content":"属性:→出口 机器人","note":""},{"date":"2025/11/20 11:36:22","content":"首次创建","note":"初始化估值模型"}]},{"code":"300777.SZ","name":"中简科技","profit":4.5,"lowPE":25,"highPE":45,"revenue":10,"lowPS":12,"highPS":18,"logs":[{"date":"2025/11/20 11:37:31","content":"首次创建","note":"初始化估值模型"}]},{"code":"601689.SH","name":"拓普集团","tags":"汽车零部件 机器人","profit":0,"lowPE":0,"highPE":0,"revenue":300,"lowPS":3.5,"highPS":4.7,"logs":[{"date":"2025/11/20 21:12:02","content":"属性:→汽车零部件 机器人","note":""},{"date":"2025/11/20 12:22:23","content":"首次创建","note":"初始化估值模型"}]},{"code":"688169.SH","name":"石头科技","tags":"出口 扫地机","profit":0,"lowPE":0,"highPE":0,"revenue":180,"lowPS":2.2,"highPS":3,"logs":[{"date":"2025/11/20 21:12:23","content":"属性:→出口 扫地机","note":""},{"date":"2025/11/20 14:00:12","content":"首次创建","note":"初始化估值模型"}]},{"code":"00388.HK","name":"香港交易所","profit":175,"lowPE":28,"highPE":40,"revenue":280,"lowPS":15,"highPS":22,"logs":[{"date":"2025/11/20 14:01:57","content":"首次创建","note":"初始化估值模型"}]},{"code":"603345.SH","name":"安井食品","tags":"消费","profit":14,"lowPE":16,"highPE":25,"revenue":157,"lowPS":1.5,"highPS":2,"logs":[{"date":"2025/11/20 20:59:34","content":"属性:→消费","note":""},{"date":"2025/11/20 14:03:54","content":"首次创建","note":"初始化估值模型"}]},{"code":"603486.SH","name":"科沃斯","tags":"出口 家电 扫地机","profit":21,"lowPE":20,"highPE":27,"revenue":225,"lowPS":1.6,"highPS":2.7,"logs":[{"date":"2025/11/20 21:03:09","content":"属性:→出口 家电 扫地机","note":""},{"date":"2025/11/20 14:05:21","content":"首次创建","note":"初始化估值模型"}]},{"code":"300124.SZ","name":"汇川技术","tags":"工控 自动化","profit":56,"lowPE":27,"highPE":40,"revenue":0,"lowPS":0,"highPS":0,"logs":[{"date":"2025/11/20 21:04:24","content":"属性:→工控 自动化","note":""},{"date":"2025/11/20 14:06:03","content":"首次创建","note":"初始化估值模型"}]},{"code":"300627.SZ","name":"华测导航","profit":7.6,"lowPE":30,"highPE":42,"revenue":41,"lowPS":5,"highPS":7,"logs":[{"date":"2025/11/20 14:06:59","content":"首次创建","note":"初始化估值模型"}]},{"code":"002920.SZ","name":"德赛西威","tags":"汽车零部件 智驾","profit":29,"lowPE":21,"highPE":30,"revenue":350,"lowPS":1.6,"highPS":2.4,"logs":[{"date":"2025/11/20 20:59:22","content":"属性:→汽车零部件 智驾","note":""},{"date":"2025/11/20 14:08:36","content":"首次创建","note":"初始化估值模型"}]},{"code":"002202.SZ","name":"金风科技","tags":"风电","profit":41,"lowPE":15,"highPE":20,"revenue":800,"lowPS":0.6,"highPS":1,"logs":[{"date":"2025/11/20 21:00:03","content":"属性:→风电","note":""},{"date":"2025/11/20 14:09:37","content":"首次创建","note":"初始化估值模型"}]},{"code":"002938.SZ","name":"鹏鼎控股","tags":"果链","profit":44,"lowPE":15,"highPE":30,"revenue":410,"lowPS":1.6,"highPS":3.2,"logs":[{"date":"2025/11/20 21:00:17","content":"属性:→果链","note":""},{"date":"2025/11/20 14:10:43","content":"首次创建","note":"初始化估值模型"}]},{"code":"002138.SZ","name":"顺络电子","tags":"元件","profit":11.2,"lowPE":24,"highPE":29,"revenue":73,"lowPS":3.5,"highPS":5,"logs":[{"date":"2025/11/20 21:05:24","content":"属性:→元件","note":""},{"date":"2025/11/20 14:11:47","content":"首次创建","note":"初始化估值模型"}]},{"code":"002475.SZ","name":"立讯精密","tags":"果链","profit":167,"lowPE":20,"highPE":30,"revenue":3300,"lowPS":1.1,"highPS":1.6,"logs":[{"date":"2025/11/20 21:01:17","content":"属性:→果链","note":""},{"date":"2025/11/20 14:12:53","content":"首次创建","note":"初始化估值模型"}]},{"code":"002126.SZ","name":"银轮股份","tags":"汽车零部件 机器人 液冷","profit":9.5,"lowPE":24,"highPE":35,"revenue":150,"lowPS":1.4,"highPS":2.2,"logs":[{"date":"2025/11/20 21:02:10","content":"属性:→汽车零部件 机器人 液冷","note":""},{"date":"2025/11/20 14:14:16","content":"首次创建","note":"Q3后下调25年业绩指引，10.5下调至9.5"}]},{"code":"300433.SZ","name":"蓝思科技","tags":"果链 消费电子","profit":45,"lowPE":27,"highPE":37,"revenue":850,"lowPS":1.6,"highPS":2.1,"logs":[{"date":"2025/11/21 09:19:30","content":"属性:果链→果链 消费电子","note":""},{"date":"2025/11/20 21:04:11","content":"属性:→果链","note":""},{"date":"2025/11/20 14:15:59","content":"首次创建","note":"初始化估值模型"}]},{"code":"000858.SZ","name":"五粮液","tags":"消费 白酒","profit":320,"lowPE":14,"highPE":18,"revenue":910,"lowPS":5,"highPS":6.5,"logs":[{"date":"2025/11/20 21:01:27","content":"属性:→消费 白酒","note":""},{"date":"2025/11/20 14:18:25","content":"首次创建","note":"初始化估值模型"}]},{"code":"000425.SZ","name":"徐工机械","tags":"工程机械 出口","profit":80,"lowPE":12,"highPE":20,"revenue":1000,"lowPS":0.93,"highPS":1.5,"logs":[{"date":"2025/11/20 20:59:46","content":"属性:→工程机械 出口","note":""},{"date":"2025/11/20 14:19:19","content":"首次创建","note":"初始化估值模型"}]},{"code":"688362.SH","name":"甬矽电子","tags":"半导体 高端封测","profit":1.46,"lowPE":60,"highPE":87,"revenue":45,"lowPS":2.6,"highPS":3.4,"logs":[{"date":"2025/11/21 11:23:34","content":"PS下:2.7→2.6; PS上:3.5→3.4","note":""},{"date":"2025/11/21 11:22:03","content":"净利:1.9→1.46; PE上:120→87; PS上:3.6→3.5","note":""},{"date":"2025/11/20 17:45:44","content":"属性:→半导体 高端封测","note":""},{"date":"2025/11/20 14:20:22","content":"首次创建","note":"初始化估值模型"}]},{"code":"603501.SH","name":"豪威集团","tags":"半导体 消费电子","profit":44,"lowPE":32,"highPE":45,"revenue":305,"lowPS":5,"highPS":6,"logs":[{"date":"2025/11/20 20:57:36","content":"属性:→半导体 消费电子","note":""},{"date":"2025/11/20 14:21:47","content":"首次创建","note":"初始化估值模型"}]},{"code":"000333.SZ","name":"美的集团","tags":"消费 家电 红利","profit":490,"lowPE":12,"highPE":15,"revenue":4800,"lowPS":1.25,"highPS":1.5,"logs":[{"date":"2025/11/20 21:01:52","content":"属性:→消费 家电 红利","note":""},{"date":"2025/11/20 14:23:48","content":"PE:0-15→12-15","note":""},{"date":"2025/11/20 14:23:32","content":"净利:0→490; PE:0-0→0-15","note":""},{"date":"2025/11/20 14:22:57","content":"首次创建","note":"初始化估值模型"}]},{"code":"601799.SH","name":"星宇股份","tags":"汽车零部件","profit":16.5,"lowPE":20,"highPE":25,"revenue":160,"lowPS":2,"highPS":2.7,"logs":[{"date":"2025/11/20 21:04:34","content":"属性:→汽车零部件","note":""},{"date":"2025/11/20 14:24:54","content":"首次创建","note":"初始化估值模型"}]},{"code":"603129.SH","name":"春风动力","tags":"出口 摩托车","profit":18.6,"lowPE":19,"highPE":25,"revenue":205,"lowPS":1.6,"highPS":2.2,"logs":[{"date":"2025/11/20 21:03:23","content":"属性:→出口 摩托车","note":""},{"date":"2025/11/20 14:25:56","content":"首次创建","note":"初始化估值模型"}]},{"code":"688111.SH","name":"金山办公","tags":"AI 软件","profit":17,"lowPE":65,"highPE":100,"revenue":60,"lowPS":20,"highPS":30,"logs":[{"date":"2025/11/20 21:03:50","content":"属性:→AI 软件","note":""},{"date":"2025/11/20 14:27:25","content":"首次创建","note":"初始化估值模型"}]},{"code":"605499.SH","name":"东鹏饮料","tags":"消费","profit":45,"lowPE":30,"highPE":36,"revenue":215,"lowPS":7,"highPS":8,"logs":[{"date":"2025/11/20 21:02:21","content":"属性:→消费","note":""},{"date":"2025/11/20 14:30:19","content":"首次创建","note":"初始化估值模型"}]},{"code":"600031.SH","name":"三一重工","tags":"工程机械 出口","profit":90,"lowPE":19,"highPE":27,"revenue":903,"lowPS":1.8,"highPS":2.5,"logs":[{"date":"2025/11/20 21:00:29","content":"属性:→工程机械 出口","note":""},{"date":"2025/11/20 14:31:19","content":"首次创建","note":"初始化估值模型"}]},{"code":"601127.SH","name":"赛力斯","tags":"汽车 华为","profit":100,"lowPE":16,"highPE":23,"revenue":1800,"lowPS":1.2,"highPS":1.5,"logs":[{"date":"2025/11/20 21:06:44","content":"属性:→汽车 华为","note":""},{"date":"2025/11/20 14:32:58","content":"首次创建","note":"初始化估值模型"}]},{"code":"002444.SZ","name":"巨星科技","tags":"出口","profit":24,"lowPE":13.5,"highPE":18,"revenue":150,"lowPS":2,"highPS":2.8,"logs":[{"date":"2025/11/20 21:04:01","content":"属性:→出口","note":""},{"date":"2025/11/20 14:33:53","content":"首次创建","note":"初始化估值模型"}]},{"code":"603005.SH","name":"晶方科技","tags":"半导体","profit":3.9,"lowPE":45,"highPE":55,"revenue":15.5,"lowPS":11,"highPS":13,"logs":[{"date":"2025/11/21 11:26:23","content":"PE上:90→55; 营收:15→15.5; PS上:14→13","note":""},{"date":"2025/11/20 17:37:30","content":"属性:→半导体","note":""},{"date":"2025/11/20 14:35:02","content":"首次创建","note":"初始化估值模型"}]},{"code":"603766.SH","name":"隆鑫通用","tags":"出口 摩托车","profit":18,"lowPE":13.3,"highPE":18,"revenue":195,"lowPS":1.25,"highPS":1.5,"logs":[{"date":"2025/11/20 21:02:36","content":"属性:→出口 摩托车","note":""},{"date":"2025/11/20 14:36:31","content":"首次创建","note":"初始化估值模型"}]},{"code":"600885.SH","name":"宏发股份","tags":"元件 继电器","profit":19,"lowPE":20,"highPE":27,"revenue":163,"lowPS":2.5,"highPS":3,"logs":[{"date":"2025/11/20 21:05:12","content":"属性:→元件 继电器","note":""},{"date":"2025/11/20 14:37:42","content":"首次创建","note":"初始化估值模型"}]},{"code":"600276.SH","name":"恒瑞医药","tags":"医药","profit":90,"lowPE":45,"highPE":63,"revenue":340,"lowPS":10,"highPS":14,"logs":[{"date":"2025/11/20 20:56:13","content":"属性:→医药","note":""},{"date":"2025/11/20 14:38:42","content":"首次创建","note":"初始化估值模型"}]},{"code":"605117.SH","name":"德业股份","tags":"出口 储能","profit":34,"lowPE":13,"highPE":25,"revenue":0,"lowPS":0,"highPS":0,"logs":[{"date":"2025/11/20 21:03:36","content":"属性:→出口 储能","note":""},{"date":"2025/11/20 14:39:30","content":"首次创建","note":"初始化估值模型"}]},{"code":"000651.SZ","name":"格力电器","tags":"消费 家电","profit":330,"lowPE":7,"highPE":8.3,"revenue":2000,"lowPS":1,"highPS":1.3,"logs":[{"date":"2025/11/20 21:02:48","content":"属性:→消费 家电","note":""},{"date":"2025/11/20 14:40:33","content":"首次创建","note":"初始化估值模型"}]},{"code":"002594.SZ","name":"比亚迪","tags":"汽车","profit":350,"lowPE":17.5,"highPE":25,"revenue":8200,"lowPS":1,"highPS":1.2,"logs":[{"date":"2025/11/20 21:07:10","content":"属性:→汽车","note":""},{"date":"2025/11/20 14:41:50","content":"首次创建","note":"初始化估值模型"}]},{"code":"600519.SH","name":"贵州茅台","tags":"消费 白酒","profit":940,"lowPE":19,"highPE":22,"revenue":1900,"lowPS":10,"highPS":12.5,"logs":[{"date":"2025/11/20 21:06:06","content":"属性:→消费 白酒","note":""},{"date":"2025/11/20 14:42:50","content":"首次创建","note":"初始化估值模型"}]},{"code":"002050.SZ","name":"三花智控","tags":"汽车零部件 机器人","profit":0,"lowPE":0,"highPE":0,"revenue":330,"lowPS":3,"highPS":6,"logs":[{"date":"2025/11/20 21:12:40","content":"属性:→汽车零部件 机器人","note":""},{"date":"2025/11/20 14:44:51","content":"净利:300→0; PE:3.5-4.66→0-0","note":""},{"date":"2025/11/20 14:44:00","content":"首次创建","note":"初始化估值模型"}]},{"code":"600114.SH","name":"东睦股份","tags":"消费电子","profit":5.2,"lowPE":22,"highPE":38,"revenue":61,"lowPS":2,"highPS":3,"logs":[{"date":"2025/11/20 21:04:47","content":"属性:→消费电子","note":""},{"date":"2025/11/20 14:45:57","content":"首次创建","note":"初始化估值模型"}]},{"code":"600584.SH","name":"长电科技","tags":"半导体 封测","profit":18,"lowPE":28,"highPE":40,"revenue":390,"lowPS":1.4,"highPS":2.2,"logs":[{"date":"2025/11/20 21:06:18","content":"属性:→半导体 封测","note":""},{"date":"2025/11/20 14:46:52","content":"首次创建","note":"初始化估值模型"}]},{"code":"688981.SH","name":"中芯国际","tags":"半导体","profit":0,"lowPE":0,"highPE":0,"revenue":680,"lowPS":10,"highPS":15,"logs":[{"date":"2025/11/20 21:12:50","content":"属性:→半导体","note":""},{"date":"2025/11/20 14:49:49","content":"首次创建","note":"初始化估值模型"}]},{"code":"000400.SZ","name":"许继电气","tags":"电力设备","profit":13.5,"lowPE":15,"highPE":25,"revenue":170,"lowPS":1.1,"highPS":1.75,"logs":[{"date":"2025/11/20 21:01:06","content":"属性:→电力设备","note":""},{"date":"2025/11/20 14:50:52","content":"首次创建","note":"初始化估值模型"}]},{"code":"002847.SZ","name":"盐津铺子","tags":"消费","profit":8,"lowPE":16,"highPE":30,"revenue":63.5,"lowPS":2,"highPS":3.5,"logs":[{"date":"2025/11/20 21:04:58","content":"属性:→消费","note":""},{"date":"2025/11/20 14:52:30","content":"首次创建","note":"初始化估值模型"}]},{"code":"688676.SH","name":"金盘科技","tags":"电器设备 出口","profit":7.3,"lowPE":25,"highPE":50,"revenue":88,"lowPS":2.2,"highPS":4.5,"logs":[{"date":"2025/11/20 21:07:00","content":"属性:→电器设备 出口","note":""},{"date":"2025/11/20 14:54:11","content":"首次创建","note":"初始化估值模型"}]},{"code":"603997.SH","name":"继峰股份","tags":"汽车零部件","profit":0,"lowPE":0,"highPE":0,"revenue":245,"lowPS":0.55,"highPS":0.72,"logs":[{"date":"2025/11/20 21:13:01","content":"属性:→汽车零部件","note":""},{"date":"2025/11/20 14:55:15","content":"首次创建","note":"初始化估值模型"}]},{"code":"002595.SZ","name":"豪迈科技","tags":"汽车零部件","profit":25,"lowPE":18,"highPE":22,"revenue":110,"lowPS":4,"highPS":5,"logs":[{"date":"2025/11/20 21:07:24","content":"属性:→汽车零部件","note":""},{"date":"2025/11/20 14:55:54","content":"首次创建","note":"初始化估值模型"}]},{"code":"00700.HK","name":"腾讯控股","tags":"互联网","profit":2400,"lowPE":18,"highPE":25,"revenue":8200,"lowPS":5.5,"highPS":7,"logs":[{"date":"2025/11/20 21:06:30","content":"属性:→互联网","note":""},{"date":"2025/11/20 14:56:36","content":"首次创建","note":"初始化估值模型"}]},{"code":"301345.SZ","name":"涛涛车业","tags":"出口","profit":7.5,"lowPE":18,"highPE":30,"revenue":40,"lowPS":2.5,"highPS":4.5,"logs":[{"date":"2025/11/20 21:07:34","content":"属性:→出口","note":""},{"date":"2025/11/20 14:57:19","content":"首次创建","note":"初始化估值模型"}]},{"code":"688518.SH","name":"联赢激光","tags":"光伏设备","profit":3,"lowPE":15,"highPE":25,"revenue":34,"lowPS":1.3,"highPS":2.6,"logs":[{"date":"2025/11/20 21:09:48","content":"属性:→光伏设备","note":""},{"date":"2025/11/20 14:58:20","content":"首次创建","note":"初始化估值模型"}]},{"code":"300476.SZ","name":"胜宏科技","tags":"AI","profit":0,"lowPE":0,"highPE":0,"revenue":300,"lowPS":4,"highPS":8,"logs":[{"date":"2025/11/20 21:13:12","content":"属性:→AI","note":""},{"date":"2025/11/20 14:59:35","content":"首次创建","note":"初始化估值模型"}]},{"code":"301656.SZ","name":"联合动力","tags":"汽车零部件","profit":0,"lowPE":0,"highPE":0,"revenue":215,"lowPS":1.5,"highPS":3,"logs":[{"date":"2025/11/20 21:13:22","content":"属性:→汽车零部件","note":""},{"date":"2025/11/20 15:00:10","content":"首次创建","note":"初始化估值模型"}]},{"code":"688305.SH","name":"科德数控","tags":"国产替代 数控机床","profit":1.4,"lowPE":36,"highPE":55,"revenue":7,"lowPS":8.5,"highPS":12,"logs":[{"date":"2025/11/20 21:08:27","content":"属性:→国产替代 数控机床","note":""},{"date":"2025/11/20 15:01:04","content":"首次创建","note":"初始化估值模型"}]},{"code":"300308.SZ","name":"中际旭创","tags":"AI 光模块","profit":105,"lowPE":30,"highPE":50,"revenue":380,"lowPS":6,"highPS":10,"logs":[{"date":"2025/11/20 21:08:40","content":"属性:→AI 光模块","note":""},{"date":"2025/11/20 15:01:50","content":"首次创建","note":"初始化估值模型"}]},{"code":"688411.SH","name":"海博思创","tags":"储能","profit":25,"lowPE":20,"highPE":30,"revenue":360,"lowPS":1,"highPS":1.5,"logs":[{"date":"2025/11/20 20:58:16","content":"属性:→储能","note":""},{"date":"2025/11/20 15:06:44","content":"净利:35→25","note":""},{"date":"2025/11/20 15:05:34","content":"首次创建","note":"初始化估值模型"}]},{"code":"300750.SZ","name":"宁德时代","tags":"电池","profit":680,"lowPE":18,"highPE":25,"revenue":0,"lowPS":0,"highPS":0,"logs":[{"date":"2025/11/20 21:08:08","content":"属性:→电池","note":""},{"date":"2025/11/20 15:07:47","content":"首次创建","note":"初始化估值模型"}]},{"code":"002371.SZ","name":"北方华创","tags":"半导体","profit":0,"lowPE":0,"highPE":0,"revenue":390,"lowPS":5.5,"highPS":7.5,"logs":[{"date":"2025/11/20 21:13:31","content":"属性:→半导体","note":""},{"date":"2025/11/20 15:08:22","content":"首次创建","note":"初始化估值模型"}]},{"code":"688361.SH","name":"中科飞测","tags":"半导体","profit":0,"lowPE":0,"highPE":0,"revenue":21,"lowPS":12.5,"highPS":20,"logs":[{"date":"2025/11/20 21:13:43","content":"属性:→半导体","note":""},{"date":"2025/11/20 15:09:34","content":"首次创建","note":"初始化估值模型"}]},{"code":"002600.SZ","name":"领益智造","tags":"果链","profit":25,"lowPE":25,"highPE":37,"revenue":500,"lowPS":1.3,"highPS":1.8,"logs":[{"date":"2025/11/20 21:08:53","content":"属性:→果链","note":""},{"date":"2025/11/20 15:12:02","content":"首次创建","note":"初始化估值模型"}]},{"code":"DDOG","name":"Datadog Inc-A","tags":"美股 软件","profit":0,"lowPE":0,"highPE":0,"revenue":34,"lowPS":13.5,"highPS":17,"logs":[{"date":"2025/11/20 21:13:54","content":"属性:→美股 软件","note":""},{"date":"2025/11/20 15:12:50","content":"首次创建","note":"初始化估值模型"}]},{"code":"603179.SH","name":"新泉股份","tags":"汽车零部件","profit":13.2,"lowPE":16,"highPE":22,"revenue":170,"lowPS":1.2,"highPS":1.8,"logs":[{"date":"2025/11/20 21:09:17","content":"属性:→汽车零部件","note":""},{"date":"2025/11/20 15:13:56","content":"首次创建","note":"初始化估值模型"}]},{"code":"300274.SZ","name":"阳光电源","tags":"储能","profit":145,"lowPE":13,"highPE":22,"revenue":970,"lowPS":1.75,"highPS":3.4,"logs":[{"date":"2025/11/20 21:10:00","content":"属性:→储能","note":""},{"date":"2025/11/20 15:15:04","content":"首次创建","note":"初始化估值模型"}]},{"code":"688072.SH","name":"拓荆科技","tags":"半导体","profit":10,"lowPE":43,"highPE":70,"revenue":57,"lowPS":8,"highPS":12,"logs":[{"date":"2025/11/20 21:10:28","content":"属性:→半导体","note":""},{"date":"2025/11/20 15:16:19","content":"首次创建","note":"初始化估值模型"}]},{"code":"603986.SH","name":"兆易创新","tags":"半导体 存储","profit":15,"lowPE":50,"highPE":80,"revenue":95,"lowPS":8,"highPS":11,"logs":[{"date":"2025/11/20 21:09:32","content":"属性:→半导体 存储","note":""},{"date":"2025/11/20 15:17:12","content":"首次创建","note":"初始化估值模型"}]},{"code":"688698.SH","name":"伟创电气","tags":"工业控制 机器人","profit":2.8,"lowPE":25,"highPE":35,"revenue":20,"lowPS":4,"highPS":6,"logs":[{"date":"2025/11/20 21:10:56","content":"属性:→工业控制 机器人","note":""},{"date":"2025/11/20 15:20:29","content":"首次创建","note":"初始化估值模型"}]},{"code":"002028.SZ","name":"思源电气","tags":"电力设备 出口","profit":30,"lowPE":23,"highPE":30,"revenue":195,"lowPS":3.1,"highPS":4,"logs":[{"date":"2025/11/20 21:10:14","content":"属性:→电力设备 出口","note":""},{"date":"2025/11/20 15:22:24","content":"首次创建","note":"初始化估值模型"}]},{"code":"601138.SH","name":"工业富联","tags":"果链 AI","profit":335,"lowPE":15,"highPE":25,"revenue":9200,"lowPS":0.6,"highPS":1,"logs":[{"date":"2025/11/20 21:10:41","content":"属性:→果链 AI","note":""},{"date":"2025/11/20 15:23:21","content":"首次创建","note":"初始化估值模型"}]},{"code":"002837.SZ","name":"英维克","tags":"液冷","profit":6.3,"lowPE":38,"highPE":65,"revenue":65,"lowPS":4,"highPS":7,"logs":[{"date":"2025/11/20 21:11:17","content":"属性:→液冷","note":""},{"date":"2025/11/20 15:23:58","content":"首次创建","note":"初始化估值模型"}]},{"code":"001309.SZ","name":"德明利","tags":"存储 阿里概念","profit":3.6,"lowPE":35,"highPE":60,"revenue":85,"lowPS":2.54,"highPS":3.2,"logs":[{"date":"2025/11/20 21:11:34","content":"属性:→存储 阿里概念","note":""},{"date":"2025/11/20 15:24:43","content":"首次创建","note":"初始化估值模型"}]},{"code":"NVDA","name":"英伟达","tags":"AI","profit":1700,"lowPE":35,"highPE":70,"revenue":3000,"lowPS":20,"highPS":40,"logs":[{"date":"2025/11/20 17:12:22","content":"属性:→AI","note":""},{"date":"2025/11/20 15:30:06","content":"净利:0→1700; PE:0-0→35-70","note":""},{"date":"2025/11/20 15:28:12","content":"首次创建","note":"初始化估值模型"}]}]
+[
+  {
+    "code": "01810.HK",
+    "name": "小米集团-W",
+    "tags": "汽车 港股 消费电子",
+    "profit": 520,
+    "lowPE": 15,
+    "highPE": 30,
+    "revenue": 5700,
+    "lowPS": 1.5,
+    "highPS": 3,
+    "logs": [
+      {
+        "date": "2025/11/21 10:23:59",
+        "content": "PE下:20→15",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 17:12:48",
+        "content": "属性:→汽车 港股 消费电子",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 09:58:08",
+        "content": "净利: 680➝520, 营收: 6900➝5700",
+        "note": "三季报后调整"
+      }
+    ]
+  },
+  {
+    "code": "09896.HK",
+    "name": "名创优品",
+    "tags": "消费",
+    "profit": 26,
+    "lowPE": 16,
+    "highPE": 21,
+    "revenue": 230,
+    "lowPS": 2,
+    "highPS": 3,
+    "logs": [
+      {
+        "date": "2025/11/21 11:29:11",
+        "content": "净利:36→26; PE下:15→16; PE上:25→21; PS上:4→3",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 17:45:54",
+        "content": "属性:→消费",
+        "note": ""
+      }
+    ]
+  },
+  {
+    "code": "002602.SZ",
+    "name": "世纪华通",
+    "tags": "游戏",
+    "profit": 55,
+    "lowPE": 20,
+    "highPE": 40,
+    "revenue": 490,
+    "lowPS": 2.5,
+    "highPS": 3.5,
+    "logs": [
+      {
+        "date": "2025/11/20 20:54:45",
+        "content": "属性:→游戏",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 11:05:22",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "02020.HK",
+    "name": "安踏体育",
+    "tags": "消费",
+    "profit": 145,
+    "lowPE": 18.5,
+    "highPE": 25,
+    "revenue": 860,
+    "lowPS": 3,
+    "highPS": 4,
+    "logs": [
+      {
+        "date": "2025/11/20 20:54:56",
+        "content": "属性:→消费",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 11:20:01",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "300502.SZ",
+    "name": "新易盛",
+    "tags": "AI 光模块",
+    "profit": 100,
+    "lowPE": 30,
+    "highPE": 50,
+    "revenue": 250,
+    "lowPS": 10,
+    "highPS": 16,
+    "logs": [
+      {
+        "date": "2025/11/20 20:55:12",
+        "content": "属性:→AI 光模块",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 11:20:55",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "002484.SZ",
+    "name": "江海股份",
+    "tags": "AI",
+    "profit": 8,
+    "lowPE": 27,
+    "highPE": 45,
+    "revenue": 57,
+    "lowPS": 3.5,
+    "highPS": 6,
+    "logs": [
+      {
+        "date": "2025/11/20 20:55:25",
+        "content": "属性:→AI",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 11:21:40",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "002222.SZ",
+    "name": "福晶科技",
+    "profit": 2.9,
+    "lowPE": 57,
+    "highPE": 90,
+    "revenue": 11,
+    "lowPS": 15,
+    "highPS": 27,
+    "logs": [
+      {
+        "date": "2025/11/20 11:22:49",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "09985.HK",
+    "name": "卫龙美味",
+    "tags": "消费",
+    "profit": 15.5,
+    "lowPE": 17,
+    "highPE": 25,
+    "revenue": 82,
+    "lowPS": 2.7,
+    "highPS": 4.5,
+    "logs": [
+      {
+        "date": "2025/11/20 20:55:39",
+        "content": "属性:→消费",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 11:24:03",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "002384.SZ",
+    "name": "东山精密",
+    "tags": "消费电子 光模块 PCB AI",
+    "profit": 60,
+    "lowPE": 20,
+    "highPE": 40,
+    "revenue": 535,
+    "lowPS": 2,
+    "highPS": 4,
+    "logs": [
+      {
+        "date": "2025/11/21 11:13:48",
+        "content": "添加备注",
+        "note": "索尔斯1000亿，东山传统业务600亿，合计1600亿"
+      },
+      {
+        "date": "2025/11/21 10:36:41",
+        "content": "营收:405→535",
+        "note": "收入加上索尔斯明年130亿+405"
+      },
+      {
+        "date": "2025/11/21 10:25:56",
+        "content": "营收:0→405; PS下:0→2; PS上:0→4",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 17:37:59",
+        "content": "属性:→消费电子 光模块 PCB AI",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 11:25:13",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "300866.SZ",
+    "name": "安克创新",
+    "tags": "出口",
+    "profit": 26,
+    "lowPE": 20,
+    "highPE": 30,
+    "revenue": 315,
+    "lowPS": 2,
+    "highPS": 2.5,
+    "logs": [
+      {
+        "date": "2025/11/20 20:56:36",
+        "content": "属性:→出口",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 11:26:14",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "301061.SZ",
+    "name": "匠心家居",
+    "tags": "出口",
+    "profit": 8.9,
+    "lowPE": 20,
+    "highPE": 30,
+    "revenue": 34,
+    "lowPS": 5,
+    "highPS": 8,
+    "logs": [
+      {
+        "date": "2025/11/20 21:00:41",
+        "content": "属性:→出口",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 11:27:25",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "002558.SZ",
+    "name": "巨人网络",
+    "tags": "游戏",
+    "profit": 24,
+    "lowPE": 20,
+    "highPE": 40,
+    "revenue": 50,
+    "lowPS": 8.5,
+    "highPS": 16,
+    "logs": [
+      {
+        "date": "2025/11/20 20:57:01",
+        "content": "属性:→游戏",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 11:28:26",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "600563.SH",
+    "name": "法拉电子",
+    "tags": "元件",
+    "profit": 13,
+    "lowPE": 17.5,
+    "highPE": 27,
+    "revenue": 58,
+    "lowPS": 4,
+    "highPS": 6,
+    "logs": [
+      {
+        "date": "2025/11/20 20:56:00",
+        "content": "属性:→元件",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 11:29:35",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "603596.SH",
+    "name": "伯特利",
+    "tags": "汽车零部件",
+    "profit": 14.2,
+    "lowPE": 19,
+    "highPE": 27,
+    "revenue": 124,
+    "lowPS": 2.25,
+    "highPS": 3,
+    "logs": [
+      {
+        "date": "2025/11/20 20:57:24",
+        "content": "属性:→汽车零部件",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 11:30:38",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "301029.SZ",
+    "name": "怡合达",
+    "profit": 5.6,
+    "lowPE": 28,
+    "highPE": 40,
+    "revenue": 30,
+    "lowPS": 5,
+    "highPS": 7,
+    "logs": [
+      {
+        "date": "2025/11/20 11:31:28",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "688052.SH",
+    "name": "纳芯微",
+    "tags": "半导体 模拟芯片",
+    "profit": 0,
+    "lowPE": 0,
+    "highPE": 0,
+    "revenue": 30,
+    "lowPS": 8.5,
+    "highPS": 9.5,
+    "logs": [
+      {
+        "date": "2025/11/20 21:11:49",
+        "content": "属性:→半导体 模拟芯片",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 11:32:23",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "689009.SH",
+    "name": "九号公司-WD",
+    "tags": "出口 两轮车",
+    "profit": 20,
+    "lowPE": 20,
+    "highPE": 27,
+    "revenue": 215,
+    "lowPS": 1.8,
+    "highPS": 2.4,
+    "logs": [
+      {
+        "date": "2025/11/20 20:56:49",
+        "content": "属性:→出口 两轮车",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 11:33:24",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "002472.SZ",
+    "name": "双环传动",
+    "tags": "汽车零部件 机器人",
+    "profit": 12.5,
+    "lowPE": 24,
+    "highPE": 35,
+    "revenue": 100,
+    "lowPS": 2.5,
+    "highPS": 4.4,
+    "logs": [
+      {
+        "date": "2025/11/20 20:58:56",
+        "content": "属性:→汽车零部件 机器人",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 11:34:20",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "688208.SH",
+    "name": "道通科技",
+    "tags": "出口 充电桩",
+    "profit": 9,
+    "lowPE": 20,
+    "highPE": 35,
+    "revenue": 50,
+    "lowPS": 4.77,
+    "highPS": 6,
+    "logs": [
+      {
+        "date": "2025/11/20 20:56:25",
+        "content": "属性:→出口 充电桩",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 11:35:28",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "603298.SH",
+    "name": "杭叉集团",
+    "tags": "出口 机器人",
+    "profit": 22.5,
+    "lowPE": 15,
+    "highPE": 20,
+    "revenue": 180,
+    "lowPS": 1.4,
+    "highPS": 2,
+    "logs": [
+      {
+        "date": "2025/11/20 20:58:35",
+        "content": "属性:→出口 机器人",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 11:36:22",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "300777.SZ",
+    "name": "中简科技",
+    "profit": 4.5,
+    "lowPE": 25,
+    "highPE": 45,
+    "revenue": 10,
+    "lowPS": 12,
+    "highPS": 18,
+    "logs": [
+      {
+        "date": "2025/11/20 11:37:31",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "601689.SH",
+    "name": "拓普集团",
+    "tags": "汽车零部件 机器人",
+    "profit": 0,
+    "lowPE": 0,
+    "highPE": 0,
+    "revenue": 300,
+    "lowPS": 3.5,
+    "highPS": 4.7,
+    "logs": [
+      {
+        "date": "2025/11/20 21:12:02",
+        "content": "属性:→汽车零部件 机器人",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 12:22:23",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "688169.SH",
+    "name": "石头科技",
+    "tags": "出口 扫地机",
+    "profit": 0,
+    "lowPE": 0,
+    "highPE": 0,
+    "revenue": 180,
+    "lowPS": 2.2,
+    "highPS": 3,
+    "logs": [
+      {
+        "date": "2025/11/20 21:12:23",
+        "content": "属性:→出口 扫地机",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 14:00:12",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "00388.HK",
+    "name": "香港交易所",
+    "profit": 175,
+    "lowPE": 28,
+    "highPE": 40,
+    "revenue": 280,
+    "lowPS": 15,
+    "highPS": 22,
+    "logs": [
+      {
+        "date": "2025/11/20 14:01:57",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "603345.SH",
+    "name": "安井食品",
+    "tags": "消费",
+    "profit": 14,
+    "lowPE": 16,
+    "highPE": 25,
+    "revenue": 157,
+    "lowPS": 1.5,
+    "highPS": 2,
+    "logs": [
+      {
+        "date": "2025/11/20 20:59:34",
+        "content": "属性:→消费",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 14:03:54",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "603486.SH",
+    "name": "科沃斯",
+    "tags": "出口 家电 扫地机",
+    "profit": 21,
+    "lowPE": 20,
+    "highPE": 27,
+    "revenue": 225,
+    "lowPS": 1.6,
+    "highPS": 2.7,
+    "logs": [
+      {
+        "date": "2025/11/20 21:03:09",
+        "content": "属性:→出口 家电 扫地机",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 14:05:21",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "300124.SZ",
+    "name": "汇川技术",
+    "tags": "工控 自动化",
+    "profit": 56,
+    "lowPE": 27,
+    "highPE": 40,
+    "revenue": 0,
+    "lowPS": 0,
+    "highPS": 0,
+    "logs": [
+      {
+        "date": "2025/11/20 21:04:24",
+        "content": "属性:→工控 自动化",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 14:06:03",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "300627.SZ",
+    "name": "华测导航",
+    "profit": 7.6,
+    "lowPE": 30,
+    "highPE": 42,
+    "revenue": 41,
+    "lowPS": 5,
+    "highPS": 7,
+    "logs": [
+      {
+        "date": "2025/11/20 14:06:59",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "002920.SZ",
+    "name": "德赛西威",
+    "tags": "汽车零部件 智驾",
+    "profit": 29,
+    "lowPE": 21,
+    "highPE": 30,
+    "revenue": 350,
+    "lowPS": 1.6,
+    "highPS": 2.4,
+    "logs": [
+      {
+        "date": "2025/11/20 20:59:22",
+        "content": "属性:→汽车零部件 智驾",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 14:08:36",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "002202.SZ",
+    "name": "金风科技",
+    "tags": "风电",
+    "profit": 41,
+    "lowPE": 15,
+    "highPE": 20,
+    "revenue": 800,
+    "lowPS": 0.6,
+    "highPS": 1,
+    "logs": [
+      {
+        "date": "2025/11/20 21:00:03",
+        "content": "属性:→风电",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 14:09:37",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "002938.SZ",
+    "name": "鹏鼎控股",
+    "tags": "果链",
+    "profit": 44,
+    "lowPE": 15,
+    "highPE": 30,
+    "revenue": 410,
+    "lowPS": 1.6,
+    "highPS": 3.2,
+    "logs": [
+      {
+        "date": "2025/11/20 21:00:17",
+        "content": "属性:→果链",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 14:10:43",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "002138.SZ",
+    "name": "顺络电子",
+    "tags": "元件",
+    "profit": 11.2,
+    "lowPE": 24,
+    "highPE": 29,
+    "revenue": 73,
+    "lowPS": 3.5,
+    "highPS": 5,
+    "logs": [
+      {
+        "date": "2025/11/20 21:05:24",
+        "content": "属性:→元件",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 14:11:47",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "002475.SZ",
+    "name": "立讯精密",
+    "tags": "果链",
+    "profit": 167,
+    "lowPE": 20,
+    "highPE": 30,
+    "revenue": 3300,
+    "lowPS": 1.1,
+    "highPS": 1.6,
+    "logs": [
+      {
+        "date": "2025/11/20 21:01:17",
+        "content": "属性:→果链",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 14:12:53",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "002126.SZ",
+    "name": "银轮股份",
+    "tags": "汽车零部件 机器人 液冷",
+    "profit": 9.5,
+    "lowPE": 24,
+    "highPE": 35,
+    "revenue": 150,
+    "lowPS": 1.4,
+    "highPS": 2.2,
+    "logs": [
+      {
+        "date": "2025/11/20 21:02:10",
+        "content": "属性:→汽车零部件 机器人 液冷",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 14:14:16",
+        "content": "首次创建",
+        "note": "Q3后下调25年业绩指引，10.5下调至9.5"
+      }
+    ]
+  },
+  {
+    "code": "300433.SZ",
+    "name": "蓝思科技",
+    "tags": "果链 消费电子",
+    "profit": 45,
+    "lowPE": 27,
+    "highPE": 37,
+    "revenue": 850,
+    "lowPS": 1.6,
+    "highPS": 2.1,
+    "logs": [
+      {
+        "date": "2025/11/21 09:19:30",
+        "content": "属性:果链→果链 消费电子",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 21:04:11",
+        "content": "属性:→果链",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 14:15:59",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "000858.SZ",
+    "name": "五粮液",
+    "tags": "消费 白酒",
+    "profit": 320,
+    "lowPE": 14,
+    "highPE": 18,
+    "revenue": 910,
+    "lowPS": 5,
+    "highPS": 6.5,
+    "logs": [
+      {
+        "date": "2025/11/20 21:01:27",
+        "content": "属性:→消费 白酒",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 14:18:25",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "000425.SZ",
+    "name": "徐工机械",
+    "tags": "工程机械 出口",
+    "profit": 80,
+    "lowPE": 12,
+    "highPE": 20,
+    "revenue": 1000,
+    "lowPS": 0.93,
+    "highPS": 1.5,
+    "logs": [
+      {
+        "date": "2025/11/20 20:59:46",
+        "content": "属性:→工程机械 出口",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 14:19:19",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "688362.SH",
+    "name": "甬矽电子",
+    "tags": "半导体 高端封测",
+    "profit": 1.46,
+    "lowPE": 60,
+    "highPE": 87,
+    "revenue": 45,
+    "lowPS": 2.6,
+    "highPS": 3.4,
+    "logs": [
+      {
+        "date": "2025/11/21 11:23:34",
+        "content": "PS下:2.7→2.6; PS上:3.5→3.4",
+        "note": ""
+      },
+      {
+        "date": "2025/11/21 11:22:03",
+        "content": "净利:1.9→1.46; PE上:120→87; PS上:3.6→3.5",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 17:45:44",
+        "content": "属性:→半导体 高端封测",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 14:20:22",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "603501.SH",
+    "name": "豪威集团",
+    "tags": "半导体 消费电子",
+    "profit": 44,
+    "lowPE": 32,
+    "highPE": 45,
+    "revenue": 305,
+    "lowPS": 5,
+    "highPS": 6,
+    "logs": [
+      {
+        "date": "2025/11/20 20:57:36",
+        "content": "属性:→半导体 消费电子",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 14:21:47",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "000333.SZ",
+    "name": "美的集团",
+    "tags": "消费 家电 红利",
+    "profit": 490,
+    "lowPE": 12,
+    "highPE": 15,
+    "revenue": 4800,
+    "lowPS": 1.25,
+    "highPS": 1.5,
+    "logs": [
+      {
+        "date": "2025/11/20 21:01:52",
+        "content": "属性:→消费 家电 红利",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 14:23:48",
+        "content": "PE:0-15→12-15",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 14:23:32",
+        "content": "净利:0→490; PE:0-0→0-15",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 14:22:57",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "601799.SH",
+    "name": "星宇股份",
+    "tags": "汽车零部件",
+    "profit": 16.5,
+    "lowPE": 20,
+    "highPE": 25,
+    "revenue": 160,
+    "lowPS": 2,
+    "highPS": 2.7,
+    "logs": [
+      {
+        "date": "2025/11/20 21:04:34",
+        "content": "属性:→汽车零部件",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 14:24:54",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "603129.SH",
+    "name": "春风动力",
+    "tags": "出口 摩托车",
+    "profit": 18.6,
+    "lowPE": 19,
+    "highPE": 25,
+    "revenue": 205,
+    "lowPS": 1.6,
+    "highPS": 2.2,
+    "logs": [
+      {
+        "date": "2025/11/20 21:03:23",
+        "content": "属性:→出口 摩托车",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 14:25:56",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "688111.SH",
+    "name": "金山办公",
+    "tags": "AI 软件",
+    "profit": 17,
+    "lowPE": 65,
+    "highPE": 100,
+    "revenue": 60,
+    "lowPS": 20,
+    "highPS": 30,
+    "logs": [
+      {
+        "date": "2025/11/20 21:03:50",
+        "content": "属性:→AI 软件",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 14:27:25",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "605499.SH",
+    "name": "东鹏饮料",
+    "tags": "消费",
+    "profit": 45,
+    "lowPE": 30,
+    "highPE": 36,
+    "revenue": 215,
+    "lowPS": 7,
+    "highPS": 8,
+    "logs": [
+      {
+        "date": "2025/11/20 21:02:21",
+        "content": "属性:→消费",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 14:30:19",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "600031.SH",
+    "name": "三一重工",
+    "tags": "工程机械 出口",
+    "profit": 90,
+    "lowPE": 19,
+    "highPE": 27,
+    "revenue": 903,
+    "lowPS": 1.8,
+    "highPS": 2.5,
+    "logs": [
+      {
+        "date": "2025/11/20 21:00:29",
+        "content": "属性:→工程机械 出口",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 14:31:19",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "601127.SH",
+    "name": "赛力斯",
+    "tags": "汽车 华为",
+    "profit": 100,
+    "lowPE": 16,
+    "highPE": 23,
+    "revenue": 1800,
+    "lowPS": 1.2,
+    "highPS": 1.5,
+    "logs": [
+      {
+        "date": "2025/11/20 21:06:44",
+        "content": "属性:→汽车 华为",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 14:32:58",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "002444.SZ",
+    "name": "巨星科技",
+    "tags": "出口",
+    "profit": 24,
+    "lowPE": 13.5,
+    "highPE": 18,
+    "revenue": 150,
+    "lowPS": 2,
+    "highPS": 2.8,
+    "logs": [
+      {
+        "date": "2025/11/20 21:04:01",
+        "content": "属性:→出口",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 14:33:53",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "603005.SH",
+    "name": "晶方科技",
+    "tags": "半导体",
+    "profit": 3.9,
+    "lowPE": 45,
+    "highPE": 55,
+    "revenue": 15.5,
+    "lowPS": 11,
+    "highPS": 13,
+    "logs": [
+      {
+        "date": "2025/11/21 11:26:23",
+        "content": "PE上:90→55; 营收:15→15.5; PS上:14→13",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 17:37:30",
+        "content": "属性:→半导体",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 14:35:02",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "603766.SH",
+    "name": "隆鑫通用",
+    "tags": "出口 摩托车",
+    "profit": 18,
+    "lowPE": 13.3,
+    "highPE": 18,
+    "revenue": 195,
+    "lowPS": 1.25,
+    "highPS": 1.5,
+    "logs": [
+      {
+        "date": "2025/11/20 21:02:36",
+        "content": "属性:→出口 摩托车",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 14:36:31",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "600885.SH",
+    "name": "宏发股份",
+    "tags": "元件 继电器",
+    "profit": 19,
+    "lowPE": 20,
+    "highPE": 27,
+    "revenue": 163,
+    "lowPS": 2.5,
+    "highPS": 3,
+    "logs": [
+      {
+        "date": "2025/11/20 21:05:12",
+        "content": "属性:→元件 继电器",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 14:37:42",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "600276.SH",
+    "name": "恒瑞医药",
+    "tags": "医药",
+    "profit": 90,
+    "lowPE": 45,
+    "highPE": 63,
+    "revenue": 340,
+    "lowPS": 10,
+    "highPS": 14,
+    "logs": [
+      {
+        "date": "2025/11/20 20:56:13",
+        "content": "属性:→医药",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 14:38:42",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "605117.SH",
+    "name": "德业股份",
+    "tags": "出口 储能",
+    "profit": 34,
+    "lowPE": 13,
+    "highPE": 25,
+    "revenue": 0,
+    "lowPS": 0,
+    "highPS": 0,
+    "logs": [
+      {
+        "date": "2025/11/20 21:03:36",
+        "content": "属性:→出口 储能",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 14:39:30",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "000651.SZ",
+    "name": "格力电器",
+    "tags": "消费 家电",
+    "profit": 330,
+    "lowPE": 7,
+    "highPE": 8.3,
+    "revenue": 2000,
+    "lowPS": 1,
+    "highPS": 1.3,
+    "logs": [
+      {
+        "date": "2025/11/20 21:02:48",
+        "content": "属性:→消费 家电",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 14:40:33",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "002594.SZ",
+    "name": "比亚迪",
+    "tags": "汽车",
+    "profit": 350,
+    "lowPE": 17.5,
+    "highPE": 25,
+    "revenue": 8200,
+    "lowPS": 1,
+    "highPS": 1.2,
+    "logs": [
+      {
+        "date": "2025/11/20 21:07:10",
+        "content": "属性:→汽车",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 14:41:50",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "600519.SH",
+    "name": "贵州茅台",
+    "tags": "消费 白酒",
+    "profit": 940,
+    "lowPE": 19,
+    "highPE": 22,
+    "revenue": 1900,
+    "lowPS": 10,
+    "highPS": 12.5,
+    "logs": [
+      {
+        "date": "2025/11/20 21:06:06",
+        "content": "属性:→消费 白酒",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 14:42:50",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "002050.SZ",
+    "name": "三花智控",
+    "tags": "汽车零部件 机器人",
+    "profit": 0,
+    "lowPE": 0,
+    "highPE": 0,
+    "revenue": 330,
+    "lowPS": 3,
+    "highPS": 6,
+    "logs": [
+      {
+        "date": "2025/11/20 21:12:40",
+        "content": "属性:→汽车零部件 机器人",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 14:44:51",
+        "content": "净利:300→0; PE:3.5-4.66→0-0",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 14:44:00",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "600114.SH",
+    "name": "东睦股份",
+    "tags": "消费电子",
+    "profit": 5.2,
+    "lowPE": 22,
+    "highPE": 38,
+    "revenue": 61,
+    "lowPS": 2,
+    "highPS": 3,
+    "logs": [
+      {
+        "date": "2025/11/20 21:04:47",
+        "content": "属性:→消费电子",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 14:45:57",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "600584.SH",
+    "name": "长电科技",
+    "tags": "半导体 封测",
+    "profit": 18,
+    "lowPE": 28,
+    "highPE": 40,
+    "revenue": 390,
+    "lowPS": 1.4,
+    "highPS": 2.2,
+    "logs": [
+      {
+        "date": "2025/11/20 21:06:18",
+        "content": "属性:→半导体 封测",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 14:46:52",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "688981.SH",
+    "name": "中芯国际",
+    "tags": "半导体",
+    "profit": 0,
+    "lowPE": 0,
+    "highPE": 0,
+    "revenue": 680,
+    "lowPS": 10,
+    "highPS": 15,
+    "logs": [
+      {
+        "date": "2025/11/20 21:12:50",
+        "content": "属性:→半导体",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 14:49:49",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "000400.SZ",
+    "name": "许继电气",
+    "tags": "电力设备",
+    "profit": 13.5,
+    "lowPE": 15,
+    "highPE": 25,
+    "revenue": 170,
+    "lowPS": 1.1,
+    "highPS": 1.75,
+    "logs": [
+      {
+        "date": "2025/11/20 21:01:06",
+        "content": "属性:→电力设备",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 14:50:52",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "002847.SZ",
+    "name": "盐津铺子",
+    "tags": "消费",
+    "profit": 8,
+    "lowPE": 16,
+    "highPE": 30,
+    "revenue": 63.5,
+    "lowPS": 2,
+    "highPS": 3.5,
+    "logs": [
+      {
+        "date": "2025/11/20 21:04:58",
+        "content": "属性:→消费",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 14:52:30",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "688676.SH",
+    "name": "金盘科技",
+    "tags": "电器设备 出口",
+    "profit": 7.3,
+    "lowPE": 25,
+    "highPE": 50,
+    "revenue": 88,
+    "lowPS": 2.2,
+    "highPS": 4.5,
+    "logs": [
+      {
+        "date": "2025/11/20 21:07:00",
+        "content": "属性:→电器设备 出口",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 14:54:11",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "603997.SH",
+    "name": "继峰股份",
+    "tags": "汽车零部件",
+    "profit": 0,
+    "lowPE": 0,
+    "highPE": 0,
+    "revenue": 245,
+    "lowPS": 0.55,
+    "highPS": 0.72,
+    "logs": [
+      {
+        "date": "2025/11/20 21:13:01",
+        "content": "属性:→汽车零部件",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 14:55:15",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "002595.SZ",
+    "name": "豪迈科技",
+    "tags": "汽车零部件",
+    "profit": 25,
+    "lowPE": 18,
+    "highPE": 22,
+    "revenue": 110,
+    "lowPS": 4,
+    "highPS": 5,
+    "logs": [
+      {
+        "date": "2025/11/20 21:07:24",
+        "content": "属性:→汽车零部件",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 14:55:54",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "00700.HK",
+    "name": "腾讯控股",
+    "tags": "互联网",
+    "profit": 2400,
+    "lowPE": 18,
+    "highPE": 25,
+    "revenue": 8200,
+    "lowPS": 5.5,
+    "highPS": 7,
+    "logs": [
+      {
+        "date": "2025/11/20 21:06:30",
+        "content": "属性:→互联网",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 14:56:36",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "301345.SZ",
+    "name": "涛涛车业",
+    "tags": "出口",
+    "profit": 7.5,
+    "lowPE": 18,
+    "highPE": 30,
+    "revenue": 40,
+    "lowPS": 2.5,
+    "highPS": 4.5,
+    "logs": [
+      {
+        "date": "2025/11/20 21:07:34",
+        "content": "属性:→出口",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 14:57:19",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "688518.SH",
+    "name": "联赢激光",
+    "tags": "光伏设备",
+    "profit": 3,
+    "lowPE": 15,
+    "highPE": 25,
+    "revenue": 34,
+    "lowPS": 1.3,
+    "highPS": 2.6,
+    "logs": [
+      {
+        "date": "2025/11/20 21:09:48",
+        "content": "属性:→光伏设备",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 14:58:20",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "300476.SZ",
+    "name": "胜宏科技",
+    "tags": "AI",
+    "profit": 0,
+    "lowPE": 0,
+    "highPE": 0,
+    "revenue": 300,
+    "lowPS": 4,
+    "highPS": 8,
+    "logs": [
+      {
+        "date": "2025/11/20 21:13:12",
+        "content": "属性:→AI",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 14:59:35",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "301656.SZ",
+    "name": "联合动力",
+    "tags": "汽车零部件",
+    "profit": 0,
+    "lowPE": 0,
+    "highPE": 0,
+    "revenue": 215,
+    "lowPS": 1.5,
+    "highPS": 3,
+    "logs": [
+      {
+        "date": "2025/11/20 21:13:22",
+        "content": "属性:→汽车零部件",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 15:00:10",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "688305.SH",
+    "name": "科德数控",
+    "tags": "国产替代 数控机床",
+    "profit": 1.4,
+    "lowPE": 36,
+    "highPE": 55,
+    "revenue": 7,
+    "lowPS": 8.5,
+    "highPS": 12,
+    "logs": [
+      {
+        "date": "2025/11/20 21:08:27",
+        "content": "属性:→国产替代 数控机床",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 15:01:04",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "300308.SZ",
+    "name": "中际旭创",
+    "tags": "AI 光模块",
+    "profit": 105,
+    "lowPE": 30,
+    "highPE": 50,
+    "revenue": 380,
+    "lowPS": 6,
+    "highPS": 10,
+    "logs": [
+      {
+        "date": "2025/11/20 21:08:40",
+        "content": "属性:→AI 光模块",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 15:01:50",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "688411.SH",
+    "name": "海博思创",
+    "tags": "储能",
+    "profit": 25,
+    "lowPE": 20,
+    "highPE": 30,
+    "revenue": 360,
+    "lowPS": 1,
+    "highPS": 1.5,
+    "logs": [
+      {
+        "date": "2025/11/20 20:58:16",
+        "content": "属性:→储能",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 15:06:44",
+        "content": "净利:35→25",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 15:05:34",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "300750.SZ",
+    "name": "宁德时代",
+    "tags": "电池",
+    "profit": 680,
+    "lowPE": 18,
+    "highPE": 25,
+    "revenue": 0,
+    "lowPS": 0,
+    "highPS": 0,
+    "logs": [
+      {
+        "date": "2025/11/20 21:08:08",
+        "content": "属性:→电池",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 15:07:47",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "002371.SZ",
+    "name": "北方华创",
+    "tags": "半导体",
+    "profit": 0,
+    "lowPE": 0,
+    "highPE": 0,
+    "revenue": 390,
+    "lowPS": 5.5,
+    "highPS": 7.5,
+    "logs": [
+      {
+        "date": "2025/11/20 21:13:31",
+        "content": "属性:→半导体",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 15:08:22",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "688361.SH",
+    "name": "中科飞测",
+    "tags": "半导体",
+    "profit": 0,
+    "lowPE": 0,
+    "highPE": 0,
+    "revenue": 21,
+    "lowPS": 12.5,
+    "highPS": 20,
+    "logs": [
+      {
+        "date": "2025/11/20 21:13:43",
+        "content": "属性:→半导体",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 15:09:34",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "002600.SZ",
+    "name": "领益智造",
+    "tags": "果链",
+    "profit": 25,
+    "lowPE": 25,
+    "highPE": 37,
+    "revenue": 500,
+    "lowPS": 1.3,
+    "highPS": 1.8,
+    "logs": [
+      {
+        "date": "2025/11/20 21:08:53",
+        "content": "属性:→果链",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 15:12:02",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "DDOG",
+    "name": "Datadog Inc-A",
+    "tags": "美股 软件",
+    "profit": 0,
+    "lowPE": 0,
+    "highPE": 0,
+    "revenue": 34,
+    "lowPS": 13.5,
+    "highPS": 17,
+    "logs": [
+      {
+        "date": "2025/11/20 21:13:54",
+        "content": "属性:→美股 软件",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 15:12:50",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "603179.SH",
+    "name": "新泉股份",
+    "tags": "汽车零部件",
+    "profit": 13.2,
+    "lowPE": 16,
+    "highPE": 22,
+    "revenue": 170,
+    "lowPS": 1.2,
+    "highPS": 1.8,
+    "logs": [
+      {
+        "date": "2025/11/20 21:09:17",
+        "content": "属性:→汽车零部件",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 15:13:56",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "300274.SZ",
+    "name": "阳光电源",
+    "tags": "储能",
+    "profit": 145,
+    "lowPE": 13,
+    "highPE": 22,
+    "revenue": 970,
+    "lowPS": 1.75,
+    "highPS": 3.4,
+    "logs": [
+      {
+        "date": "2025/11/20 21:10:00",
+        "content": "属性:→储能",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 15:15:04",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "688072.SH",
+    "name": "拓荆科技",
+    "tags": "半导体",
+    "profit": 10,
+    "lowPE": 43,
+    "highPE": 70,
+    "revenue": 57,
+    "lowPS": 8,
+    "highPS": 12,
+    "logs": [
+      {
+        "date": "2025/11/20 21:10:28",
+        "content": "属性:→半导体",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 15:16:19",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "603986.SH",
+    "name": "兆易创新",
+    "tags": "半导体 存储",
+    "profit": 15,
+    "lowPE": 50,
+    "highPE": 80,
+    "revenue": 95,
+    "lowPS": 8,
+    "highPS": 11,
+    "logs": [
+      {
+        "date": "2025/11/20 21:09:32",
+        "content": "属性:→半导体 存储",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 15:17:12",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "688698.SH",
+    "name": "伟创电气",
+    "tags": "工业控制 机器人",
+    "profit": 2.8,
+    "lowPE": 25,
+    "highPE": 35,
+    "revenue": 20,
+    "lowPS": 4,
+    "highPS": 6,
+    "logs": [
+      {
+        "date": "2025/11/20 21:10:56",
+        "content": "属性:→工业控制 机器人",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 15:20:29",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "002028.SZ",
+    "name": "思源电气",
+    "tags": "电力设备 出口",
+    "profit": 30,
+    "lowPE": 23,
+    "highPE": 30,
+    "revenue": 195,
+    "lowPS": 3.1,
+    "highPS": 4,
+    "logs": [
+      {
+        "date": "2025/11/20 21:10:14",
+        "content": "属性:→电力设备 出口",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 15:22:24",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "601138.SH",
+    "name": "工业富联",
+    "tags": "果链 AI",
+    "profit": 335,
+    "lowPE": 15,
+    "highPE": 25,
+    "revenue": 9200,
+    "lowPS": 0.6,
+    "highPS": 1,
+    "logs": [
+      {
+        "date": "2025/11/20 21:10:41",
+        "content": "属性:→果链 AI",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 15:23:21",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "002837.SZ",
+    "name": "英维克",
+    "tags": "液冷",
+    "profit": 6.3,
+    "lowPE": 38,
+    "highPE": 65,
+    "revenue": 65,
+    "lowPS": 4,
+    "highPS": 7,
+    "logs": [
+      {
+        "date": "2025/11/20 21:11:17",
+        "content": "属性:→液冷",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 15:23:58",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "001309.SZ",
+    "name": "德明利",
+    "tags": "存储 阿里概念",
+    "profit": 3.6,
+    "lowPE": 35,
+    "highPE": 60,
+    "revenue": 85,
+    "lowPS": 2.54,
+    "highPS": 3.2,
+    "logs": [
+      {
+        "date": "2025/11/20 21:11:34",
+        "content": "属性:→存储 阿里概念",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 15:24:43",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  },
+  {
+    "code": "NVDA",
+    "name": "英伟达",
+    "tags": "AI",
+    "profit": 1700,
+    "lowPE": 35,
+    "highPE": 70,
+    "revenue": 3000,
+    "lowPS": 20,
+    "highPS": 40,
+    "logs": [
+      {
+        "date": "2025/11/21 13:27:06",
+        "content": "PS上:39→40",
+        "note": ""
+      },
+      {
+        "date": "2025/11/21 13:19:05",
+        "content": "PS上:40→39",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 17:12:22",
+        "content": "属性:→AI",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 15:30:06",
+        "content": "净利:0→1700; PE:0-0→35-70",
+        "note": ""
+      },
+      {
+        "date": "2025/11/20 15:28:12",
+        "content": "首次创建",
+        "note": "初始化估值模型"
+      }
+    ]
+  }
+]
