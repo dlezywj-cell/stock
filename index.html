@@ -3,25 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>股票估值系统 (最终稳定版)</title>
+    <title>股票估值系统 (极简布局版)</title>
     <style>
         /* === 全局重置 === */
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft YaHei', sans-serif; padding: 20px; max-width: 1700px; margin: 0 auto; background-color: #f4f6f9; font-size: 13px; color: #333; height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; }
         
-        /* === 移动端专属导航 === */
+        /* === 移动端专属导航 (PC隐藏) === */
         #mobile-nav { display: none; justify-content: space-between; align-items: center; background: #fff; padding: 10px 15px; border-radius: 8px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); flex-shrink: 0; }
         #mobile-nav h3 { margin: 0; color: #2c3e50; font-size: 16px; display: flex; align-items: center; gap: 8px; }
         #mobile-status { font-size: 11px; color: #007bff; font-family: monospace; }
         .btn-menu { background: #f8f9fa; border: 1px solid #ddd; color: #333; padding: 6px 12px; border-radius: 4px; font-size: 14px; }
 
-        /* === 顶部区域 wrapper === */
+        /* === 顶部折叠区域 wrapper === */
         #top-area { flex-shrink: 0; }
 
-        /* === PC端 标准布局 === */
-        .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .header-bar h2 { margin: 0; border-left: 5px solid #007bff; padding-left: 10px; color: #2c3e50; font-size: 20px; }
-        .header-actions { display: flex; align-items: center; gap: 10px; }
+        /* === 顶部工具栏 (原 header-bar 改造) === */
+        .header-bar { 
+            display: flex; 
+            justify-content: space-between; /* 左右两端对齐 */
+            align-items: center; 
+            margin-bottom: 10px; 
+            background: #fff; /* 增加背景色，统一风格 */
+            padding: 10px; 
+            border-radius: 8px; 
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        
+        /* 分组容器 */
+        .tool-group { display: flex; align-items: center; gap: 10px; }
 
+        /* === 控制栏 === */
         .control-bar { 
             margin-bottom: 10px; display: flex; gap: 10px; align-items: center; 
             background: #fff; padding: 10px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); 
@@ -122,10 +133,12 @@
             #mobile-nav { display: flex; }
             #top-area { display: none; }
             #top-area.show { display: block; animation: slideDown 0.2s ease-out; }
-            .header-bar { flex-direction: column; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
-            .header-bar h2 { display: none; }
-            .header-actions { width: 100%; display: flex; justify-content: space-between; flex-wrap: wrap; }
-            .header-actions button { flex: 1; justify-content: center; }
+            
+            /* 手机上 header-bar 样式调整，让按钮撑满 */
+            .header-bar { flex-direction: column; gap: 10px; padding: 10px; }
+            .tool-group { width: 100%; justify-content: space-between; }
+            .tool-group button { flex: 1; justify-content: center; }
+            
             .control-bar { flex-direction: column; align-items: stretch; gap: 8px; padding: 10px; }
             .control-bar > * { width: 100%; margin: 0; }
             .spacer, .divider { display: none; }
@@ -152,13 +165,16 @@
     </div>
 
     <div id="top-area">
+        <!-- 顶部工具栏 (UI重构：去标题，左右分栏) -->
         <div class="header-bar">
-            <h2>📈 股票估值复盘系统</h2>
-            <div class="header-actions">
+            <div class="tool-group">
+                <button class="btn-cloud-pull" onclick="syncFromGithub()">☁️ 拉取数据</button>
+                <button class="btn-cloud-push" onclick="uploadToGithub()">🚀 保存到 GitHub</button>
+            </div>
+            
+            <div class="tool-group">
                 <span id="status-msg"></span>
-                <button class="btn-cloud-pull" onclick="syncFromGithub()">☁️ 拉取</button>
-                <button class="btn-cloud-push" onclick="uploadToGithub()">🚀 上传</button>
-                <span style="border-left:1px solid #ccc; height:20px; margin:0 5px; display:inline-block;" class="divider"></span>
+                <div class="divider"></div>
                 <button class="btn-control" onclick="startRealtime()">▶ 开启</button>
                 <button class="btn-control" onclick="stopRealtime()">⏹ 暂停</button>
             </div>
@@ -248,7 +264,6 @@
     <div id="sync-modal" class="modal"><div class="modal-content"><span class="close-btn" onclick="closeSyncModal()">&times;</span><h3 style="margin-top:0; border-bottom:2px solid #eee; padding-bottom:15px;">☁️ 同步确认</h3><div style="padding: 10px 0;"><div class="sync-info-row"><span class="sync-label">云端:</span><span class="sync-val" id="sync-cloud-date">...</span></div><div class="sync-info-row"><span class="sync-label">本地:</span><span class="sync-val" id="sync-local-date">...</span></div><div class="sync-info-row"><span class="sync-label">数量:</span><span class="sync-val" id="sync-count">...</span></div></div><div style="text-align:right; margin-top:20px;"><button class="btn-cloud-pull" onclick="confirmSyncAction()" style="padding:8px 20px;">✅ 覆盖</button><button class="btn-cancel" onclick="closeSyncModal()" style="padding:8px 20px;">取消</button></div></div></div>
 
     <script>
-        // ★★★ 核心修复：统一时间格式函数 (YYYY/MM/DD HH:mm:ss) ★★★
         function getNowStr() {
             const d = new Date();
             const pad = (n) => n.toString().padStart(2, '0');
@@ -364,7 +379,6 @@
             
             if (sortState.key) {
                 rows.sort((a, b) => {
-                    // ★★★ 修复逻辑：对更新时间进行字符串/数字兼容比较 ★★★
                     if (sortState.key === 'last_update') {
                         const dA = a.logs?.[0]?.date || "";
                         const dB = b.logs?.[0]?.date || "";
@@ -434,7 +448,6 @@
             if(!code) { alert("请先搜索"); return; }
             const s = { code, name, tags:document.getElementById('inTags').value.trim(), profit:parseFloat(document.getElementById('inProfit').value)||0, lowPE:parseFloat(document.getElementById('inLowPE').value)||0, highPE:parseFloat(document.getElementById('inHighPE').value)||0, revenue:parseFloat(document.getElementById('inRevenue').value)||0, lowPS:parseFloat(document.getElementById('inLowPS').value)||0, highPS:parseFloat(document.getElementById('inHighPS').value)||0, logs:[] };
             const idx = stocks.findIndex(i=>i.code===code);
-            // ★★★ 修复点：使用统一的日期生成函数 ★★★
             const now = getNowStr();
             const note = document.getElementById('inNote').value.trim();
             
