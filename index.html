@@ -5,31 +5,34 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>股票估值系统 (极速同步版)</title>
     <style>
-        body { font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif; padding: 20px; max-width: 1700px; margin: 0 auto; background-color: #f4f6f9; font-size: 13px; color: #333; }
+        body { font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif; padding: 15px; max-width: 100%; margin: 0 auto; background-color: #f4f6f9; font-size: 13px; color: #333; height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; }
         
-        .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        h2 { margin: 0; border-left: 5px solid #007bff; padding-left: 10px; color: #2c3e50; }
+        /* === 头部和控制栏 === */
+        .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-shrink: 0; }
+        h2 { margin: 0; border-left: 5px solid #007bff; padding-left: 10px; color: #2c3e50; font-size: 18px; }
 
         .control-bar { 
-            margin-bottom: 10px; display: flex; gap: 10px; align-items: center; 
-            background: #fff; padding: 10px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); 
-            flex-wrap: wrap;
+            margin-bottom: 10px; display: flex; gap: 8px; align-items: center; 
+            background: #fff; padding: 8px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); 
+            flex-wrap: wrap; flex-shrink: 0;
         }
-        .divider { border-left: 1px solid #eee; height: 20px; margin: 0 5px; }
+        .divider { border-left: 1px solid #eee; height: 20px; margin: 0 2px; }
 
-        #input-container { background: #fff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); overflow: hidden; transition: all 0.3s ease; margin-bottom: 15px; display: none; }
-        #input-panel { padding: 20px; border-top: 3px solid #007bff; }
-        .input-row { display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-end; margin-bottom: 15px; }
+        /* === 录入面板 (浮动层) === */
+        #input-container { background: #fff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); overflow: hidden; transition: all 0.3s ease; margin-bottom: 10px; display: none; flex-shrink: 0; border: 1px solid #e0e0e0; }
+        #input-panel { padding: 15px; border-top: 3px solid #007bff; }
+        .input-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; margin-bottom: 10px; }
         
-        .group-box { border: 1px solid #e9ecef; padding: 15px; border-radius: 6px; background: #f8f9fa; display: flex; gap: 10px; }
+        .group-box { border: 1px solid #e9ecef; padding: 10px; border-radius: 6px; background: #f8f9fa; display: flex; gap: 8px; flex-wrap: wrap; }
         .group-title { font-weight: bold; color: #555; margin-right: 5px; display: block; margin-bottom: 5px; font-size: 12px;}
         
-        label { font-size: 12px; color: #666; display: block; margin-bottom: 4px; font-weight: 500; }
-        input { padding: 6px 8px; border: 1px solid #ced4da; border-radius: 4px; width: 100px; transition: border-color 0.2s; }
+        label { font-size: 12px; color: #666; display: block; margin-bottom: 2px; font-weight: 500; }
+        input { padding: 4px 6px; border: 1px solid #ced4da; border-radius: 4px; width: 90px; transition: border-color 0.2s; }
         input:focus { border-color: #007bff; outline: none; }
         input[readonly] { background-color: #e9ecef; color: #495057; cursor: not-allowed; }
         
-        button { padding: 6px 12px; cursor: pointer; border: none; border-radius: 4px; font-weight: 600; transition: all 0.2s; font-size: 12px; display: inline-flex; align-items: center; gap: 4px; }
+        /* === 按钮样式 === */
+        button { padding: 5px 10px; cursor: pointer; border: none; border-radius: 4px; font-weight: 600; transition: all 0.2s; font-size: 12px; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
         button:hover { opacity: 0.85; transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         button:active { transform: translateY(1px); }
 
@@ -38,11 +41,8 @@
         .btn-edit { background-color: #ffc107; color: #333; }
         .btn-log { background-color: #6f42c1; color: white; }
         .btn-delete { background-color: #dc3545; color: white; }
-        
-        /* 云同步按钮样式 */
-        .btn-cloud-pull { background-color: #6610f2; color: white; } /* 紫色：拉取 */
-        .btn-cloud-push { background-color: #fd7e14; color: white; } /* 橙色：上传 */
-        
+        .btn-cloud-pull { background-color: #6610f2; color: white; }
+        .btn-cloud-push { background-color: #fd7e14; color: white; }
         .btn-control { background-color: #6c757d; color: white; }
         .btn-toggle { background-color: #f8f9fa; border: 1px solid #ccc; color: #333; margin-right: 10px; }
         .btn-find { background-color: #fd7e14; color: white; }
@@ -54,122 +54,147 @@
         .btn-confirm-del { background-color: #dc3545; color: white; font-size: 14px; padding: 8px 25px; }
         .btn-cancel { background-color: #6c757d; color: white; font-size: 14px; padding: 8px 25px; }
 
-        #result { overflow-x: auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #e9ecef; min-height: 300px; }
-        table { border-collapse: collapse; width: 100%; min-width: 1300px; }
-        th, td { padding: 10px 12px; text-align: center; border: 1px solid #ebebeb; white-space: nowrap; }
-        th { background-color: #f1f3f5; color: #495057; font-weight: 700; user-select: none; position: sticky; top: 0; z-index: 10; }
-        th.sortable:hover { background-color: #e2e6ea; cursor: pointer; color: #007bff; }
-        tbody tr:nth-child(even) { background-color: #f8f9fa; } 
-        tbody tr:hover { background-color: #e9ecef; transition: background-color 0.1s; }
-        .col-hidden { display: none !important; }
+        /* === 核心表格区域 (含锁定逻辑) === */
+        #result { 
+            background: #fff; 
+            border-radius: 8px; 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05); 
+            border: 1px solid #e9ecef; 
+            
+            /* 关键：让表格区域独立滚动，并自适应剩余高度 */
+            flex-grow: 1;
+            overflow: auto; 
+            position: relative;
+        }
 
-        .tag-badge { display: inline-block; background: #e7f5ff; color: #007bff; padding: 2px 6px; border-radius: 4px; font-size: 11px; margin: 1px; border: 1px solid #d0ebff; }
+        table { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 1300px; }
+        
+        th, td { padding: 8px 10px; text-align: center; border-bottom: 1px solid #ebebeb; border-right: 1px solid #ebebeb; white-space: nowrap; }
+        
+        /* === 表头锁定 (Sticky Top) === */
+        th { 
+            background-color: #f1f3f5; 
+            color: #495057; 
+            font-weight: 700; 
+            user-select: none; 
+            position: sticky; 
+            top: 0; 
+            z-index: 20; 
+            border-top: 1px solid #ddd;
+            /* 增加阴影增加层次感 */
+            box-shadow: 0 1px 0 #dcdcdc;
+        }
+        th.sortable:hover { background-color: #e2e6ea; cursor: pointer; color: #007bff; }
+
+        /* === 第一列 (名称) 锁定 (Sticky Left) === */
+        
+        /* 1. 表体第一列 (td) */
+        tbody td:first-child {
+            position: sticky;
+            left: 0;
+            z-index: 15; /* 层级高于普通td(0)，低于表头(20) */
+            border-right: 2px solid #d1d1d1; /* 加深右边框以区分 */
+        }
+        /* 必须手动指定背景色，否则是透明的 */
+        tbody tr:nth-child(odd) td:first-child { background-color: #fff; }
+        tbody tr:nth-child(even) td:first-child { background-color: #f8f9fa; }
+        tbody tr:hover td:first-child { background-color: #e9ecef; }
+
+        /* 2. 表头第一列 (包含两行) */
+        /* 第一行：基础行情 (跨列) */
+        thead tr:nth-child(1) th:first-child {
+            position: sticky;
+            left: 0;
+            z-index: 30; /* 最高层级：位于左上角 */
+            border-right: 2px solid #d1d1d1;
+        }
+        /* 第二行：名称 */
+        thead tr:nth-child(2) th:first-child {
+            position: sticky;
+            left: 0;
+            top: 38px; /* 根据第一行的大致高度 */
+            z-index: 30;
+            border-right: 2px solid #d1d1d1;
+        }
+
+        /* === 其他样式 === */
+        .col-hidden { display: none !important; }
+        .tag-badge { display: inline-block; background: #e7f5ff; color: #007bff; padding: 1px 4px; border-radius: 4px; font-size: 10px; margin: 1px; border: 1px solid #d0ebff; }
+        
         .th-basic { border-top: 3px solid #6c757d; }
         .th-pe { border-top: 3px solid #28a745; background-color: #f3fdf6; }
         .th-ps { border-top: 3px solid #fd7e14; background-color: #fff8f3; }
         
-        /* === 最后一列专用样式 === */
-        .th-select { 
-            border-top: 3px solid #adb5bd; 
-            border-left: 2px solid #dee2e6 !important; 
-            background-color: #e9ecef;
-            width: 40px !important;      
-            max-width: 40px !important;
-            padding: 0 !important;   
-            text-align: center;
-            vertical-align: middle;
-            cursor: pointer;
-        }
-        .th-select:hover { background-color: #dde2e6; }
+        /* 全选列样式 */
+        .th-select, .td-select { width: 30px !important; max-width: 30px !important; padding: 0 !important; cursor: pointer; }
+        .th-select { border-top: 3px solid #adb5bd; border-left: 2px solid #dee2e6 !important; background-color: #e9ecef; z-index: 20; }
+        .td-select { border-left: 2px solid #dee2e6 !important; background-color: #f8f9fa; }
         
-        .td-select { 
-            border-left: 2px solid #dee2e6 !important; 
-            background-color: #f8f9fa;
-            width: 40px !important;
-            max-width: 40px !important;
-            padding: 0 !important;
-            text-align: center;
-            vertical-align: middle;
-            cursor: pointer;
-        }
-        .td-select:hover { background-color: #e2e6ea; }
-        
-        .row-checkbox { 
-            cursor: pointer; 
-            accent-color: #007bff; 
-            width: 15px; 
-            height: 15px; 
-            margin: 0 auto; 
-            display: block; 
-        }
-
-        .filter-icon { font-size: 12px; color: #adb5bd; cursor: pointer; padding: 2px 4px; margin-left: 4px; border-radius: 3px; transition: 0.2s; display: inline-block; }
-        .filter-icon:hover { background-color: #ced4da; color: #333; }
-        .filter-active { color: #dc3545 !important; font-weight: bold; background-color: #f8d7da; }
+        .row-checkbox { cursor: pointer; accent-color: #007bff; width: 15px; height: 15px; margin: 0 auto; display: block; }
+        .filter-icon { font-size: 10px; color: #adb5bd; cursor: pointer; margin-left: 2px; }
+        .filter-active { color: #dc3545 !important; background-color: #f8d7da; padding: 0 2px; border-radius: 2px; }
 
         #filter-menu { display: none; position: absolute; background: white; border: 1px solid #ccc; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border-radius: 6px; padding: 12px; z-index: 3000; min-width: 200px; }
         #filter-menu h4 { margin: 0 0 10px 0; font-size: 13px; border-bottom: 1px solid #eee; padding-bottom: 5px; color: #333; }
         .filter-row { display: flex; gap: 5px; margin-bottom: 10px; align-items: center; }
-        .filter-row select { padding: 4px; border: 1px solid #ddd; border-radius: 4px; }
-        .filter-row input { padding: 4px; border: 1px solid #ddd; border-radius: 4px; flex-grow: 1; }
+        .filter-row input { padding: 4px; border: 1px solid #ddd; border-radius: 4px; flex-grow: 1; width: 100%;}
         .filter-actions { display: flex; justify-content: flex-end; gap: 8px; }
-        .filter-actions button { font-size: 12px; padding: 4px 10px; }
         
         .row-selected { background-color: #e8f0fe !important; }
-        @keyframes highlightFade { 0% { background-color: #ffeb3b; } 100% { background-color: transparent; } }
-        .row-highlight { animation: highlightFade 2.5s ease-out forwards; }
+        .row-selected td:first-child { background-color: #e8f0fe !important; } /* 修正选中时左侧锁定列颜色 */
+        
         .data-empty { color: #ccc; font-weight: normal; }
-        #status-msg { font-size: 12px; color: #007bff; margin-left: 10px; font-family: monospace; }
-        .sort-icon { font-size: 10px; margin-left: 4px; color: #adb5bd; }
+        #status-msg { font-size: 11px; color: #007bff; margin-left: 5px; font-family: monospace; }
+        .sort-icon { font-size: 10px; margin-left: 2px; color: #adb5bd; }
         .sort-active { color: #007bff; }
 
         .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(2px); justify-content: center; align-items: center; }
-        .modal-content { background-color: white; padding: 25px; border-radius: 12px; width: 500px; box-shadow: 0 15px 40px rgba(0,0,0,0.3); position: relative; animation: slideDown 0.2s ease-out; }
-        .close-btn { position: absolute; top: 15px; right: 20px; font-size: 24px; cursor: pointer; color: #aaa; }
-        .log-entry { border-bottom: 1px solid #eee; padding: 12px 0; font-size: 13px; color: #444; }
-        .log-time { color: #999; font-size: 12px; margin-bottom: 4px; }
-        .log-change { color: #2c3e50; font-weight: 600; }
-        .log-note { display: block; margin-top: 6px; color: #555; background: #fff3cd; padding: 6px 10px; border-radius: 4px; border-left: 3px solid #ffc107; }
+        .modal-content { background-color: white; padding: 20px; border-radius: 12px; width: 90%; max-width: 500px; box-shadow: 0 15px 40px rgba(0,0,0,0.3); position: relative; }
+        .close-btn { position: absolute; top: 10px; right: 15px; font-size: 24px; cursor: pointer; color: #aaa; }
+        .log-entry { border-bottom: 1px solid #eee; padding: 10px 0; font-size: 12px; color: #444; }
+        .log-note { display: block; margin-top: 4px; color: #555; background: #fff3cd; padding: 4px 8px; border-radius: 4px; border-left: 3px solid #ffc107; }
+
+        /* 移动端适配优化 */
+        @media (max-width: 768px) {
+            .control-bar input { width: 70px !important; }
+            .header-bar h2 { font-size: 16px; }
+            button { padding: 6px 8px; }
+            .btn-view { display: none; } /* 手机上隐藏显示切换按钮以节省空间 */
+            #btn-toggle-action { display: inline-flex; } /* 仅保留操作列切换 */
+        }
     </style>
 </head>
 <body>
 
     <div class="header-bar">
-        <h2>📈 股票估值复盘系统</h2>
+        <h2>📈 股票估值系统</h2>
         <div>
             <span id="status-msg"></span>
-            
-            <!-- 云同步按钮组 -->
-            <button class="btn-cloud-pull" onclick="syncFromGithub()" title="从GitHub下载 data.jason 覆盖本地">☁️ 拉取数据</button>
-            <button class="btn-cloud-push" onclick="uploadToGithub()" title="将本地数据上传覆盖到 GitHub">🚀 保存到 GitHub</button>
-            
-            <span style="border-left:1px solid #ccc; margin:0 10px; height:20px; display:inline-block; vertical-align:middle;"></span>
-            <button class="btn-control" onclick="startRealtime()">▶ 开启</button>
-            <button class="btn-control" onclick="stopRealtime()">⏹ 暂停</button>
+            <button class="btn-control" onclick="startRealtime()">▶</button>
+            <button class="btn-control" onclick="stopRealtime()">⏸</button>
         </div>
     </div>
 
     <div class="control-bar">
-        <button class="btn-toggle" onclick="toggleInputPanel()" id="toggle-btn">➕ 录入/管理</button>
+        <button class="btn-toggle" onclick="toggleInputPanel()" id="toggle-btn">➕ 管理</button>
+        <button class="btn-cloud-pull" onclick="syncFromGithub()">☁️ 拉取</button>
+        <button class="btn-cloud-push" onclick="uploadToGithub()">🚀 上传</button>
         
         <div class="divider"></div>
-        <span style="font-size:12px; color:#666;">🔍:</span>
-        <input type="text" id="findInput" placeholder="代码/名称" style="width: 100px;" onkeydown="if(event.keyCode==13) updateTable()">
-        <input type="text" id="findTags" placeholder="属性/赛道" style="width: 100px;" onkeydown="if(event.keyCode==13) updateTable()">
+        <input type="text" id="findInput" placeholder="代码/名称" onkeydown="if(event.keyCode==13) updateTable()">
         <button class="btn-find" onclick="updateTable()">Go</button>
-
+        
         <div style="flex-grow:1"></div>
+        <button class="btn-compare" id="btn-compare" onclick="toggleShowSelected()">📊 选中 (0)</button>
+        <button class="btn-reset-all" onclick="clearAllFilters()">🌪️</button>
         
-        <span class="control-label">👁️ 显示:</span>
-        <button class="btn-view active" id="btn-toggle-code" onclick="toggleColumn('code')" title="显示/隐藏 代码列">代码</button>
-        <button class="btn-view active" id="btn-toggle-tags" onclick="toggleColumn('tags')" title="显示/隐藏 属性列">属性</button>
-        <button class="btn-view active" id="btn-toggle-update" onclick="toggleColumn('update')" title="显示/隐藏 更新列">更新</button>
-        <button class="btn-view active" id="btn-toggle-action" onclick="toggleColumn('action')" title="显示/隐藏 操作列">操作</button>
-
-        <div class="divider"></div>
-        
-        <button class="btn-reset-all" onclick="clearAllFilters()" title="清除所有筛选与搜索">🌪️ 重置筛选</button>
-        <button class="btn-compare" id="btn-compare" onclick="toggleShowSelected()">📊 只看选中 (0)</button>
+        <!-- 手机端隐藏部分显示按钮，但在代码中保留功能 -->
+        <div style="display:none;">
+            <button class="btn-view active" id="btn-toggle-code" onclick="toggleColumn('code')">代码</button>
+            <button class="btn-view active" id="btn-toggle-tags" onclick="toggleColumn('tags')">属性</button>
+            <button class="btn-view active" id="btn-toggle-update" onclick="toggleColumn('update')">更新</button>
+            <button class="btn-view active" id="btn-toggle-action" onclick="toggleColumn('action')">操作</button>
+        </div>
     </div>
 
     <!-- 录入面板 -->
@@ -177,27 +202,37 @@
         <div id="input-panel">
             <input type="hidden" id="editCode" value="">
             <div class="input-row">
-                <div class="group-box" style="background: #fff; border-color: #ddd;">
-                    <div><label>1. 股票名称</label><div style="display:flex; gap:5px;"><input type="text" id="inName" placeholder="如: 腾讯" style="width:110px"><button class="btn-search" onclick="searchStockCode()">🔍 匹配</button></div></div>
-                    <div><label>2. 代码 (自动)</label><input type="text" id="inCode" readonly placeholder="等待匹配" style="width:90px"></div>
-                    <div style="flex-grow: 1; min-width: 200px;"><label>🏷️ 属性/赛道 (空格分隔)</label><input type="text" id="inTags" placeholder="如: 消费电子 华为链 绩优" style="width: 98%;"></div>
-                    <div style="flex-grow: 1; min-width: 200px;"><label>📝 备注 (日志用)</label><input type="text" id="inNote" placeholder="输入想法，如：调高估值上限" style="width: 98%;"></div>
+                <div class="group-box" style="background: #fff; border-color: #ddd; width:100%">
+                    <div style="display:flex; gap:5px; align-items:center; width:100%">
+                        <label style="width:40px">名称</label>
+                        <input type="text" id="inName" placeholder="如: 腾讯" style="flex:1">
+                        <button class="btn-search" onclick="searchStockCode()">🔍</button>
+                    </div>
+                    <div style="display:flex; gap:5px; align-items:center; width:100%">
+                        <label style="width:40px">代码</label>
+                        <input type="text" id="inCode" readonly placeholder="自动" style="flex:1; background:#f0f0f0">
+                    </div>
+                    <div style="width:100%"><input type="text" id="inTags" placeholder="属性/赛道 (空格分隔)" style="width: 98%;"></div>
+                    <div style="width:100%"><input type="text" id="inNote" placeholder="备注 (日志)" style="width: 98%;"></div>
                 </div>
             </div>
             <div class="input-row">
-                <div class="group-box" style="border-left: 4px solid #28a745;">
-                    <div><span class="group-title" style="color:#28a745">① PE 估值</span></div>
-                    <div><label>净利(亿)</label><input type="number" id="inProfit" step="0.1"></div>
-                    <div><label>PE下限</label><input type="number" id="inLowPE"></div>
-                    <div><label>PE上限</label><input type="number" id="inHighPE"></div>
+                <div class="group-box" style="border-left: 4px solid #28a745; flex:1;">
+                    <div><span class="group-title" style="color:#28a745">① PE (净利)</span></div>
+                    <div><label>净利</label><input type="number" id="inProfit" step="0.1" style="width:60px"></div>
+                    <div><label>PE下</label><input type="number" id="inLowPE" style="width:40px"></div>
+                    <div><label>PE上</label><input type="number" id="inHighPE" style="width:40px"></div>
                 </div>
-                <div class="group-box" style="border-left: 4px solid #fd7e14;">
-                    <div><span class="group-title" style="color:#fd7e14">② PS 估值</span></div>
-                    <div><label>营收(亿)</label><input type="number" id="inRevenue" step="0.1"></div>
-                    <div><label>PS下限</label><input type="number" id="inLowPS" step="0.1"></div>
-                    <div><label>PS上限</label><input type="number" id="inHighPS" step="0.1"></div>
+                <div class="group-box" style="border-left: 4px solid #fd7e14; flex:1;">
+                    <div><span class="group-title" style="color:#fd7e14">② PS (营收)</span></div>
+                    <div><label>营收</label><input type="number" id="inRevenue" step="0.1" style="width:60px"></div>
+                    <div><label>PS下</label><input type="number" id="inLowPS" style="width:40px"></div>
+                    <div><label>PS上</label><input type="number" id="inHighPS" style="width:40px"></div>
                 </div>
-                <div style="align-self: center;"><button class="btn-add" onclick="saveStock()" id="btn-save-text">💾 保存</button><button onclick="clearInput()" style="margin-left:5px;">重置</button></div>
+            </div>
+            <div style="margin-top:10px; text-align:center;">
+                <button class="btn-add" onclick="saveStock()" id="btn-save-text" style="width:100px; padding:8px;">💾 保存</button>
+                <button onclick="clearInput()" style="margin-left:10px; padding:8px;">重置</button>
             </div>
         </div>
     </div>
@@ -208,22 +243,22 @@
     <div id="filter-menu">
         <h4 id="filter-title">筛选条件</h4>
         <div class="filter-row" id="filter-row-numeric">
-            <select id="filter-op"><option value=">">大于 (>)</option><option value="<">小于 (<)</option><option value=">=">大等 (≥)</option><option value="<=">小等 (≤)</option><option value="=">等于 (=)</option></select>
+            <select id="filter-op" style="width:60px"><option value=">"> > </option><option value="<"> < </option><option value=">="> ≥ </option><option value="<="> ≤ </option><option value="="> = </option></select>
             <input type="number" id="filter-val" placeholder="数值">
         </div>
         <div class="filter-row" id="filter-row-text" style="display:none;">
-            <input type="text" id="filter-text-val" placeholder="包含的内容...">
+            <input type="text" id="filter-text-val" placeholder="包含...">
         </div>
         <div class="filter-actions"><button class="btn-cancel" onclick="clearCurrentFilter()" style="padding:4px 10px;">清空</button><button class="btn-add" onclick="confirmFilter()" style="padding:4px 10px;">确定</button></div>
         <input type="hidden" id="filter-col-key">
     </div>
 
     <!-- 弹窗区域 -->
-    <div id="log-modal" class="modal"><div class="modal-content" style="width: 600px;"><span class="close-btn" onclick="closeLogModal()">&times;</span><h3 id="modal-title" style="margin-top:0; border-bottom:2px solid #eee; padding-bottom:15px;">操作日志</h3><div id="modal-body" style="max-height: 60vh; overflow-y: auto;"></div></div></div>
-    <div id="delete-modal" class="modal"><div class="modal-content" style="width: 400px; text-align: center; padding-top: 30px;"><h3>⚠️ 确认删除？</h3><p id="delete-msg" style="color:#555; margin-bottom:30px;">...</p><div><button class="btn-confirm-del" onclick="confirmDeleteAction()">确定删除</button><button class="btn-cancel" onclick="closeDeleteModal()">取消</button></div></div></div>
+    <div id="log-modal" class="modal"><div class="modal-content"><span class="close-btn" onclick="closeLogModal()">&times;</span><h3 id="modal-title" style="margin-top:0; border-bottom:2px solid #eee; padding-bottom:15px;">操作日志</h3><div id="modal-body" style="max-height: 50vh; overflow-y: auto;"></div></div></div>
+    <div id="delete-modal" class="modal"><div class="modal-content" style="text-align: center; padding-top: 30px;"><h3>⚠️ 确认删除？</h3><p id="delete-msg" style="color:#555; margin-bottom:30px;">...</p><div><button class="btn-confirm-del" onclick="confirmDeleteAction()">删除</button><button class="btn-cancel" onclick="closeDeleteModal()">取消</button></div></div></div>
 
     <script>
-        // ★★★ 1. 初始化逻辑 ★★★
+        // ★★★ 初始化逻辑 ★★★
         let stocks = JSON.parse(localStorage.getItem('valuationStocks')) || [];
         let defaultView = { showCode: true, showTags: true, showUpdate: true, showAction: true };
         let storedView = JSON.parse(localStorage.getItem('viewSettings')) || {};
@@ -239,165 +274,72 @@
         let onlySelectedMode = false;
         let currentVisibleStocks = [];
 
-        updateViewButtons();
-
         // ==========================================
         // ★★★ 配置 GitHub 信息 ★★★
         // ==========================================
         const GITHUB_CONFIG = {
-            username: "dlezywj-cell",   // 用户名
-            repo: "stock",              // 仓库名
-            path: "data.jason",         // 文件名 (注意你的是 .jason)
-            branch: "main"              // 分支
+            username: "dlezywj-cell",
+            repo: "stock",
+            path: "data.jason",
+            branch: "main"
         };
 
-        // 处理中文 Base64 编码
-        function utf8_to_b64(str) {
-            return window.btoa(unescape(encodeURIComponent(str)));
-        }
-        
-        // 处理 Base64 解码
-        function b64_to_utf8(str) {
-            return decodeURIComponent(escape(window.atob(str)));
-        }
+        function utf8_to_b64(str) { return window.btoa(unescape(encodeURIComponent(str))); }
+        function b64_to_utf8(str) { return decodeURIComponent(escape(window.atob(str))); }
 
-        // ------------------------------------------
-        //  功能 1: 上传到 GitHub (自动更新)
-        // ------------------------------------------
         async function uploadToGithub() {
             let token = localStorage.getItem("github_token");
             if (!token) {
-                token = prompt("🔑 首次上传需要验证权限\n\n请输入 GitHub Personal Access Token (ghp_...):\n(Token将保存在本地，不会上传)");
+                token = prompt("🔑 请输入 GitHub Token (ghp_...):");
                 if (!token) return;
                 localStorage.setItem("github_token", token);
             }
-
             const btn = document.querySelector('.btn-cloud-push');
             const originText = btn.innerText;
-            btn.innerText = "⏳ 连接中...";
-            btn.disabled = true;
-
-            // 使用 API 地址而非 Raw 地址
+            btn.innerText = "⏳"; btn.disabled = true;
             const apiUrl = `https://api.github.com/repos/${GITHUB_CONFIG.username}/${GITHUB_CONFIG.repo}/contents/${GITHUB_CONFIG.path}`;
-
             try {
-                // A. 获取文件 SHA
-                const getRes = await fetch(apiUrl, {
-                    headers: { 
-                        "Authorization": `token ${token}`, 
-                        "Accept": "application/vnd.github.v3+json" 
-                    },
-                    cache: "no-store" // 禁用缓存
-                });
-
+                const getRes = await fetch(apiUrl, { headers: { "Authorization": `token ${token}`, "Accept": "application/vnd.github.v3+json" }, cache: "no-store" });
                 let sha = null;
-                if (getRes.ok) {
-                    const fileData = await getRes.json();
-                    sha = fileData.sha;
-                } else if (getRes.status !== 404) {
-                    throw new Error(`API 错误: ${getRes.status}`);
-                }
-
-                // B. 上传新数据
-                btn.innerText = "🚀 上传中...";
-                const contentStr = JSON.stringify(stocks, null, 2);
-                const putBody = {
-                    message: `Update data ${new Date().toLocaleString()}`,
-                    content: utf8_to_b64(contentStr),
-                    branch: GITHUB_CONFIG.branch
-                };
-                if (sha) putBody.sha = sha;
+                if (getRes.ok) { const fileData = await getRes.json(); sha = fileData.sha; }
+                else if (getRes.status !== 404) throw new Error(`API 错误: ${getRes.status}`);
 
                 const putRes = await fetch(apiUrl, {
                     method: "PUT",
-                    headers: {
-                        "Authorization": `token ${token}`,
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify(putBody)
+                    headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" },
+                    body: JSON.stringify({ message: `Update ${new Date().toLocaleString()}`, content: utf8_to_b64(JSON.stringify(stocks, null, 2)), branch: GITHUB_CONFIG.branch, sha: sha })
                 });
-
-                if (putRes.ok) {
-                    alert("✅ 上传成功！\nGitHub上的 data.jason 已更新。\n\n其他设备点击【☁️ 拉取数据】即可同步。");
-                } else {
-                    const err = await putRes.json();
-                    throw new Error(err.message);
-                }
-
+                if (putRes.ok) alert("✅ 上传成功！");
+                else throw new Error((await putRes.json()).message);
             } catch (e) {
-                console.error(e);
-                if (e.message.includes("401") || e.message.includes("Bad credentials")) {
-                    alert("❌ Token 无效或过期，已清除本地存储，请重试。");
-                    localStorage.removeItem("github_token");
-                } else {
-                    alert(`❌ 上传失败: ${e.message}`);
-                }
-            } finally {
-                btn.innerText = originText;
-                btn.disabled = false;
-            }
+                if (e.message.includes("401")) { alert("❌ Token 失效，已清除，请重试。"); localStorage.removeItem("github_token"); }
+                else alert(`❌ 失败: ${e.message}`);
+            } finally { btn.innerText = originText; btn.disabled = false; }
         }
 
-        // ------------------------------------------
-        //  功能 2: 从 GitHub 拉取 (走 API，无延迟)
-        // ------------------------------------------
         async function syncFromGithub() {
-            // 优先尝试使用 Token 走 API 拉取（无缓存，秒更新）
             let token = localStorage.getItem("github_token");
             const btn = document.querySelector('.btn-cloud-pull');
             const originText = btn.innerText;
-            btn.innerText = "⌛ 下载中...";
-            btn.disabled = true;
-
+            btn.innerText = "⌛"; btn.disabled = true;
             try {
                 let newData = null;
-
-                // 方式 A: 如果有 Token，走 API 读取 (推荐，无延迟)
                 if (token) {
                     const apiUrl = `https://api.github.com/repos/${GITHUB_CONFIG.username}/${GITHUB_CONFIG.repo}/contents/${GITHUB_CONFIG.path}`;
-                    const res = await fetch(apiUrl, {
-                        headers: { 
-                            "Authorization": `token ${token}`, 
-                            "Accept": "application/vnd.github.v3+json" 
-                        },
-                        cache: "no-store"
-                    });
-
-                    if (res.ok) {
-                        const json = await res.json();
-                        // GitHub API 返回的内容是 Base64 编码的
-                        const content = b64_to_utf8(json.content);
-                        newData = JSON.parse(content);
-                    }
+                    const res = await fetch(apiUrl, { headers: { "Authorization": `token ${token}`, "Accept": "application/vnd.github.v3+json" }, cache: "no-store" });
+                    if (res.ok) newData = JSON.parse(b64_to_utf8((await res.json()).content));
                 }
-
-                // 方式 B: 如果没有 Token 或者 API 失败，走 Raw URL (可能有延迟)
                 if (!newData) {
-                    console.log("API 拉取失败或无Token，尝试 Raw 链接...");
                     const rawUrl = `https://raw.githubusercontent.com/${GITHUB_CONFIG.username}/${GITHUB_CONFIG.repo}/${GITHUB_CONFIG.branch}/${GITHUB_CONFIG.path}`;
                     const res = await fetch(rawUrl + "?t=" + Date.now());
-                    if (!res.ok) throw new Error("文件不存在或网络错误");
+                    if (!res.ok) throw new Error("文件不存在");
                     newData = await res.json();
                 }
-
-                if (Array.isArray(newData)) {
-                    if(confirm(`☁️ 成功从云端获取 ${newData.length} 条数据。\n\n是否覆盖当前本地数据？`)) {
-                        stocks = newData;
-                        saveStorage(); 
-                        updateTable(); 
-                        alert("✅ 同步完成！");
-                    }
-                } else {
-                    alert("❌ 数据格式错误：不是数组");
+                if (Array.isArray(newData) && confirm(`☁️ 获取到 ${newData.length} 条数据，覆盖本地？`)) {
+                    stocks = newData; saveStorage(); updateTable(); alert("✅ 同步完成！");
                 }
-
-            } catch (e) {
-                console.error(e);
-                alert(`❌ 拉取失败: ${e.message}\n请检查 Token 是否正确，或文件是否存在。`);
-            } finally {
-                btn.innerText = originText;
-                btn.disabled = false;
-            }
+            } catch (e) { alert(`❌ 拉取失败: ${e.message}`); } 
+            finally { btn.innerText = originText; btn.disabled = false; }
         }
 
         function getSecid(code) {
@@ -407,103 +349,69 @@
             return `105.${code}`;
         }
 
-        // ---------------- 核心：数据获取与渲染 ----------------
         async function updateTable() {
             const container = document.getElementById('result');
             const statusMsg = document.getElementById('status-msg');
-            
             if (stocks.length === 0) {
-                container.innerHTML = '<div style="padding:40px;text-align:center;color:#999;border:2px dashed #eee;border-radius:10px;">📭 列表为空，请添加股票或点击 "☁️ 拉取数据"</div>';
-                statusMsg.innerText = ""; return;
+                container.innerHTML = '<div style="padding:40px;text-align:center;color:#999;">📭 列表为空</div>'; return;
             }
-
             const secids = stocks.map(s => getSecid(s.code)).join(',');
             const url = `https://push2.eastmoney.com/api/qt/ulist.np/get?secids=${secids}&fields=f12,f14,f2,f3,f18,f20&invt=2&fltt=2&_=${Date.now()}`;
-
             try {
                 const res = await fetch(url);
                 const json = await res.json();
                 if (json?.data?.diff) {
-                    const list = Array.isArray(json.data.diff) ? json.data.diff : Object.values(json.data.diff);
-                    list.forEach(item => { cachedMarketData[item.f12] = item; });
-                    statusMsg.innerHTML = `● 数据已更新 ${new Date().toLocaleTimeString()}`;
-                    statusMsg.style.color = "#007bff";
+                    (Array.isArray(json.data.diff) ? json.data.diff : Object.values(json.data.diff)).forEach(item => cachedMarketData[item.f12] = item);
+                    statusMsg.innerHTML = `● ${new Date().toLocaleTimeString()}`;
                 }
-            } catch (e) { statusMsg.innerHTML = `<span style="color:orange">⚠️ 网络波动，显示缓存</span>`; }
+            } catch (e) { statusMsg.innerHTML = `<span style="color:orange">⚠️ 缓存</span>`; }
 
             const data = stocks.map(s => {
                 const rawCode = s.code.split('.')[0];
-                const mItem = cachedMarketData[rawCode];
+                const m = cachedMarketData[rawCode];
                 let market = { cap: 0, chg: 0, valid: false };
-                if (mItem) {
-                    let p = parseFloat(mItem.f2); 
-                    let last = parseFloat(mItem.f18);
-                    let mCap = parseFloat(mItem.f20);
-                    let chgPct = parseFloat(mItem.f3);
-                    let validPrice = (p > 0) ? p : last;
-                    let validCap = (mCap > 0) ? mCap : 0;
-                    market.cap = validCap / 100000000; 
-                    if (!isNaN(chgPct)) market.chg = chgPct.toFixed(2); else market.chg = "0.00";
+                if (m) {
+                    let p = parseFloat(m.f2), last = parseFloat(m.f18), mCap = parseFloat(m.f20);
+                    market.cap = (mCap > 0 ? mCap : 0) / 100000000;
+                    market.chg = (!isNaN(parseFloat(m.f3))) ? parseFloat(m.f3).toFixed(2) : "0.00";
                     market.valid = true;
                 }
-                let peRes = { down: '-', up: '-' };
-                let psRes = { down: '-', up: '-' };
+                let peRes = { down: '-', up: '-' }, psRes = { down: '-', up: '-' };
                 if (market.valid && market.cap > 0) {
-                    if (s.profit && s.lowPE) {
-                        peRes.down = ((s.profit * s.lowPE / market.cap - 1) * 100).toFixed(2);
-                        peRes.up = ((s.profit * s.highPE - market.cap) / market.cap * 100).toFixed(2);
-                    }
-                    if (s.revenue && s.lowPS) {
-                        psRes.down = ((s.revenue * s.lowPS / market.cap - 1) * 100).toFixed(2);
-                        psRes.up = ((s.revenue * s.highPS - market.cap) / market.cap * 100).toFixed(2);
-                    }
+                    if (s.profit && s.lowPE) { peRes.down = ((s.profit * s.lowPE / market.cap - 1) * 100).toFixed(2); peRes.up = ((s.profit * s.highPE - market.cap) / market.cap * 100).toFixed(2); }
+                    if (s.revenue && s.lowPS) { psRes.down = ((s.revenue * s.lowPS / market.cap - 1) * 100).toFixed(2); psRes.up = ((s.revenue * s.highPS - market.cap) / market.cap * 100).toFixed(2); }
                 }
                 return { ...s, ...market, peRes, psRes };
             });
-
             renderTable(data);
             updateCompareBtn();
         }
 
         function renderTable(data) {
             const container = document.getElementById('result');
-            
             let filteredData = data.filter(item => {
                 if (onlySelectedMode && !selectedCodes.has(item.code)) return false;
                 const searchKey = document.getElementById('findInput').value.trim().toUpperCase();
                 if (searchKey && !item.code.includes(searchKey) && !item.name.includes(searchKey)) return false;
-                const searchTags = document.getElementById('findTags').value.trim().toLowerCase();
-                if (searchTags) {
-                    const itemTags = (item.tags || "").toLowerCase();
-                    const keywords = searchTags.split(/\s+/); 
-                    if (!keywords.every(k => itemTags.includes(k))) return false;
-                }
                 for (let colKey in columnFilters) {
                     const rule = columnFilters[colKey];
                     if (!rule) continue;
-                    if (rule.type === 'text') {
-                        const cellVal = (item[colKey] || "").toLowerCase();
-                        if (!cellVal.includes(rule.val.toLowerCase())) return false;
-                    } else {
+                    if (rule.type === 'text') { if (!(item[colKey] || "").toLowerCase().includes(rule.val.toLowerCase())) return false; } 
+                    else {
                         let val = -999999;
                         if (colKey === 'pe_down') val = parseFloat(item.peRes.down);
                         else if (colKey === 'pe_up') val = parseFloat(item.peRes.up);
                         else if (colKey === 'ps_down') val = parseFloat(item.psRes.down);
                         else if (colKey === 'ps_up') val = parseFloat(item.psRes.up);
                         if (isNaN(val)) return false;
-                        const limit = rule.val;
-                        switch(rule.op) {
-                            case '>': if (!(val > limit)) return false; break;
-                            case '<': if (!(val < limit)) return false; break;
-                            case '>=': if (!(val >= limit)) return false; break;
-                            case '<=': if (!(val <= limit)) return false; break;
-                            case '=': if (Math.abs(val - limit) > 0.1) return false; break;
-                        }
+                        if (rule.op === '>' && !(val > rule.val)) return false;
+                        if (rule.op === '<' && !(val < rule.val)) return false;
+                        if (rule.op === '>=' && !(val >= rule.val)) return false;
+                        if (rule.op === '<=' && !(val <= rule.val)) return false;
                     }
                 }
                 return true;
             });
-            
             currentVisibleStocks = filteredData;
 
             if (sortState.key) {
@@ -512,112 +420,63 @@
                         if(k=='chg') return parseFloat(obj.chg);
                         if(k.includes('pe')) return parseFloat(obj.peRes[k.split('_')[1]]) || -9999;
                         if(k.includes('ps')) return parseFloat(obj.psRes[k.split('_')[1]]) || -9999;
-                        if(k==='last_update') {
-                            const d1 = obj.logs && obj.logs.length > 0 ? obj.logs[0].date : "0";
-                            const d2 = b.logs && b.logs.length > 0 ? b.logs[0].date : "0";
-                            return sortState.dir === 'desc' ? (d1 < d2 ? 1 : -1) : (d1 > d2 ? 1 : -1);
-                        }
+                        if(k==='last_update') return obj.logs?.length ? obj.logs[0].date : "0";
                         return 0;
                     };
-                    if (sortState.key === 'last_update') {
-                        const d1 = a.logs && a.logs.length ? a.logs[0].date : "";
-                        const d2 = b.logs && b.logs.length ? b.logs[0].date : "";
-                        if(d1 === d2) return 0;
-                        return sortState.dir === 'desc' ? (d1 < d2 ? 1 : -1) : (d1 > d2 ? 1 : -1);
-                    }
-                    return sortState.dir === 'desc' ? getVal(b, sortState.key) - getVal(a, sortState.key) : getVal(a, sortState.key) - getVal(b, sortState.key);
+                    return sortState.dir === 'desc' ? (getVal(b, sortState.key) > getVal(a, sortState.key) ? 1 : -1) : (getVal(a, sortState.key) > getVal(b, sortState.key) ? 1 : -1);
                 });
             }
 
-            const getFilterIcon = (key) => {
-                const isActive = columnFilters[key] != null;
-                const iconClass = isActive ? 'filter-icon filter-active' : 'filter-icon';
-                const symbol = isActive ? '▼' : '▽';
-                return `<span class="${iconClass}" onclick="event.stopPropagation(); openFilterMenu('${key}', event)">${symbol}</span>`;
-            };
-
+            const getFilterIcon = (key) => `<span class="${columnFilters[key] ? 'filter-icon filter-active' : 'filter-icon'}" onclick="event.stopPropagation(); openFilterMenu('${key}', event)">${columnFilters[key]?'▼':'▽'}</span>`;
             const styleCode = viewSettings.showCode ? '' : 'col-hidden';
             const styleTags = viewSettings.showTags ? '' : 'col-hidden';
             const styleUpdate = viewSettings.showUpdate ? '' : 'col-hidden';
             const styleAction = viewSettings.showAction ? '' : 'col-hidden';
-
             const isAllVisibleSelected = filteredData.length > 0 && filteredData.every(item => selectedCodes.has(item.code));
-            const basicColsSpan = 3 + (viewSettings.showCode ? 1 : 0) + (viewSettings.showTags ? 1 : 0);
 
-            let html = `
-            <table>
-                <thead>
+            let html = `<table><thead>
                     <tr>
-                        <th class="th-basic" colspan="${basicColsSpan}">📊 基础行情</th>
-                        <th class="th-pe" colspan="4">💰 PE 估值模型 (利润)</th>
-                        <th class="th-ps" colspan="4">🚀 PS 估值模型 (营收)</th>
-                        <th rowspan="2" class="sortable ${styleUpdate}" onclick="setSort('last_update')" style="vertical-align: middle; width:70px; font-size:12px;">
-                            📅 更新 <span class="${getSortClass('last_update')}">${getSortIcon('last_update')}</span>
-                        </th>
-                        <th class="th-basic ${styleAction}" rowspan="2" style="vertical-align: middle;">⚙️ 操作</th>
-                        <th class="th-select" rowspan="2" onclick="toggleSelectAll()" title="点击全选/取消">
-                            <div style="display:flex; flex-direction:column; align-items:center; cursor:pointer;">
-                                <input type="checkbox" id="header-checkbox" ${isAllVisibleSelected ? 'checked' : ''} style="margin:0; cursor:pointer;">
-                                <div style="font-size:9px; font-weight:normal; color:#888; line-height:1; margin-top:2px;">全选</div>
-                            </div>
-                        </th>
+                        <th class="th-basic" colspan="${3 + (viewSettings.showCode?1:0) + (viewSettings.showTags?1:0)}">📊 基础行情</th>
+                        <th class="th-pe" colspan="4">💰 PE (利润)</th>
+                        <th class="th-ps" colspan="4">🚀 PS (营收)</th>
+                        <th rowspan="2" class="sortable ${styleUpdate}" onclick="setSort('last_update')">📅<span class="${getSortClass('last_update')}">${getSortIcon('last_update')}</span></th>
+                        <th class="th-basic ${styleAction}" rowspan="2">操作</th>
+                        <th class="th-select" rowspan="2" onclick="toggleSelectAll()"><input type="checkbox" ${isAllVisibleSelected ? 'checked' : ''}></th>
                     </tr>
                     <tr>
                         <th>名称</th>
                         <th class="${styleCode}">代码</th>
-                        <th class="${styleTags}" style="max-width:150px;">属性 ${getFilterIcon('tags')}</th>
-                        <th onclick="setSort('chg')" class="sortable">涨跌幅 <span class="${getSortClass('chg')}">${getSortIcon('chg')}</span></th>
-                        <th>市值(亿)</th>
-                        <th>预期净利</th>
+                        <th class="${styleTags}">属性 ${getFilterIcon('tags')}</th>
+                        <th onclick="setSort('chg')" class="sortable">涨跌 <span class="${getSortClass('chg')}">${getSortIcon('chg')}</span></th>
+                        <th>市值</th>
+                        <th>净利</th>
                         <th>合理PE</th>
-                        <th onclick="setSort('pe_down')" class="sortable">下行% ${getFilterIcon('pe_down')} <span class="${getSortClass('pe_down')}">${getSortIcon('pe_down')}</span></th>
-                        <th onclick="setSort('pe_up')" class="sortable">上行% ${getFilterIcon('pe_up')} <span class="${getSortClass('pe_up')}">${getSortIcon('pe_up')}</span></th>
-                        <th>预期营收</th>
+                        <th onclick="setSort('pe_down')" class="sortable">下% ${getFilterIcon('pe_down')} <span class="${getSortClass('pe_down')}">${getSortIcon('pe_down')}</span></th>
+                        <th onclick="setSort('pe_up')" class="sortable">上% ${getFilterIcon('pe_up')} <span class="${getSortClass('pe_up')}">${getSortIcon('pe_up')}</span></th>
+                        <th>营收</th>
                         <th>合理PS</th>
-                        <th onclick="setSort('ps_down')" class="sortable">下行% ${getFilterIcon('ps_down')} <span class="${getSortClass('ps_down')}">${getSortIcon('ps_down')}</span></th>
-                        <th onclick="setSort('ps_up')" class="sortable">上行% ${getFilterIcon('ps_up')} <span class="${getSortClass('ps_up')}">${getSortIcon('ps_up')}</span></th>
-                    </tr>
-                </thead>
-                <tbody>
-            `;
+                        <th onclick="setSort('ps_down')" class="sortable">下% ${getFilterIcon('ps_down')} <span class="${getSortClass('ps_down')}">${getSortIcon('ps_down')}</span></th>
+                        <th onclick="setSort('ps_up')" class="sortable">上% ${getFilterIcon('ps_up')} <span class="${getSortClass('ps_up')}">${getSortIcon('ps_up')}</span></th>
+                    </tr></thead><tbody>`;
 
-            if(filteredData.length === 0) {
-                html += `<tr><td colspan="16" style="padding:30px;text-align:center;color:#999;">没有符合条件的股票</td></tr>`;
-            } else {
+            if(filteredData.length === 0) html += `<tr><td colspan="20" style="padding:30px;text-align:center;color:#999;">无数据</td></tr>`;
+            else {
                 filteredData.forEach(item => {
                     const fmtPct = (v) => {
                         if(v==='-') return '<span class="data-empty">-</span>';
                         const val = parseFloat(v);
                         const color = val >= 0 ? '#d32f2f' : '#2e7d32';
-                        const weight = (val > 30) ? '800' : 'bold';
-                        return `<span style="color:${color}; font-weight:${weight}">${v}%</span>`;
+                        return `<span style="color:${color}; font-weight:${val>30?'800':'bold'}">${v}%</span>`;
                     };
-
-                    let tagsHtml = '';
-                    if(item.tags) tagsHtml = item.tags.split(' ').map(t => t.trim()).filter(t=>t).map(t => `<span class="tag-badge">${t}</span>`).join('');
-
-                    const lastDateRaw = (item.logs && item.logs.length > 0) ? item.logs[0].date : '';
-                    let updateHtml = '<span class="data-empty" style="font-size:11px;">-</span>';
-                    if(lastDateRaw) {
-                        const parts = lastDateRaw.split(' ');
-                        if(parts.length >= 2) {
-                            updateHtml = `<span style="font-size:11px; color:#666; display:block; line-height:1.2;">${parts[0]}<br><span style="color:#999; font-size:10px;">${parts[1].slice(0,5)}</span></span>`;
-                        } else {
-                            updateHtml = `<span style="font-size:11px; color:#666;">${lastDateRaw}</span>`;
-                        }
-                    }
-
-                    const rowId = 'row-' + item.code.replace(/\./g, '-');
                     const isChecked = selectedCodes.has(item.code) ? 'checked' : '';
                     const rowClass = isChecked ? 'row-selected' : '';
-
-                    html += `
-                        <tr id="${rowId}" class="${rowClass}">
+                    
+                    html += `<tr class="${rowClass}">
                             <td style="font-weight:600; color:#343a40;">${item.name}</td>
                             <td class="${styleCode}" style="color:#868e96; font-size:12px;">${item.code}</td>
-                            <td class="${styleTags}" style="text-align:left;">${tagsHtml}</td>
+                            <td class="${styleTags}" style="text-align:left;">${item.tags ? item.tags.split(' ').map(t=>t?`<span class="tag-badge">${t}</span>`:'').join('') : ''}</td>
                             <td style="font-weight:bold; color:${parseFloat(item.chg)>=0 ? '#e03131':'#099268'}">${item.chg}%</td>
-                            <td style="font-family:monospace; font-size:13px;">${item.cap ? item.cap.toFixed(2) : '-'}</td>
+                            <td style="font-family:monospace;">${item.cap ? item.cap.toFixed(2) : '-'}</td>
                             <td>${item.profit || '<span class="data-empty">-</span>'}</td>
                             <td style="font-size:12px;">${item.lowPE||'-'}~${item.highPE||'-'}</td>
                             <td>${fmtPct(item.peRes.down)}</td>
@@ -626,226 +485,103 @@
                             <td style="font-size:12px;">${item.lowPS||'-'}~${item.highPS||'-'}</td>
                             <td>${fmtPct(item.psRes.down)}</td>
                             <td>${fmtPct(item.psRes.up)}</td>
-                            <td class="${styleUpdate}">${updateHtml}</td>
-                            <td style="white-space:nowrap;" class="${styleAction}">
-                                <button class="btn-log" onclick="showLogs('${item.code}')" title="日志">📝</button>
-                                <button class="btn-edit" onclick="editStock('${item.code}')" title="修改">✏️</button>
-                                <button class="btn-delete" onclick="openDeleteModal('${item.code}')" title="删除">✕</button>
+                            <td class="${styleUpdate}" style="font-size:11px;color:#666">${item.logs?.length ? item.logs[0].date.split(' ')[0] : '-'}</td>
+                            <td class="${styleAction}">
+                                <button class="btn-log" onclick="showLogs('${item.code}')">📝</button>
+                                <button class="btn-edit" onclick="editStock('${item.code}')">✏️</button>
+                                <button class="btn-delete" onclick="openDeleteModal('${item.code}')">✕</button>
                             </td>
-                            <td class="td-select" onclick="toggleSelectRow('${item.code}')">
-                                <input type="checkbox" class="row-checkbox" ${isChecked} onclick="event.stopPropagation(); toggleSelectRow('${item.code}')">
-                            </td>
-                        </tr>
-                    `;
+                            <td class="td-select" onclick="toggleSelectRow('${item.code}')"><input type="checkbox" class="row-checkbox" ${isChecked}></td>
+                        </tr>`;
                 });
             }
             html += '</tbody></table>';
             container.innerHTML = html;
         }
 
-        function toggleSelectRow(code) {
-            if (selectedCodes.has(code)) {
-                selectedCodes.delete(code);
-            } else {
-                selectedCodes.add(code);
-            }
-            updateTable();
-        }
+        function toggleSelectRow(code) { if (selectedCodes.has(code)) selectedCodes.delete(code); else selectedCodes.add(code); updateTable(); }
+        function toggleSelectAll() { if(currentVisibleStocks.length===0)return; const all=currentVisibleStocks.every(i=>selectedCodes.has(i.code)); currentVisibleStocks.forEach(i=>all?selectedCodes.delete(i.code):selectedCodes.add(i.code)); updateTable(); }
+        function clearAllFilters() { columnFilters={}; document.getElementById('findInput').value=''; if(onlySelectedMode)toggleShowSelected(); updateTable(); }
+        function toggleShowSelected() { onlySelectedMode=!onlySelectedMode; document.getElementById('btn-compare').innerText=onlySelectedMode?"🔙 全部":`📊 选中 (${selectedCodes.size})`; document.getElementById('btn-compare').classList.toggle('active'); updateTable(); }
+        function updateCompareBtn() { if(!onlySelectedMode) document.getElementById('btn-compare').innerText=`📊 选中 (${selectedCodes.size})`; }
+        function toggleColumn(c) { if(c=='code')viewSettings.showCode=!viewSettings.showCode; if(c=='tags')viewSettings.showTags=!viewSettings.showTags; if(c=='update')viewSettings.showUpdate=!viewSettings.showUpdate; if(c=='action')viewSettings.showAction=!viewSettings.showAction; localStorage.setItem('viewSettings',JSON.stringify(viewSettings)); updateTable(); }
 
-        function toggleSelectAll() {
-            if (currentVisibleStocks.length === 0) return;
-            const allSelected = currentVisibleStocks.every(item => selectedCodes.has(item.code));
-            if (allSelected) currentVisibleStocks.forEach(item => selectedCodes.delete(item.code));
-            else currentVisibleStocks.forEach(item => selectedCodes.add(item.code));
-            updateTable();
+        function openFilterMenu(k,e) {
+            const m=document.getElementById('filter-menu'); m.style.display='block'; 
+            const r=e.target.getBoundingClientRect(); m.style.top=(r.bottom+5)+'px'; m.style.left=Math.min(window.innerWidth-220, r.left-100)+'px';
+            document.getElementById('filter-col-key').value=k;
+            const isText=k==='tags'; document.getElementById('filter-row-numeric').style.display=isText?'none':'flex'; document.getElementById('filter-row-text').style.display=isText?'flex':'none';
+            setTimeout(()=>document.addEventListener('click', closeFilterMenuOutside),0);
         }
-
-        function clearAllFilters() {
-            columnFilters = {}; 
-            document.getElementById('findInput').value = ''; 
-            document.getElementById('findTags').value = '';
-            if (onlySelectedMode) toggleShowSelected(); 
-            updateTable();
-        }
-
-        function toggleShowSelected() {
-            onlySelectedMode = !onlySelectedMode;
-            const btn = document.getElementById('btn-compare');
-            if (onlySelectedMode) { btn.classList.add('active'); btn.innerText = "🔙 显示全部"; }
-            else { btn.classList.remove('active'); updateCompareBtn(); }
-            updateTable();
-        }
-        function updateCompareBtn() { if (!onlySelectedMode) document.getElementById('btn-compare').innerText = `📊 只看选中 (${selectedCodes.size})`; }
-
-        function toggleColumn(colType) {
-            if(colType === 'code') viewSettings.showCode = !viewSettings.showCode;
-            if(colType === 'tags') viewSettings.showTags = !viewSettings.showTags;
-            if(colType === 'update') viewSettings.showUpdate = !viewSettings.showUpdate;
-            if(colType === 'action') viewSettings.showAction = !viewSettings.showAction;
-            localStorage.setItem('viewSettings', JSON.stringify(viewSettings));
-            updateViewButtons(); updateTable();
-        }
-        function updateViewButtons() {
-            const btnCode = document.getElementById('btn-toggle-code');
-            const btnTags = document.getElementById('btn-toggle-tags');
-            const btnUpdate = document.getElementById('btn-toggle-update');
-            const btnAction = document.getElementById('btn-toggle-action');
-            
-            if(viewSettings.showCode) btnCode.classList.add('active'); else btnCode.classList.remove('active');
-            if(viewSettings.showTags) btnTags.classList.add('active'); else btnTags.classList.remove('active');
-            if(viewSettings.showUpdate) btnUpdate.classList.add('active'); else btnUpdate.classList.remove('active');
-            if(viewSettings.showAction) btnAction.classList.add('active'); else btnAction.classList.remove('active');
-        }
-
-        function openFilterMenu(colKey, event) {
-            const menu = document.getElementById('filter-menu');
-            const input = document.getElementById('filter-val');
-            const op = document.getElementById('filter-op');
-            const numRow = document.getElementById('filter-row-numeric');
-            const textRow = document.getElementById('filter-row-text');
-            const title = document.getElementById('filter-title');
-            const isText = colKey === 'tags';
-            numRow.style.display = isText ? 'none' : 'flex';
-            textRow.style.display = isText ? 'flex' : 'none';
-            title.innerText = isText ? "筛选包含内容" : "数值筛选";
-            const rect = event.target.getBoundingClientRect();
-            menu.style.top = (window.scrollY + rect.bottom + 5) + 'px';
-            menu.style.left = Math.min(window.innerWidth - 230, (window.scrollX + rect.left - 100)) + 'px';
-            menu.style.display = 'block';
-            document.getElementById('filter-col-key').value = colKey;
-            const existing = columnFilters[colKey];
-            if (isText) {
-                document.getElementById('filter-text-val').value = existing ? existing.val : "";
-                document.getElementById('filter-text-val').focus();
-            } else {
-                if (existing) { op.value = existing.op; input.value = existing.val; } else { op.value = ">"; input.value = ""; }
-                input.focus();
-            }
-            setTimeout(() => { document.addEventListener('click', closeFilterMenuOutside); }, 0);
-        }
-        function closeFilterMenuOutside(e) { const menu = document.getElementById('filter-menu'); if (!menu.contains(e.target)) { menu.style.display = 'none'; document.removeEventListener('click', closeFilterMenuOutside); } }
+        function closeFilterMenuOutside(e) { const m=document.getElementById('filter-menu'); if(!m.contains(e.target)) { m.style.display='none'; document.removeEventListener('click', closeFilterMenuOutside); } }
         function confirmFilter() {
-            const colKey = document.getElementById('filter-col-key').value;
-            const isText = colKey === 'tags';
-            if (isText) {
-                const val = document.getElementById('filter-text-val').value.trim();
-                if (val === "") delete columnFilters[colKey]; else columnFilters[colKey] = { type: 'text', val: val };
-            } else {
-                const op = document.getElementById('filter-op').value;
-                const valStr = document.getElementById('filter-val').value;
-                if (valStr === "") delete columnFilters[colKey]; else columnFilters[colKey] = { type: 'num', op: op, val: parseFloat(valStr) };
-            }
-            document.getElementById('filter-menu').style.display = 'none'; document.removeEventListener('click', closeFilterMenuOutside); updateTable();
+            const k=document.getElementById('filter-col-key').value;
+            const isText=k==='tags';
+            if(isText) { const v=document.getElementById('filter-text-val').value.trim(); if(v) columnFilters[k]={type:'text',val:v}; else delete columnFilters[k]; }
+            else { const op=document.getElementById('filter-op').value, v=document.getElementById('filter-val').value; if(v) columnFilters[k]={type:'num',op,val:parseFloat(v)}; else delete columnFilters[k]; }
+            document.getElementById('filter-menu').style.display='none'; updateTable();
         }
-        function clearCurrentFilter() { const colKey = document.getElementById('filter-col-key').value; delete columnFilters[colKey]; document.getElementById('filter-menu').style.display = 'none'; document.removeEventListener('click', closeFilterMenuOutside); updateTable(); }
-        function getColName(key) { if(key=='pe_up') return 'PE上行'; if(key=='pe_down') return 'PE下行'; if(key=='ps_up') return 'PS上行'; if(key=='ps_down') return 'PS下行'; return key; }
+        function clearCurrentFilter() { delete columnFilters[document.getElementById('filter-col-key').value]; document.getElementById('filter-menu').style.display='none'; updateTable(); }
 
         function saveStock() {
-            const code = document.getElementById('inCode').value.trim();
-            const name = document.getElementById('inName').value.trim();
-            const note = document.getElementById('inNote').value.trim();
-            const tags = document.getElementById('inTags').value.trim();
-            const p = parseFloat(document.getElementById('inProfit').value)||0;
-            const lpe = parseFloat(document.getElementById('inLowPE').value)||0;
-            const hpe = parseFloat(document.getElementById('inHighPE').value)||0;
-            const rev = parseFloat(document.getElementById('inRevenue').value)||0;
-            const lps = parseFloat(document.getElementById('inLowPS').value)||0;
-            const hps = parseFloat(document.getElementById('inHighPS').value)||0;
-
-            if (!code || !name) { alert("请先搜索并匹配股票代码！"); return; }
-            const now = new Date().toLocaleString('zh-CN', { hour12: false });
-            let changes = [];
-            let newLog = null;
-            const stockData = { code, name, tags, profit: p, lowPE: lpe, highPE: hpe, revenue: rev, lowPS: lps, highPS: hps, logs: [] };
-            
-            const idx = stocks.findIndex(s => s.code === code);
-            if (idx >= 0) {
-                const old = stocks[idx];
-                stockData.logs = old.logs || [];
-                
-                if (old.profit !== p) changes.push(`净利:${old.profit}→${p}`);
-                if (old.lowPE !== lpe) changes.push(`PE下:${old.lowPE}→${lpe}`);
-                if (old.highPE !== hpe) changes.push(`PE上:${old.highPE}→${hpe}`);
-                if (old.revenue !== rev) changes.push(`营收:${old.revenue}→${rev}`);
-                if (old.lowPS !== lps) changes.push(`PS下:${old.lowPS}→${lps}`);
-                if (old.highPS !== hps) changes.push(`PS上:${old.highPS}→${hps}`);
-                if ((old.tags||"") !== tags) changes.push(`属性:${old.tags||""}→${tags}`);
-
-                if (changes.length > 0 || note) {
-                    newLog = { 
-                        date: now, 
-                        content: changes.length > 0 ? changes.join('; ') : "添加备注", 
-                        note: note 
-                    };
-                    stockData.logs.unshift(newLog);
-                }
-                stocks[idx] = stockData;
+            const code=document.getElementById('inCode').value.trim(), name=document.getElementById('inName').value.trim();
+            if(!code) { alert("请先搜索股票"); return; }
+            const s = { code, name, tags:document.getElementById('inTags').value.trim(), profit:parseFloat(document.getElementById('inProfit').value)||0, lowPE:parseFloat(document.getElementById('inLowPE').value)||0, highPE:parseFloat(document.getElementById('inHighPE').value)||0, revenue:parseFloat(document.getElementById('inRevenue').value)||0, lowPS:parseFloat(document.getElementById('inLowPS').value)||0, highPS:parseFloat(document.getElementById('inHighPS').value)||0, logs:[] };
+            const idx = stocks.findIndex(i=>i.code===code);
+            const now = new Date().toLocaleString('zh-CN',{hour12:false});
+            if(idx>=0) {
+                s.logs = stocks[idx].logs||[];
+                s.logs.unshift({date:now, content:"更新数据", note:document.getElementById('inNote').value.trim()});
+                stocks[idx] = s;
             } else {
-                newLog = { date: now, content: "首次创建", note: note || "初始化" };
-                stockData.logs.push(newLog);
-                stocks.push(stockData);
+                s.logs.push({date:now, content:"创建", note:document.getElementById('inNote').value.trim()});
+                stocks.push(s);
             }
-            saveStorage();
-            clearInput();
-            updateTable();
+            saveStorage(); clearInput(); updateTable();
         }
 
-        function showLogs(c) { 
-            const s = stocks.find(i=>i.code===c); 
-            if(!s) return; 
-            document.getElementById('modal-title').innerText = `${s.name} 日志`; 
-            document.getElementById('modal-body').innerHTML = s.logs?.map(l => `
-                <div class="log-entry">
-                    <div class="log-time">${l.date}</div>
-                    <div class="log-change">${l.content}</div>
-                    ${l.note ? `<span class="log-note">${l.note}</span>` : ''}
-                </div>
-            `).join('') || '<div style="text-align:center;padding:20px;color:#999">暂无日志记录</div>'; 
-            document.getElementById('log-modal').style.display = 'flex'; 
+        function searchStockCode() { 
+            const n=document.getElementById('inName').value.trim(); if(!n)return; 
+            const sc=document.createElement('script'); 
+            window.handleSearch=function(d){ if(d?.QuotationCodeTable?.Data?.length){ const r=d.QuotationCodeTable.Data[0]; let s=r.MarketType=="1"?".SH":(r.MarketType=="2"?".SZ":".HK"); if(r.Code.length==6 && !r.MarketType) s=r.Code.startsWith('6')?".SH":".SZ"; document.getElementById('inCode').value=r.Code+s; document.getElementById('inName').value=r.Name; }else alert("未找到"); sc.remove(); };
+            sc.src=`https://searchapi.eastmoney.com/api/suggest/get?input=${encodeURIComponent(n)}&type=14&token=D43BF722C8E33BD5D50F639205545E43&cb=handleSearch`; document.body.appendChild(sc);
         }
-        
-        function closeLogModal() { document.getElementById('log-modal').style.display='none'; }
 
-        window.openDeleteModal = function(c) { pendingDeleteCode = c; document.getElementById('delete-msg').innerText=`确认不再跟踪 ${c}?`; document.getElementById('delete-modal').style.display='flex'; };
-        window.confirmDeleteAction = function() { if(pendingDeleteCode) { stocks=stocks.filter(s=>s.code!==pendingDeleteCode); selectedCodes.delete(pendingDeleteCode); saveStorage(); updateTable(); } closeDeleteModal(); };
-        window.closeDeleteModal = function() { document.getElementById('delete-modal').style.display='none'; };
-        
-        function searchStockCode() { const name = document.getElementById('inName').value.trim(); if(!name) return; const btn = document.querySelector('.btn-search'); btn.innerText='...'; const sc = document.createElement('script'); window.handleSearch = function(d) { btn.innerText='🔍'; if(d?.QuotationCodeTable?.Data?.length) { const r = d.QuotationCodeTable.Data[0]; let suf = r.MarketType=="1"?".SH":(r.MarketType=="2"?".SZ":(r.Code.length===5?".HK":"")); if(!suf && r.Code.length===6) suf = r.Code.startsWith('6')?".SH":".SZ"; document.getElementById('inCode').value = r.Code+suf; document.getElementById('inName').value = r.Name; } else { alert("未找到"); } sc.remove(); }; sc.src = `https://searchapi.eastmoney.com/api/suggest/get?input=${encodeURIComponent(name)}&type=14&token=D43BF722C8E33BD5D50F639205545E43&cb=handleSearch`; document.body.appendChild(sc); }
-        function toggleInputPanel() { const c=document.getElementById('input-container'); isPanelOpen=!isPanelOpen; c.style.display=isPanelOpen?'block':'none'; document.getElementById('toggle-btn').innerText=isPanelOpen?'🔼 收起':'➕ 录入/管理 (展开)'; }
-        function clearInput() { document.querySelectorAll('#input-panel input').forEach(i=>i.value=''); document.getElementById('editCode').value=''; document.getElementById('btn-save-text').innerText="💾 保存"; }
-        
-        // ★★★ 关键修改：点击修改时自动滚动到顶部 ★★★
-        function editStock(c) { 
-            // 1. 确保面板是打开的
-            if(!isPanelOpen) { toggleInputPanel(); }
+        // ★★★ 自动滚动回顶部编辑 ★★★
+        function editStock(c) {
+            toggleInputPanel(true);
+            // 滚动到录入区域
+            document.getElementById('input-container').scrollIntoView({ behavior: 'smooth', block: 'start' });
             
-            // 2. 找到输入框容器并平滑滚动到那里
-            const container = document.getElementById('input-container');
-            container.scrollIntoView({ behavior: 'smooth', block: 'start' });
-
-            // 3. 填充数据
-            const s=stocks.find(i=>i.code===c); 
-            if(!s)return; 
-            document.getElementById('inName').value=s.name; 
-            document.getElementById('inCode').value=s.code; 
-            document.getElementById('inTags').value=s.tags||''; 
-            document.getElementById('inProfit').value=s.profit||''; 
-            document.getElementById('inLowPE').value=s.lowPE||''; 
-            document.getElementById('inHighPE').value=s.highPE||''; 
-            document.getElementById('inRevenue').value=s.revenue||''; 
-            document.getElementById('inLowPS').value=s.lowPS||''; 
-            document.getElementById('inHighPS').value=s.highPS||''; 
-            document.getElementById('btn-save-text').innerText="💾 确认修改"; 
+            const s=stocks.find(i=>i.code===c); if(!s)return;
+            document.getElementById('inName').value=s.name; document.getElementById('inCode').value=s.code;
+            document.getElementById('inTags').value=s.tags||''; document.getElementById('inProfit').value=s.profit||'';
+            document.getElementById('inLowPE').value=s.lowPE||''; document.getElementById('inHighPE').value=s.highPE||'';
+            document.getElementById('inRevenue').value=s.revenue||''; document.getElementById('inLowPS').value=s.lowPS||'';
+            document.getElementById('inHighPS').value=s.highPS||''; document.getElementById('btn-save-text').innerText="💾 修改";
         }
 
-        function startRealtime() { if(!intervalId) { updateTable(); intervalId=setInterval(updateTable, 5000); document.getElementById('status-msg').innerText="● 实时中"; } }
+        function toggleInputPanel(forceOpen=false) { 
+            const c=document.getElementById('input-container'); 
+            isPanelOpen = forceOpen ? true : !isPanelOpen; 
+            c.style.display=isPanelOpen?'block':'none'; 
+            document.getElementById('toggle-btn').innerText=isPanelOpen?'🔼 收起':'➕ 管理'; 
+        }
+        function clearInput() { document.querySelectorAll('#input-panel input').forEach(i=>i.value=''); document.getElementById('btn-save-text').innerText="💾 保存"; }
+        
+        function showLogs(c) { const s=stocks.find(i=>i.code===c); document.getElementById('modal-body').innerHTML=s?.logs?.map(l=>`<div class="log-entry"><b>${l.date}</b>: ${l.content} ${l.note?`<div class="log-note">${l.note}</div>`:''}</div>`).join('')||'无日志'; document.getElementById('log-modal').style.display='flex'; }
+        function closeLogModal() { document.getElementById('log-modal').style.display='none'; }
+        window.openDeleteModal=function(c){pendingDeleteCode=c;document.getElementById('delete-msg').innerText=`删除 ${c}?`;document.getElementById('delete-modal').style.display='flex';};
+        window.confirmDeleteAction=function(){if(pendingDeleteCode){stocks=stocks.filter(s=>s.code!==pendingDeleteCode);selectedCodes.delete(pendingDeleteCode);saveStorage();updateTable();}closeDeleteModal();};
+        window.closeDeleteModal=function(){document.getElementById('delete-modal').style.display='none';};
+
+        function startRealtime() { if(!intervalId) { updateTable(); intervalId=setInterval(updateTable, 5000); document.getElementById('status-msg').innerText="● 运行中"; } }
         function stopRealtime() { clearInterval(intervalId); intervalId=null; document.getElementById('status-msg').innerText="⏸ 暂停"; }
         function setSort(k) { if(sortState.key===k) sortState.dir=sortState.dir==='desc'?'asc':'desc'; else {sortState.key=k; sortState.dir='desc';} updateTable(); }
-        function getSortIcon(k) { return sortState.key!==k?'⇅':(sortState.dir==='desc'?'⬇':'⬆'); }
+        function getSortIcon(k) { return sortState.key!==k?'':(sortState.dir==='desc'?'⬇':'⬆'); }
         function getSortClass(k) { return sortState.key===k?'sort-icon sort-active':'sort-icon'; }
         function saveStorage() { localStorage.setItem('valuationStocks', JSON.stringify(stocks)); }
-        
-        window.onclick = function(e) { if(e.target.className==='modal') e.target.style.display='none'; }
+        window.onclick=function(e){if(e.target.className==='modal')e.target.style.display='none';}
 
         updateTable();
     </script>
