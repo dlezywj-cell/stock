@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>股票估值系统 (日志管理增强版)</title>
+    <title>股票估值系统 (交互修复版)</title>
     <style>
-        /* === 基础布局保持不变 === */
+        /* === 基础布局 === */
         body { font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif; padding: 20px; max-width: 100%; margin: 0 auto; background-color: #f4f6f9; font-size: 13px; color: #333; height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; }
         
         .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-shrink: 0; }
@@ -34,7 +34,6 @@
         button:hover { opacity: 0.85; transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         button:active { transform: translateY(1px); }
 
-        /* 按钮颜色保持原样 */
         .btn-search { background-color: #17a2b8; color: white; }
         .btn-add { background-color: #28a745; color: white; }
         .btn-edit { background-color: #ffc107; color: #333; }
@@ -67,17 +66,15 @@
         table { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 1300px; }
         th, td { padding: 10px 12px; text-align: center; border-bottom: 1px solid #ebebeb; border-right: 1px solid #ebebeb; white-space: nowrap; }
         
-        /* === 锁定逻辑 (Sticky) === */
+        /* 锁定逻辑 */
         th { background-color: #f1f3f5; color: #495057; font-weight: 700; user-select: none; position: sticky; z-index: 20; }
         thead tr:nth-child(1) th { top: 0; border-bottom: 1px solid #ccc; height: 22px; }
         thead tr:nth-child(2) th { top: 43px; box-shadow: 0 2px 2px rgba(0,0,0,0.05); }
 
-        /* 左侧第一列锁定 */
         tbody td:first-child { position: sticky; left: 0; z-index: 15; background-color: #fff; border-right: 2px solid #d1d1d1; }
         tbody tr:nth-child(even) td:first-child { background-color: #f8f9fa; }
         tbody tr:hover td:first-child { background-color: #e9ecef; }
 
-        /* 左上角交叉点锁定 */
         thead tr:nth-child(1) th:first-child { position: sticky; left: 0; top: 0; z-index: 30; border-right: 2px solid #d1d1d1; }
         thead tr:nth-child(2) th:first-child { position: sticky; left: 0; top: 43px; z-index: 30; border-right: 2px solid #d1d1d1; }
         
@@ -111,7 +108,11 @@
         .sort-icon { font-size: 10px; margin-left: 4px; color: #adb5bd; }
         .sort-active { color: #007bff; }
 
+        /* 弹窗样式调整 */
         .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(2px); justify-content: center; align-items: center; }
+        /* 删除弹窗层级必须高于日志弹窗 */
+        #delete-modal { z-index: 2100; }
+        
         .modal-content { background-color: white; padding: 25px; border-radius: 12px; width: 500px; box-shadow: 0 15px 40px rgba(0,0,0,0.3); position: relative; animation: slideDown 0.2s ease-out; }
         .close-btn { position: absolute; top: 15px; right: 20px; font-size: 24px; cursor: pointer; color: #aaa; }
         .log-entry { border-bottom: 1px solid #eee; padding: 12px 0; font-size: 13px; color: #444; }
@@ -215,6 +216,7 @@
         let sortState = { key: 'pe_up', dir: 'desc' };
         let isPanelOpen = false;
         let pendingDeleteCode = null;
+        let pendingLogIndex = null; // 新增：用于记录待删除日志的索引
         let cachedMarketData = {};
         let selectedCodes = new Set();
         let columnFilters = {}; 
@@ -438,21 +440,47 @@
             document.getElementById('log-modal').style.display = 'flex'; 
         }
         
-        // ★★★ 日志删除功能 ★★★
+        // ★★★ 删除日志触发逻辑 (复用弹窗) ★★★
         function deleteLog(code, index) {
-            if(!confirm("确定要删除这条日志记录吗？")) return;
-            const s = stocks.find(item => item.code === code);
-            if(s && s.logs) {
-                s.logs.splice(index, 1); // 删除对应索引的日志
-                saveStorage();
-                showLogs(code); // 刷新弹窗
-                updateTable(); // 刷新主表（因为“更新时间”可能会变）
-            }
+            pendingDeleteCode = code;
+            pendingLogIndex = index; // 标记为删除日志
+            document.getElementById('delete-msg').innerText = `确认删除这条日志吗？`;
+            document.getElementById('delete-modal').style.display = 'flex';
         }
 
+        // ★★★ 删除股票触发逻辑 ★★★
+        window.openDeleteModal = function(c) { 
+            pendingDeleteCode = c; 
+            pendingLogIndex = null; // 标记为删除股票
+            document.getElementById('delete-msg').innerText = `确认不再跟踪 ${c}?`; 
+            document.getElementById('delete-modal').style.display = 'flex'; 
+        };
+
+        // ★★★ 统一删除执行逻辑 ★★★
+        window.confirmDeleteAction = function() { 
+            if(pendingDeleteCode) {
+                if (pendingLogIndex !== null) {
+                    // 执行删除日志
+                    const s = stocks.find(item => item.code === pendingDeleteCode);
+                    if(s && s.logs) {
+                        s.logs.splice(pendingLogIndex, 1);
+                        saveStorage();
+                        showLogs(pendingDeleteCode); // 刷新日志弹窗
+                        updateTable(); // 刷新主表
+                    }
+                    pendingLogIndex = null;
+                } else {
+                    // 执行删除股票
+                    stocks = stocks.filter(s => s.code !== pendingDeleteCode); 
+                    selectedCodes.delete(pendingDeleteCode); 
+                    saveStorage(); 
+                    updateTable(); 
+                }
+            } 
+            closeDeleteModal(); 
+        };
+        
         function closeLogModal() { document.getElementById('log-modal').style.display='none'; }
-        window.openDeleteModal = function(c) { pendingDeleteCode = c; document.getElementById('delete-msg').innerText=`确认不再跟踪 ${c}?`; document.getElementById('delete-modal').style.display='flex'; };
-        window.confirmDeleteAction = function() { if(pendingDeleteCode) { stocks=stocks.filter(s=>s.code!==pendingDeleteCode); selectedCodes.delete(pendingDeleteCode); saveStorage(); updateTable(); } closeDeleteModal(); };
         window.closeDeleteModal = function() { document.getElementById('delete-modal').style.display='none'; };
         
         function searchStockCode() { const name = document.getElementById('inName').value.trim(); if(!name) return; const btn = document.querySelector('.btn-search'); btn.innerText='...'; const sc = document.createElement('script'); window.handleSearch = function(d) { btn.innerText='🔍'; if(d?.QuotationCodeTable?.Data?.length) { const r = d.QuotationCodeTable.Data[0]; let suf = r.MarketType=="1"?".SH":(r.MarketType=="2"?".SZ":(r.Code.length===5?".HK":"")); if(!suf && r.Code.length===6) suf = r.Code.startsWith('6')?".SH":".SZ"; document.getElementById('inCode').value = r.Code+suf; document.getElementById('inName').value = r.Name; } else { alert("未找到"); } sc.remove(); }; sc.src = `https://searchapi.eastmoney.com/api/suggest/get?input=${encodeURIComponent(name)}&type=14&token=D43BF722C8E33BD5D50F639205545E43&cb=handleSearch`; document.body.appendChild(sc); }
