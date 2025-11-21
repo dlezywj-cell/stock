@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>股票估值系统 (双行锁定修复版)</title>
+    <title>股票估值系统 (日志管理增强版)</title>
     <style>
         /* === 基础布局保持不变 === */
         body { font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif; padding: 20px; max-width: 100%; margin: 0 auto; background-color: #f4f6f9; font-size: 13px; color: #333; height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; }
@@ -53,13 +53,12 @@
         .btn-confirm-del { background-color: #dc3545; color: white; font-size: 14px; padding: 8px 25px; }
         .btn-cancel { background-color: #6c757d; color: white; font-size: 14px; padding: 8px 25px; }
 
-        /* === 表格区域改造 (核心修改) === */
+        /* === 表格区域 (双行锁定) === */
         #result { 
             background: #fff; 
             border-radius: 8px; 
             box-shadow: 0 2px 8px rgba(0,0,0,0.05); 
             border: 1px solid #e9ecef; 
-            /* 让表格区域填满剩余空间并独立滚动 */
             flex-grow: 1; 
             overflow: auto; 
             position: relative;
@@ -69,58 +68,19 @@
         th, td { padding: 10px 12px; text-align: center; border-bottom: 1px solid #ebebeb; border-right: 1px solid #ebebeb; white-space: nowrap; }
         
         /* === 锁定逻辑 (Sticky) === */
-        th { 
-            background-color: #f1f3f5; 
-            color: #495057; 
-            font-weight: 700; 
-            user-select: none; 
-            position: sticky; 
-            z-index: 20; 
-        }
+        th { background-color: #f1f3f5; color: #495057; font-weight: 700; user-select: none; position: sticky; z-index: 20; }
+        thead tr:nth-child(1) th { top: 0; border-bottom: 1px solid #ccc; height: 22px; }
+        thead tr:nth-child(2) th { top: 43px; box-shadow: 0 2px 2px rgba(0,0,0,0.05); }
 
-        /* 第一行表头 (大标题) 锁定在顶部 0px */
-        thead tr:nth-child(1) th {
-            top: 0;
-            border-bottom: 1px solid #ccc;
-            height: 22px; /* 固定高度以便计算 */
-        }
-
-        /* 第二行表头 (列名) 锁定在第一行下方 */
-        /* 第一行高度约 43px (padding+border+font) */
-        thead tr:nth-child(2) th {
-            top: 43px; 
-            box-shadow: 0 2px 2px rgba(0,0,0,0.05);
-        }
-
-        /* 左侧第一列 (股票名称) 锁定 */
-        tbody td:first-child {
-            position: sticky;
-            left: 0;
-            z-index: 15;
-            background-color: #fff; /* 必须指定背景色，否则透明 */
-            border-right: 2px solid #d1d1d1;
-        }
+        /* 左侧第一列锁定 */
+        tbody td:first-child { position: sticky; left: 0; z-index: 15; background-color: #fff; border-right: 2px solid #d1d1d1; }
         tbody tr:nth-child(even) td:first-child { background-color: #f8f9fa; }
         tbody tr:hover td:first-child { background-color: #e9ecef; }
 
-        /* 左上角交叉点 (第一行第一列) */
-        thead tr:nth-child(1) th:first-child {
-            position: sticky;
-            left: 0;
-            top: 0;
-            z-index: 30; /* 最高层级 */
-            border-right: 2px solid #d1d1d1;
-        }
-        /* 左上角交叉点 (第二行第一列) */
-        thead tr:nth-child(2) th:first-child {
-            position: sticky;
-            left: 0;
-            top: 43px;
-            z-index: 30;
-            border-right: 2px solid #d1d1d1;
-        }
+        /* 左上角交叉点锁定 */
+        thead tr:nth-child(1) th:first-child { position: sticky; left: 0; top: 0; z-index: 30; border-right: 2px solid #d1d1d1; }
+        thead tr:nth-child(2) th:first-child { position: sticky; left: 0; top: 43px; z-index: 30; border-right: 2px solid #d1d1d1; }
         
-        /* === 原始样式保持 === */
         th.sortable:hover { background-color: #e2e6ea; cursor: pointer; color: #007bff; }
         .col-hidden { display: none !important; }
         .tag-badge { display: inline-block; background: #e7f5ff; color: #007bff; padding: 2px 6px; border-radius: 4px; font-size: 11px; margin: 1px; border: 1px solid #d0ebff; }
@@ -128,14 +88,7 @@
         .th-pe { border-top: 3px solid #28a745; background-color: #f3fdf6; }
         .th-ps { border-top: 3px solid #fd7e14; background-color: #fff8f3; }
         
-        /* 最后一列全选框处理 */
-        .th-select { 
-            border-top: 3px solid #adb5bd; 
-            border-left: 2px solid #dee2e6 !important; 
-            background-color: #e9ecef;
-            width: 40px !important; padding: 0 !important; cursor: pointer;
-            z-index: 25; /* 略高于普通表头 */
-        }
+        .th-select { border-top: 3px solid #adb5bd; border-left: 2px solid #dee2e6 !important; background-color: #e9ecef; width: 40px !important; padding: 0 !important; cursor: pointer; z-index: 25; }
         .td-select { border-left: 2px solid #dee2e6 !important; background-color: #f8f9fa; width: 40px !important; padding: 0 !important; cursor: pointer; }
         
         .row-checkbox { cursor: pointer; accent-color: #007bff; width: 15px; height: 15px; margin: 0 auto; display: block; }
@@ -151,10 +104,8 @@
         .filter-actions button { font-size: 12px; padding: 4px 10px; }
         
         .row-selected { background-color: #e8f0fe !important; }
-        .row-selected td:first-child { background-color: #e8f0fe !important; } /* 选中时左侧锁定列颜色跟随 */
+        .row-selected td:first-child { background-color: #e8f0fe !important; } 
 
-        @keyframes highlightFade { 0% { background-color: #ffeb3b; } 100% { background-color: transparent; } }
-        .row-highlight { animation: highlightFade 2.5s ease-out forwards; }
         .data-empty { color: #ccc; font-weight: normal; }
         #status-msg { font-size: 12px; color: #007bff; margin-left: 10px; font-family: monospace; }
         .sort-icon { font-size: 10px; margin-left: 4px; color: #adb5bd; }
@@ -167,53 +118,46 @@
         .log-time { color: #999; font-size: 12px; margin-bottom: 4px; }
         .log-change { color: #2c3e50; font-weight: 600; }
         .log-note { display: block; margin-top: 6px; color: #555; background: #fff3cd; padding: 6px 10px; border-radius: 4px; border-left: 3px solid #ffc107; }
+        
+        /* 日志删除按钮样式 */
+        .log-del-btn { 
+            cursor: pointer; color: #dc3545; opacity: 0.6; transition: all 0.2s; font-size: 14px; 
+        }
+        .log-del-btn:hover { opacity: 1; transform: scale(1.1); }
     </style>
 </head>
 <body>
 
-    <!-- 顶部栏：保持原样 -->
     <div class="header-bar">
         <h2>📈 股票估值复盘系统</h2>
         <div>
             <span id="status-msg"></span>
-            
-            <!-- 云同步按钮组：位置恢复 -->
             <button class="btn-cloud-pull" onclick="syncFromGithub()" title="从GitHub下载 data.jason 覆盖本地">☁️ 拉取数据</button>
             <button class="btn-cloud-push" onclick="uploadToGithub()" title="将本地数据上传覆盖到 GitHub">🚀 保存到 GitHub</button>
-            
             <span style="border-left:1px solid #ccc; margin:0 10px; height:20px; display:inline-block; vertical-align:middle;"></span>
             <button class="btn-control" onclick="startRealtime()">▶ 开启</button>
             <button class="btn-control" onclick="stopRealtime()">⏹ 暂停</button>
         </div>
     </div>
 
-    <!-- 控制栏：保持原样 -->
     <div class="control-bar">
         <button class="btn-toggle" onclick="toggleInputPanel()" id="toggle-btn">➕ 录入/管理</button>
-        
         <div class="divider"></div>
         <span style="font-size:12px; color:#666;">🔍:</span>
-        <!-- 搜索框：位置恢复 -->
         <input type="text" id="findInput" placeholder="代码/名称" style="width: 100px;" onkeydown="if(event.keyCode==13) updateTable()">
         <input type="text" id="findTags" placeholder="属性/赛道" style="width: 100px;" onkeydown="if(event.keyCode==13) updateTable()">
         <button class="btn-find" onclick="updateTable()">Go</button>
-
         <div style="flex-grow:1"></div>
-        
         <span class="control-label">👁️ 显示:</span>
-        <!-- 显示/隐藏按钮：恢复 -->
         <button class="btn-view active" id="btn-toggle-code" onclick="toggleColumn('code')" title="显示/隐藏 代码列">代码</button>
         <button class="btn-view active" id="btn-toggle-tags" onclick="toggleColumn('tags')" title="显示/隐藏 属性列">属性</button>
         <button class="btn-view active" id="btn-toggle-update" onclick="toggleColumn('update')" title="显示/隐藏 更新列">更新</button>
         <button class="btn-view active" id="btn-toggle-action" onclick="toggleColumn('action')" title="显示/隐藏 操作列">操作</button>
-
         <div class="divider"></div>
-        
         <button class="btn-reset-all" onclick="clearAllFilters()" title="清除所有筛选与搜索">🌪️ 重置筛选</button>
         <button class="btn-compare" id="btn-compare" onclick="toggleShowSelected()">📊 只看选中 (0)</button>
     </div>
 
-    <!-- 录入面板 -->
     <div id="input-container">
         <div id="input-panel">
             <input type="hidden" id="editCode" value="">
@@ -245,7 +189,6 @@
 
     <div id="result"></div>
 
-    <!-- 悬浮筛选菜单 -->
     <div id="filter-menu">
         <h4 id="filter-title">筛选条件</h4>
         <div class="filter-row" id="filter-row-numeric">
@@ -259,12 +202,10 @@
         <input type="hidden" id="filter-col-key">
     </div>
 
-    <!-- 弹窗区域 -->
     <div id="log-modal" class="modal"><div class="modal-content" style="width: 600px;"><span class="close-btn" onclick="closeLogModal()">&times;</span><h3 id="modal-title" style="margin-top:0; border-bottom:2px solid #eee; padding-bottom:15px;">操作日志</h3><div id="modal-body" style="max-height: 60vh; overflow-y: auto;"></div></div></div>
     <div id="delete-modal" class="modal"><div class="modal-content" style="width: 400px; text-align: center; padding-top: 30px;"><h3>⚠️ 确认删除？</h3><p id="delete-msg" style="color:#555; margin-bottom:30px;">...</p><div><button class="btn-confirm-del" onclick="confirmDeleteAction()">确定删除</button><button class="btn-cancel" onclick="closeDeleteModal()">取消</button></div></div></div>
 
     <script>
-        // ★★★ 1. 初始化逻辑 ★★★
         let stocks = JSON.parse(localStorage.getItem('valuationStocks')) || [];
         let defaultView = { showCode: true, showTags: true, showUpdate: true, showAction: true };
         let storedView = JSON.parse(localStorage.getItem('viewSettings')) || {};
@@ -282,305 +223,122 @@
 
         updateViewButtons();
 
-        // ==========================================
-        // ★★★ 配置 GitHub 信息 ★★★
-        // ==========================================
-        const GITHUB_CONFIG = {
-            username: "dlezywj-cell",   // 用户名
-            repo: "stock",              // 仓库名
-            path: "data.jason",         // 文件名
-            branch: "main"              // 分支
-        };
+        const GITHUB_CONFIG = { username: "dlezywj-cell", repo: "stock", path: "data.jason", branch: "main" };
 
-        function utf8_to_b64(str) {
-            return window.btoa(unescape(encodeURIComponent(str)));
-        }
-        
-        function b64_to_utf8(str) {
-            return decodeURIComponent(escape(window.atob(str)));
-        }
+        function utf8_to_b64(str) { return window.btoa(unescape(encodeURIComponent(str))); }
+        function b64_to_utf8(str) { return decodeURIComponent(escape(window.atob(str))); }
 
-        // ------------------------------------------
-        //  功能: 上传到 GitHub
-        // ------------------------------------------
         async function uploadToGithub() {
             let token = localStorage.getItem("github_token");
-            if (!token) {
-                token = prompt("🔑 首次上传需要验证权限\n\n请输入 GitHub Personal Access Token (ghp_...):");
-                if (!token) return;
-                localStorage.setItem("github_token", token);
-            }
-
+            if (!token) { token = prompt("🔑 请输入 GitHub Token:"); if (!token) return; localStorage.setItem("github_token", token); }
             const btn = document.querySelector('.btn-cloud-push');
             const originText = btn.innerText;
-            btn.innerText = "⏳ 连接中...";
-            btn.disabled = true;
-
+            btn.innerText = "⏳ 连接中..."; btn.disabled = true;
             const apiUrl = `https://api.github.com/repos/${GITHUB_CONFIG.username}/${GITHUB_CONFIG.repo}/contents/${GITHUB_CONFIG.path}`;
-
             try {
-                const getRes = await fetch(apiUrl, {
-                    headers: { "Authorization": `token ${token}`, "Accept": "application/vnd.github.v3+json" },
-                    cache: "no-store"
-                });
-
-                let sha = null;
-                if (getRes.ok) {
-                    const fileData = await getRes.json();
-                    sha = fileData.sha;
-                } else if (getRes.status !== 404) {
-                    throw new Error(`API 错误: ${getRes.status}`);
-                }
-
+                const getRes = await fetch(apiUrl, { headers: { "Authorization": `token ${token}`, "Accept": "application/vnd.github.v3+json" }, cache: "no-store" });
+                let sha = null; if (getRes.ok) { const fileData = await getRes.json(); sha = fileData.sha; } else if (getRes.status !== 404) throw new Error(`API 错误: ${getRes.status}`);
                 btn.innerText = "🚀 上传中...";
-                const contentStr = JSON.stringify(stocks, null, 2);
-                const putBody = {
-                    message: `Update data ${new Date().toLocaleString()}`,
-                    content: utf8_to_b64(contentStr),
-                    branch: GITHUB_CONFIG.branch
-                };
-                if (sha) putBody.sha = sha;
-
-                const putRes = await fetch(apiUrl, {
-                    method: "PUT",
-                    headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" },
-                    body: JSON.stringify(putBody)
-                });
-
-                if (putRes.ok) {
-                    alert("✅ 上传成功！");
-                } else {
-                    const err = await putRes.json();
-                    throw new Error(err.message);
-                }
-
-            } catch (e) {
-                console.error(e);
-                if (e.message.includes("401")) {
-                    alert("❌ Token 无效或过期，已清除本地存储，请重试。");
-                    localStorage.removeItem("github_token");
-                } else {
-                    alert(`❌ 上传失败: ${e.message}`);
-                }
-            } finally {
-                btn.innerText = originText;
-                btn.disabled = false;
-            }
+                const putRes = await fetch(apiUrl, { method: "PUT", headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ message: `Update ${new Date().toLocaleString()}`, content: utf8_to_b64(JSON.stringify(stocks, null, 2)), branch: GITHUB_CONFIG.branch, sha: sha }) });
+                if (putRes.ok) alert("✅ 上传成功！"); else throw new Error((await putRes.json()).message);
+            } catch (e) { if (e.message.includes("401")) { alert("❌ Token 无效，请重试。"); localStorage.removeItem("github_token"); } else alert(`❌ 失败: ${e.message}`); } 
+            finally { btn.innerText = originText; btn.disabled = false; }
         }
 
-        // ------------------------------------------
-        //  功能: 从 GitHub 拉取
-        // ------------------------------------------
         async function syncFromGithub() {
             let token = localStorage.getItem("github_token");
             const btn = document.querySelector('.btn-cloud-pull');
             const originText = btn.innerText;
-            btn.innerText = "⌛ 下载中...";
-            btn.disabled = true;
-
+            btn.innerText = "⌛ 下载中..."; btn.disabled = true;
             try {
                 let newData = null;
-
                 if (token) {
                     const apiUrl = `https://api.github.com/repos/${GITHUB_CONFIG.username}/${GITHUB_CONFIG.repo}/contents/${GITHUB_CONFIG.path}`;
-                    const res = await fetch(apiUrl, {
-                        headers: { "Authorization": `token ${token}`, "Accept": "application/vnd.github.v3+json" },
-                        cache: "no-store"
-                    });
-
-                    if (res.ok) {
-                        const json = await res.json();
-                        const content = b64_to_utf8(json.content);
-                        newData = JSON.parse(content);
-                    }
+                    const res = await fetch(apiUrl, { headers: { "Authorization": `token ${token}`, "Accept": "application/vnd.github.v3+json" }, cache: "no-store" });
+                    if (res.ok) newData = JSON.parse(b64_to_utf8((await res.json()).content));
                 }
-
                 if (!newData) {
                     const rawUrl = `https://raw.githubusercontent.com/${GITHUB_CONFIG.username}/${GITHUB_CONFIG.repo}/${GITHUB_CONFIG.branch}/${GITHUB_CONFIG.path}`;
                     const res = await fetch(rawUrl + "?t=" + Date.now());
-                    if (!res.ok) throw new Error("文件不存在或网络错误");
+                    if (!res.ok) throw new Error("文件不存在");
                     newData = await res.json();
                 }
-
-                if (Array.isArray(newData)) {
-                    if(confirm(`☁️ 成功从云端获取 ${newData.length} 条数据。\n\n是否覆盖当前本地数据？`)) {
-                        stocks = newData;
-                        saveStorage(); 
-                        updateTable(); 
-                        alert("✅ 同步完成！");
-                    }
-                }
-
-            } catch (e) {
-                console.error(e);
-                alert(`❌ 拉取失败: ${e.message}`);
-            } finally {
-                btn.innerText = originText;
-                btn.disabled = false;
-            }
+                if (Array.isArray(newData) && confirm(`☁️ 获取到 ${newData.length} 条数据，覆盖本地？`)) { stocks = newData; saveStorage(); updateTable(); alert("✅ 同步完成！"); }
+            } catch (e) { alert(`❌ 失败: ${e.message}`); } 
+            finally { btn.innerText = originText; btn.disabled = false; }
         }
 
-        function getSecid(code) {
-            if (code.endsWith('.SH')) return `1.${code.replace('.SH','')}`;
-            if (code.endsWith('.SZ')) return `0.${code.replace('.SZ','')}`;
-            if (code.endsWith('.HK')) return `116.${code.replace('.HK','')}`;
-            return `105.${code}`;
-        }
+        function getSecid(code) { if (code.endsWith('.SH')) return `1.${code.replace('.SH','')}`; if (code.endsWith('.SZ')) return `0.${code.replace('.SZ','')}`; if (code.endsWith('.HK')) return `116.${code.replace('.HK','')}`; return `105.${code}`; }
 
-        // ---------------- 核心：数据获取与渲染 ----------------
         async function updateTable() {
             const container = document.getElementById('result');
             const statusMsg = document.getElementById('status-msg');
-            
-            if (stocks.length === 0) {
-                container.innerHTML = '<div style="padding:40px;text-align:center;color:#999;border:2px dashed #eee;border-radius:10px;">📭 列表为空，请添加股票或点击 "☁️ 拉取数据"</div>';
-                statusMsg.innerText = ""; return;
-            }
-
+            if (stocks.length === 0) { container.innerHTML = '<div style="padding:40px;text-align:center;color:#999;border:2px dashed #eee;border-radius:10px;">📭 列表为空</div>'; statusMsg.innerText = ""; return; }
             const secids = stocks.map(s => getSecid(s.code)).join(',');
             const url = `https://push2.eastmoney.com/api/qt/ulist.np/get?secids=${secids}&fields=f12,f14,f2,f3,f18,f20&invt=2&fltt=2&_=${Date.now()}`;
-
             try {
                 const res = await fetch(url);
                 const json = await res.json();
-                if (json?.data?.diff) {
-                    const list = Array.isArray(json.data.diff) ? json.data.diff : Object.values(json.data.diff);
-                    list.forEach(item => { cachedMarketData[item.f12] = item; });
-                    statusMsg.innerHTML = `● 数据已更新 ${new Date().toLocaleTimeString()}`;
-                    statusMsg.style.color = "#007bff";
-                }
-            } catch (e) { statusMsg.innerHTML = `<span style="color:orange">⚠️ 网络波动，显示缓存</span>`; }
-
+                if (json?.data?.diff) { (Array.isArray(json.data.diff) ? json.data.diff : Object.values(json.data.diff)).forEach(item => { cachedMarketData[item.f12] = item; }); statusMsg.innerHTML = `● 数据已更新 ${new Date().toLocaleTimeString()}`; statusMsg.style.color = "#007bff"; }
+            } catch (e) { statusMsg.innerHTML = `<span style="color:orange">⚠️ 缓存</span>`; }
             const data = stocks.map(s => {
-                const rawCode = s.code.split('.')[0];
-                const mItem = cachedMarketData[rawCode];
-                let market = { cap: 0, chg: 0, valid: false };
-                if (mItem) {
-                    let p = parseFloat(mItem.f2); 
-                    let last = parseFloat(mItem.f18);
-                    let mCap = parseFloat(mItem.f20);
-                    let chgPct = parseFloat(mItem.f3);
-                    let validPrice = (p > 0) ? p : last;
-                    let validCap = (mCap > 0) ? mCap : 0;
-                    market.cap = validCap / 100000000; 
-                    if (!isNaN(chgPct)) market.chg = chgPct.toFixed(2); else market.chg = "0.00";
-                    market.valid = true;
-                }
-                let peRes = { down: '-', up: '-' };
-                let psRes = { down: '-', up: '-' };
+                const rawCode = s.code.split('.')[0]; const mItem = cachedMarketData[rawCode]; let market = { cap: 0, chg: 0, valid: false };
+                if (mItem) { let p = parseFloat(mItem.f2), last = parseFloat(mItem.f18), mCap = parseFloat(mItem.f20), chgPct = parseFloat(mItem.f3); market.cap = (mCap > 0 ? mCap : 0) / 100000000; market.chg = !isNaN(chgPct) ? chgPct.toFixed(2) : "0.00"; market.valid = true; }
+                let peRes = { down: '-', up: '-' }, psRes = { down: '-', up: '-' };
                 if (market.valid && market.cap > 0) {
-                    if (s.profit && s.lowPE) {
-                        peRes.down = ((s.profit * s.lowPE / market.cap - 1) * 100).toFixed(2);
-                        peRes.up = ((s.profit * s.highPE - market.cap) / market.cap * 100).toFixed(2);
-                    }
-                    if (s.revenue && s.lowPS) {
-                        psRes.down = ((s.revenue * s.lowPS / market.cap - 1) * 100).toFixed(2);
-                        psRes.up = ((s.revenue * s.highPS - market.cap) / market.cap * 100).toFixed(2);
-                    }
+                    if (s.profit && s.lowPE) { peRes.down = ((s.profit * s.lowPE / market.cap - 1) * 100).toFixed(2); peRes.up = ((s.profit * s.highPE - market.cap) / market.cap * 100).toFixed(2); }
+                    if (s.revenue && s.lowPS) { psRes.down = ((s.revenue * s.lowPS / market.cap - 1) * 100).toFixed(2); psRes.up = ((s.revenue * s.highPS - market.cap) / market.cap * 100).toFixed(2); }
                 }
                 return { ...s, ...market, peRes, psRes };
             });
-
-            renderTable(data);
-            updateCompareBtn();
+            renderTable(data); updateCompareBtn();
         }
 
         function renderTable(data) {
             const container = document.getElementById('result');
-            
             let filteredData = data.filter(item => {
                 if (onlySelectedMode && !selectedCodes.has(item.code)) return false;
                 const searchKey = document.getElementById('findInput').value.trim().toUpperCase();
                 if (searchKey && !item.code.includes(searchKey) && !item.name.includes(searchKey)) return false;
                 const searchTags = document.getElementById('findTags').value.trim().toLowerCase();
-                if (searchTags) {
-                    const itemTags = (item.tags || "").toLowerCase();
-                    const keywords = searchTags.split(/\s+/); 
-                    if (!keywords.every(k => itemTags.includes(k))) return false;
-                }
+                if (searchTags) { const itemTags = (item.tags || "").toLowerCase(); if (!searchTags.split(/\s+/).every(k => itemTags.includes(k))) return false; }
                 for (let colKey in columnFilters) {
-                    const rule = columnFilters[colKey];
-                    if (!rule) continue;
-                    if (rule.type === 'text') {
-                        const cellVal = (item[colKey] || "").toLowerCase();
-                        if (!cellVal.includes(rule.val.toLowerCase())) return false;
-                    } else {
+                    const rule = columnFilters[colKey]; if (!rule) continue;
+                    if (rule.type === 'text') { if (!(item[colKey] || "").toLowerCase().includes(rule.val.toLowerCase())) return false; } 
+                    else {
                         let val = -999999;
-                        if (colKey === 'pe_down') val = parseFloat(item.peRes.down);
-                        else if (colKey === 'pe_up') val = parseFloat(item.peRes.up);
-                        else if (colKey === 'ps_down') val = parseFloat(item.psRes.down);
-                        else if (colKey === 'ps_up') val = parseFloat(item.psRes.up);
+                        if (colKey === 'pe_down') val = parseFloat(item.peRes.down); else if (colKey === 'pe_up') val = parseFloat(item.peRes.up); else if (colKey === 'ps_down') val = parseFloat(item.psRes.down); else if (colKey === 'ps_up') val = parseFloat(item.psRes.up);
                         if (isNaN(val)) return false;
-                        const limit = rule.val;
-                        switch(rule.op) {
-                            case '>': if (!(val > limit)) return false; break;
-                            case '<': if (!(val < limit)) return false; break;
-                            case '>=': if (!(val >= limit)) return false; break;
-                            case '<=': if (!(val <= limit)) return false; break;
-                            case '=': if (Math.abs(val - limit) > 0.1) return false; break;
-                        }
+                        if(rule.op==='>'&&!(val>rule.val))return false; if(rule.op==='<'&&!(val<rule.val))return false; if(rule.op==='>='&&!(val>=rule.val))return false; if(rule.op==='<='&&!(val<=rule.val))return false; if(rule.op==='='&&Math.abs(val-rule.val)>0.1)return false;
                     }
                 }
                 return true;
             });
-            
             currentVisibleStocks = filteredData;
-
             if (sortState.key) {
                 filteredData.sort((a, b) => {
                     const getVal = (obj, k) => {
                         if(k=='chg') return parseFloat(obj.chg);
                         if(k.includes('pe')) return parseFloat(obj.peRes[k.split('_')[1]]) || -9999;
                         if(k.includes('ps')) return parseFloat(obj.psRes[k.split('_')[1]]) || -9999;
-                        if(k==='last_update') {
-                            const d1 = obj.logs && obj.logs.length > 0 ? obj.logs[0].date : "0";
-                            const d2 = b.logs && b.logs.length > 0 ? b.logs[0].date : "0";
-                            return sortState.dir === 'desc' ? (d1 < d2 ? 1 : -1) : (d1 > d2 ? 1 : -1);
-                        }
+                        if(k==='last_update') return obj.logs?.length ? obj.logs[0].date : "0";
                         return 0;
                     };
-                    if (sortState.key === 'last_update') {
-                        const d1 = a.logs && a.logs.length ? a.logs[0].date : "";
-                        const d2 = b.logs && b.logs.length ? b.logs[0].date : "";
-                        if(d1 === d2) return 0;
-                        return sortState.dir === 'desc' ? (d1 < d2 ? 1 : -1) : (d1 > d2 ? 1 : -1);
-                    }
-                    return sortState.dir === 'desc' ? getVal(b, sortState.key) - getVal(a, sortState.key) : getVal(a, sortState.key) - getVal(b, sortState.key);
+                    return sortState.dir === 'desc' ? (getVal(b, sortState.key) > getVal(a, sortState.key) ? 1 : -1) : (getVal(a, sortState.key) > getVal(b, sortState.key) ? 1 : -1);
                 });
             }
-
-            const getFilterIcon = (key) => {
-                const isActive = columnFilters[key] != null;
-                const iconClass = isActive ? 'filter-icon filter-active' : 'filter-icon';
-                const symbol = isActive ? '▼' : '▽';
-                return `<span class="${iconClass}" onclick="event.stopPropagation(); openFilterMenu('${key}', event)">${symbol}</span>`;
-            };
-
-            const styleCode = viewSettings.showCode ? '' : 'col-hidden';
-            const styleTags = viewSettings.showTags ? '' : 'col-hidden';
-            const styleUpdate = viewSettings.showUpdate ? '' : 'col-hidden';
-            const styleAction = viewSettings.showAction ? '' : 'col-hidden';
-
+            const getFilterIcon = (key) => `<span class="${columnFilters[key]?'filter-icon filter-active':'filter-icon'}" onclick="event.stopPropagation(); openFilterMenu('${key}', event)">${columnFilters[key]?'▼':'▽'}</span>`;
+            const styleCode = viewSettings.showCode?'':'col-hidden'; const styleTags = viewSettings.showTags?'':'col-hidden'; const styleUpdate = viewSettings.showUpdate?'':'col-hidden'; const styleAction = viewSettings.showAction?'':'col-hidden';
             const isAllVisibleSelected = filteredData.length > 0 && filteredData.every(item => selectedCodes.has(item.code));
-            const basicColsSpan = 3 + (viewSettings.showCode ? 1 : 0) + (viewSettings.showTags ? 1 : 0);
-
-            let html = `
-            <table>
-                <thead>
+            
+            let html = `<table><thead>
                     <tr>
-                        <th class="th-basic" colspan="${basicColsSpan}">📊 基础行情</th>
+                        <th class="th-basic" colspan="${3 + (viewSettings.showCode?1:0) + (viewSettings.showTags?1:0)}">📊 基础行情</th>
                         <th class="th-pe" colspan="4">💰 PE 估值模型 (利润)</th>
                         <th class="th-ps" colspan="4">🚀 PS 估值模型 (营收)</th>
-                        <th rowspan="2" class="sortable ${styleUpdate}" onclick="setSort('last_update')" style="vertical-align: middle; width:70px; font-size:12px;">
-                            📅 更新 <span class="${getSortClass('last_update')}">${getSortIcon('last_update')}</span>
-                        </th>
-                        <th class="th-basic ${styleAction}" rowspan="2" style="vertical-align: middle;">⚙️ 操作</th>
-                        <th class="th-select" rowspan="2" onclick="toggleSelectAll()" title="点击全选/取消">
-                            <div style="display:flex; flex-direction:column; align-items:center; cursor:pointer;">
-                                <input type="checkbox" id="header-checkbox" ${isAllVisibleSelected ? 'checked' : ''} style="margin:0; cursor:pointer;">
-                                <div style="font-size:9px; font-weight:normal; color:#888; line-height:1; margin-top:2px;">全选</div>
-                            </div>
-                        </th>
+                        <th rowspan="2" class="sortable ${styleUpdate}" onclick="setSort('last_update')" style="width:70px;">📅 更新 <span class="${getSortClass('last_update')}">${getSortIcon('last_update')}</span></th>
+                        <th class="th-basic ${styleAction}" rowspan="2">⚙️ 操作</th>
+                        <th class="th-select" rowspan="2" onclick="toggleSelectAll()"><input type="checkbox" ${isAllVisibleSelected ? 'checked' : ''}></th>
                     </tr>
                     <tr>
                         <th>名称</th>
@@ -590,233 +348,89 @@
                         <th>市值(亿)</th>
                         <th>预期净利</th>
                         <th>合理PE</th>
-                        <th onclick="setSort('pe_down')" class="sortable">下行% ${getFilterIcon('pe_down')} <span class="${getSortClass('pe_down')}">${getSortIcon('pe_down')}</span></th>
-                        <th onclick="setSort('pe_up')" class="sortable">上行% ${getFilterIcon('pe_up')} <span class="${getSortClass('pe_up')}">${getSortIcon('pe_up')}</span></th>
+                        <th onclick="setSort('pe_down')" class="sortable">下行% ${getFilterIcon('pe_down')}</th>
+                        <th onclick="setSort('pe_up')" class="sortable">上行% ${getFilterIcon('pe_up')}</th>
                         <th>预期营收</th>
                         <th>合理PS</th>
-                        <th onclick="setSort('ps_down')" class="sortable">下行% ${getFilterIcon('ps_down')} <span class="${getSortClass('ps_down')}">${getSortIcon('ps_down')}</span></th>
-                        <th onclick="setSort('ps_up')" class="sortable">上行% ${getFilterIcon('ps_up')} <span class="${getSortClass('ps_up')}">${getSortIcon('ps_up')}</span></th>
-                    </tr>
-                </thead>
-                <tbody>
-            `;
+                        <th onclick="setSort('ps_down')" class="sortable">下行% ${getFilterIcon('ps_down')}</th>
+                        <th onclick="setSort('ps_up')" class="sortable">上行% ${getFilterIcon('ps_up')}</th>
+                    </tr></thead><tbody>`;
 
-            if(filteredData.length === 0) {
-                html += `<tr><td colspan="16" style="padding:30px;text-align:center;color:#999;">没有符合条件的股票</td></tr>`;
-            } else {
-                filteredData.forEach(item => {
-                    const fmtPct = (v) => {
-                        if(v==='-') return '<span class="data-empty">-</span>';
-                        const val = parseFloat(v);
-                        const color = val >= 0 ? '#d32f2f' : '#2e7d32';
-                        const weight = (val > 30) ? '800' : 'bold';
-                        return `<span style="color:${color}; font-weight:${weight}">${v}%</span>`;
-                    };
-
-                    let tagsHtml = '';
-                    if(item.tags) tagsHtml = item.tags.split(' ').map(t => t.trim()).filter(t=>t).map(t => `<span class="tag-badge">${t}</span>`).join('');
-
-                    const lastDateRaw = (item.logs && item.logs.length > 0) ? item.logs[0].date : '';
-                    let updateHtml = '<span class="data-empty" style="font-size:11px;">-</span>';
-                    if(lastDateRaw) {
-                        const parts = lastDateRaw.split(' ');
-                        if(parts.length >= 2) {
-                            updateHtml = `<span style="font-size:11px; color:#666; display:block; line-height:1.2;">${parts[0]}<br><span style="color:#999; font-size:10px;">${parts[1].slice(0,5)}</span></span>`;
-                        } else {
-                            updateHtml = `<span style="font-size:11px; color:#666;">${lastDateRaw}</span>`;
-                        }
-                    }
-
-                    const rowId = 'row-' + item.code.replace(/\./g, '-');
-                    const isChecked = selectedCodes.has(item.code) ? 'checked' : '';
-                    const rowClass = isChecked ? 'row-selected' : '';
-
-                    html += `
-                        <tr id="${rowId}" class="${rowClass}">
-                            <td style="font-weight:600; color:#343a40;">${item.name}</td>
-                            <td class="${styleCode}" style="color:#868e96; font-size:12px;">${item.code}</td>
-                            <td class="${styleTags}" style="text-align:left;">${tagsHtml}</td>
-                            <td style="font-weight:bold; color:${parseFloat(item.chg)>=0 ? '#e03131':'#099268'}">${item.chg}%</td>
-                            <td style="font-family:monospace; font-size:13px;">${item.cap ? item.cap.toFixed(2) : '-'}</td>
-                            <td>${item.profit || '<span class="data-empty">-</span>'}</td>
-                            <td style="font-size:12px;">${item.lowPE||'-'}~${item.highPE||'-'}</td>
-                            <td>${fmtPct(item.peRes.down)}</td>
-                            <td>${fmtPct(item.peRes.up)}</td>
-                            <td>${item.revenue || '<span class="data-empty">-</span>'}</td>
-                            <td style="font-size:12px;">${item.lowPS||'-'}~${item.highPS||'-'}</td>
-                            <td>${fmtPct(item.psRes.down)}</td>
-                            <td>${fmtPct(item.psRes.up)}</td>
-                            <td class="${styleUpdate}">${updateHtml}</td>
-                            <td style="white-space:nowrap;" class="${styleAction}">
-                                <button class="btn-log" onclick="showLogs('${item.code}')" title="日志">📝</button>
-                                <button class="btn-edit" onclick="editStock('${item.code}')" title="修改">✏️</button>
-                                <button class="btn-delete" onclick="openDeleteModal('${item.code}')" title="删除">✕</button>
-                            </td>
-                            <td class="td-select" onclick="toggleSelectRow('${item.code}')">
-                                <input type="checkbox" class="row-checkbox" ${isChecked} onclick="event.stopPropagation(); toggleSelectRow('${item.code}')">
-                            </td>
-                        </tr>
-                    `;
-                });
-            }
-            html += '</tbody></table>';
-            container.innerHTML = html;
+            if(filteredData.length === 0) html += `<tr><td colspan="16" style="padding:30px;text-align:center;color:#999;">没有符合条件的股票</td></tr>`;
+            else filteredData.forEach(item => {
+                const fmtPct = (v) => `<span style="color:${parseFloat(v)>=0?'#d32f2f':'#2e7d32'}; font-weight:${Math.abs(parseFloat(v))>30?'800':'bold'}">${v==='-'?'-':v+'%'}</span>`;
+                const lastDateRaw = (item.logs && item.logs.length > 0) ? item.logs[0].date : '';
+                let updateHtml = '<span class="data-empty" style="font-size:11px;">-</span>';
+                if(lastDateRaw) updateHtml = `<span style="font-size:11px; color:#666;">${lastDateRaw.split(' ')[0]}<br><span style="color:#999; font-size:10px;">${lastDateRaw.split(' ')[1]||''}</span></span>`;
+                const isChecked = selectedCodes.has(item.code) ? 'checked' : '';
+                
+                html += `<tr class="${isChecked?'row-selected':''}">
+                    <td style="font-weight:600;">${item.name}</td>
+                    <td class="${styleCode}" style="color:#868e96; font-size:12px;">${item.code}</td>
+                    <td class="${styleTags}" style="text-align:left;">${item.tags?item.tags.split(' ').map(t=>`<span class="tag-badge">${t}</span>`).join(''):''}</td>
+                    <td style="font-weight:bold; color:${parseFloat(item.chg)>=0 ? '#e03131':'#099268'}">${item.chg}%</td>
+                    <td style="font-family:monospace;">${item.cap ? item.cap.toFixed(2) : '-'}</td>
+                    <td>${item.profit||'-'}</td>
+                    <td style="font-size:12px;">${item.lowPE||'-'}~${item.highPE||'-'}</td>
+                    <td>${fmtPct(item.peRes.down)}</td>
+                    <td>${fmtPct(item.peRes.up)}</td>
+                    <td>${item.revenue||'-'}</td>
+                    <td style="font-size:12px;">${item.lowPS||'-'}~${item.highPS||'-'}</td>
+                    <td>${fmtPct(item.psRes.down)}</td>
+                    <td>${fmtPct(item.psRes.up)}</td>
+                    <td class="${styleUpdate}">${updateHtml}</td>
+                    <td class="${styleAction}">
+                        <button class="btn-log" onclick="showLogs('${item.code}')">📝</button>
+                        <button class="btn-edit" onclick="editStock('${item.code}')">✏️</button>
+                        <button class="btn-delete" onclick="openDeleteModal('${item.code}')">✕</button>
+                    </td>
+                    <td class="td-select" onclick="toggleSelectRow('${item.code}')"><input type="checkbox" class="row-checkbox" ${isChecked}></td>
+                </tr>`;
+            });
+            html += '</tbody></table>'; container.innerHTML = html;
         }
 
-        function toggleSelectRow(code) {
-            if (selectedCodes.has(code)) {
-                selectedCodes.delete(code);
-            } else {
-                selectedCodes.add(code);
-            }
-            updateTable();
-        }
-
-        function toggleSelectAll() {
-            if (currentVisibleStocks.length === 0) return;
-            const allSelected = currentVisibleStocks.every(item => selectedCodes.has(item.code));
-            if (allSelected) currentVisibleStocks.forEach(item => selectedCodes.delete(item.code));
-            else currentVisibleStocks.forEach(item => selectedCodes.add(item.code));
-            updateTable();
-        }
-
-        function clearAllFilters() {
-            columnFilters = {}; 
-            document.getElementById('findInput').value = ''; 
-            document.getElementById('findTags').value = '';
-            if (onlySelectedMode) toggleShowSelected(); 
-            updateTable();
-        }
-
-        function toggleShowSelected() {
-            onlySelectedMode = !onlySelectedMode;
-            const btn = document.getElementById('btn-compare');
-            if (onlySelectedMode) { btn.classList.add('active'); btn.innerText = "🔙 显示全部"; }
-            else { btn.classList.remove('active'); updateCompareBtn(); }
-            updateTable();
-        }
+        function toggleSelectRow(code) { if (selectedCodes.has(code)) selectedCodes.delete(code); else selectedCodes.add(code); updateTable(); }
+        function toggleSelectAll() { if (currentVisibleStocks.length === 0) return; const allSelected = currentVisibleStocks.every(item => selectedCodes.has(item.code)); currentVisibleStocks.forEach(item => allSelected?selectedCodes.delete(item.code):selectedCodes.add(item.code)); updateTable(); }
+        function clearAllFilters() { columnFilters = {}; document.getElementById('findInput').value = ''; document.getElementById('findTags').value = ''; if (onlySelectedMode) toggleShowSelected(); updateTable(); }
+        function toggleShowSelected() { onlySelectedMode = !onlySelectedMode; const btn = document.getElementById('btn-compare'); if (onlySelectedMode) { btn.classList.add('active'); btn.innerText = "🔙 显示全部"; } else { btn.classList.remove('active'); updateCompareBtn(); } updateTable(); }
         function updateCompareBtn() { if (!onlySelectedMode) document.getElementById('btn-compare').innerText = `📊 只看选中 (${selectedCodes.size})`; }
+        function toggleColumn(c) { if(c=='code')viewSettings.showCode=!viewSettings.showCode; if(c=='tags')viewSettings.showTags=!viewSettings.showTags; if(c=='update')viewSettings.showUpdate=!viewSettings.showUpdate; if(c=='action')viewSettings.showAction=!viewSettings.showAction; localStorage.setItem('viewSettings',JSON.stringify(viewSettings)); updateViewButtons(); updateTable(); }
+        function updateViewButtons() { const btnCode=document.getElementById('btn-toggle-code'), btnTags=document.getElementById('btn-toggle-tags'), btnUpdate=document.getElementById('btn-toggle-update'), btnAction=document.getElementById('btn-toggle-action'); if(viewSettings.showCode)btnCode.classList.add('active');else btnCode.classList.remove('active'); if(viewSettings.showTags)btnTags.classList.add('active');else btnTags.classList.remove('active'); if(viewSettings.showUpdate)btnUpdate.classList.add('active');else btnUpdate.classList.remove('active'); if(viewSettings.showAction)btnAction.classList.add('active');else btnAction.classList.remove('active'); }
 
-        function toggleColumn(colType) {
-            if(colType === 'code') viewSettings.showCode = !viewSettings.showCode;
-            if(colType === 'tags') viewSettings.showTags = !viewSettings.showTags;
-            if(colType === 'update') viewSettings.showUpdate = !viewSettings.showUpdate;
-            if(colType === 'action') viewSettings.showAction = !viewSettings.showAction;
-            localStorage.setItem('viewSettings', JSON.stringify(viewSettings));
-            updateViewButtons(); updateTable();
-        }
-        function updateViewButtons() {
-            const btnCode = document.getElementById('btn-toggle-code');
-            const btnTags = document.getElementById('btn-toggle-tags');
-            const btnUpdate = document.getElementById('btn-toggle-update');
-            const btnAction = document.getElementById('btn-toggle-action');
-            
-            if(viewSettings.showCode) btnCode.classList.add('active'); else btnCode.classList.remove('active');
-            if(viewSettings.showTags) btnTags.classList.add('active'); else btnTags.classList.remove('active');
-            if(viewSettings.showUpdate) btnUpdate.classList.add('active'); else btnUpdate.classList.remove('active');
-            if(viewSettings.showAction) btnAction.classList.add('active'); else btnAction.classList.remove('active');
-        }
-
-        function openFilterMenu(colKey, event) {
-            const menu = document.getElementById('filter-menu');
-            const input = document.getElementById('filter-val');
-            const op = document.getElementById('filter-op');
-            const numRow = document.getElementById('filter-row-numeric');
-            const textRow = document.getElementById('filter-row-text');
-            const title = document.getElementById('filter-title');
-            const isText = colKey === 'tags';
-            numRow.style.display = isText ? 'none' : 'flex';
-            textRow.style.display = isText ? 'flex' : 'none';
-            title.innerText = isText ? "筛选包含内容" : "数值筛选";
-            const rect = event.target.getBoundingClientRect();
-            menu.style.top = (window.scrollY + rect.bottom + 5) + 'px';
-            menu.style.left = Math.min(window.innerWidth - 230, (window.scrollX + rect.left - 100)) + 'px';
-            menu.style.display = 'block';
-            document.getElementById('filter-col-key').value = colKey;
-            const existing = columnFilters[colKey];
-            if (isText) {
-                document.getElementById('filter-text-val').value = existing ? existing.val : "";
-                document.getElementById('filter-text-val').focus();
-            } else {
-                if (existing) { op.value = existing.op; input.value = existing.val; } else { op.value = ">"; input.value = ""; }
-                input.focus();
-            }
-            setTimeout(() => { document.addEventListener('click', closeFilterMenuOutside); }, 0);
-        }
-        function closeFilterMenuOutside(e) { const menu = document.getElementById('filter-menu'); if (!menu.contains(e.target)) { menu.style.display = 'none'; document.removeEventListener('click', closeFilterMenuOutside); } }
-        function confirmFilter() {
-            const colKey = document.getElementById('filter-col-key').value;
-            const isText = colKey === 'tags';
-            if (isText) {
-                const val = document.getElementById('filter-text-val').value.trim();
-                if (val === "") delete columnFilters[colKey]; else columnFilters[colKey] = { type: 'text', val: val };
-            } else {
-                const op = document.getElementById('filter-op').value;
-                const valStr = document.getElementById('filter-val').value;
-                if (valStr === "") delete columnFilters[colKey]; else columnFilters[colKey] = { type: 'num', op: op, val: parseFloat(valStr) };
-            }
-            document.getElementById('filter-menu').style.display = 'none'; document.removeEventListener('click', closeFilterMenuOutside); updateTable();
-        }
-        function clearCurrentFilter() { const colKey = document.getElementById('filter-col-key').value; delete columnFilters[colKey]; document.getElementById('filter-menu').style.display = 'none'; document.removeEventListener('click', closeFilterMenuOutside); updateTable(); }
-        function getColName(key) { if(key=='pe_up') return 'PE上行'; if(key=='pe_down') return 'PE下行'; if(key=='ps_up') return 'PS上行'; if(key=='ps_down') return 'PS下行'; return key; }
+        function openFilterMenu(colKey, e) { const m = document.getElementById('filter-menu'); m.style.display = 'block'; const r = e.target.getBoundingClientRect(); m.style.top = (window.scrollY + r.bottom + 5) + 'px'; m.style.left = Math.min(window.innerWidth - 230, (window.scrollX + r.left - 100)) + 'px'; document.getElementById('filter-col-key').value = colKey; const isText=colKey==='tags'; document.getElementById('filter-row-numeric').style.display=isText?'none':'flex'; document.getElementById('filter-row-text').style.display=isText?'flex':'none'; setTimeout(() => document.addEventListener('click', closeFilterMenuOutside), 0); }
+        function closeFilterMenuOutside(e) { const m = document.getElementById('filter-menu'); if (!m.contains(e.target)) { m.style.display = 'none'; document.removeEventListener('click', closeFilterMenuOutside); } }
+        function confirmFilter() { const k=document.getElementById('filter-col-key').value, isText=k==='tags'; if(isText){ const v=document.getElementById('filter-text-val').value.trim(); if(v)columnFilters[k]={type:'text',val:v};else delete columnFilters[k]; } else { const op=document.getElementById('filter-op').value, v=document.getElementById('filter-val').value; if(v)columnFilters[k]={type:'num',op,val:parseFloat(v)};else delete columnFilters[k]; } document.getElementById('filter-menu').style.display='none'; updateTable(); }
+        function clearCurrentFilter() { delete columnFilters[document.getElementById('filter-col-key').value]; document.getElementById('filter-menu').style.display='none'; updateTable(); }
 
         function saveStock() {
-            const code = document.getElementById('inCode').value.trim();
-            const name = document.getElementById('inName').value.trim();
-            const note = document.getElementById('inNote').value.trim();
-            const tags = document.getElementById('inTags').value.trim();
-            const p = parseFloat(document.getElementById('inProfit').value)||0;
-            const lpe = parseFloat(document.getElementById('inLowPE').value)||0;
-            const hpe = parseFloat(document.getElementById('inHighPE').value)||0;
-            const rev = parseFloat(document.getElementById('inRevenue').value)||0;
-            const lps = parseFloat(document.getElementById('inLowPS').value)||0;
-            const hps = parseFloat(document.getElementById('inHighPS').value)||0;
-
-            if (!code || !name) { alert("请先搜索并匹配股票代码！"); return; }
-            const now = new Date().toLocaleString('zh-CN', { hour12: false });
-            let changes = [];
-            let newLog = null;
-            const stockData = { code, name, tags, profit: p, lowPE: lpe, highPE: hpe, revenue: rev, lowPS: lps, highPS: hps, logs: [] };
-            
-            const idx = stocks.findIndex(s => s.code === code);
-            if (idx >= 0) {
-                const old = stocks[idx];
-                stockData.logs = old.logs || [];
-                
-                if (old.profit !== p) changes.push(`净利:${old.profit}→${p}`);
-                if (old.lowPE !== lpe) changes.push(`PE下:${old.lowPE}→${lpe}`);
-                if (old.highPE !== hpe) changes.push(`PE上:${old.highPE}→${hpe}`);
-                if (old.revenue !== rev) changes.push(`营收:${old.revenue}→${rev}`);
-                if (old.lowPS !== lps) changes.push(`PS下:${old.lowPS}→${lps}`);
-                if (old.highPS !== hps) changes.push(`PS上:${old.highPS}→${hps}`);
-                if ((old.tags||"") !== tags) changes.push(`属性:${old.tags||""}→${tags}`);
-
-                if (changes.length > 0 || note) {
-                    newLog = { 
-                        date: now, 
-                        content: changes.length > 0 ? changes.join('; ') : "添加备注", 
-                        note: note 
-                    };
-                    stockData.logs.unshift(newLog);
-                }
-                stocks[idx] = stockData;
-            } else {
-                newLog = { date: now, content: "首次创建", note: note || "初始化" };
-                stockData.logs.push(newLog);
-                stocks.push(stockData);
-            }
-            saveStorage();
-            clearInput();
-            updateTable();
+            const code=document.getElementById('inCode').value.trim(), name=document.getElementById('inName').value.trim(), note=document.getElementById('inNote').value.trim(), tags=document.getElementById('inTags').value.trim();
+            const p=parseFloat(document.getElementById('inProfit').value)||0, lpe=parseFloat(document.getElementById('inLowPE').value)||0, hpe=parseFloat(document.getElementById('inHighPE').value)||0;
+            const rev=parseFloat(document.getElementById('inRevenue').value)||0, lps=parseFloat(document.getElementById('inLowPS').value)||0, hps=parseFloat(document.getElementById('inHighPS').value)||0;
+            if(!code||!name){alert("请先搜索并匹配股票代码！");return;}
+            const now=new Date().toLocaleString('zh-CN',{hour12:false});
+            let changes=[], newLog=null, stockData={code,name,tags,profit:p,lowPE:lpe,highPE:hpe,revenue:rev,lowPS:lps,highPS:hps,logs:[]};
+            const idx=stocks.findIndex(s=>s.code===code);
+            if(idx>=0){
+                const old=stocks[idx]; stockData.logs=old.logs||[];
+                if(old.profit!==p)changes.push(`净利:${old.profit}→${p}`); if(old.lowPE!==lpe)changes.push(`PE下:${old.lowPE}→${lpe}`); if(old.highPE!==hpe)changes.push(`PE上:${old.highPE}→${hpe}`);
+                if(old.revenue!==rev)changes.push(`营收:${old.revenue}→${rev}`); if(old.lowPS!==lps)changes.push(`PS下:${old.lowPS}→${lps}`); if(old.highPS!==hps)changes.push(`PS上:${old.highPS}→${hps}`);
+                if((old.tags||"")!==tags)changes.push(`属性:${old.tags||""}→${tags}`);
+                if(changes.length>0||note){ newLog={date:now, content:changes.length>0?changes.join('; '):"添加备注", note:note}; stockData.logs.unshift(newLog); }
+                stocks[idx]=stockData;
+            } else { newLog={date:now, content:"首次创建", note:note||"初始化"}; stockData.logs.push(newLog); stocks.push(stockData); }
+            saveStorage(); clearInput(); updateTable();
         }
 
         function showLogs(c) { 
-            const s = stocks.find(i=>i.code===c); 
-            if(!s) return; 
+            const s = stocks.find(i=>i.code===c); if(!s) return; 
             document.getElementById('modal-title').innerText = `${s.name} 日志`; 
-            document.getElementById('modal-body').innerHTML = s.logs?.map(l => `
+            document.getElementById('modal-body').innerHTML = s.logs?.map((l, idx) => `
                 <div class="log-entry">
-                    <div class="log-time">${l.date}</div>
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div class="log-time">${l.date}</div>
+                        <span class="log-del-btn" onclick="deleteLog('${c}', ${idx})" title="删除此条日志">🗑️</span>
+                    </div>
                     <div class="log-change">${l.content}</div>
                     ${l.note ? `<span class="log-note">${l.note}</span>` : ''}
                 </div>
@@ -824,33 +438,26 @@
             document.getElementById('log-modal').style.display = 'flex'; 
         }
         
-        function closeLogModal() { document.getElementById('log-modal').style.display='none'; }
+        // ★★★ 日志删除功能 ★★★
+        function deleteLog(code, index) {
+            if(!confirm("确定要删除这条日志记录吗？")) return;
+            const s = stocks.find(item => item.code === code);
+            if(s && s.logs) {
+                s.logs.splice(index, 1); // 删除对应索引的日志
+                saveStorage();
+                showLogs(code); // 刷新弹窗
+                updateTable(); // 刷新主表（因为“更新时间”可能会变）
+            }
+        }
 
+        function closeLogModal() { document.getElementById('log-modal').style.display='none'; }
         window.openDeleteModal = function(c) { pendingDeleteCode = c; document.getElementById('delete-msg').innerText=`确认不再跟踪 ${c}?`; document.getElementById('delete-modal').style.display='flex'; };
         window.confirmDeleteAction = function() { if(pendingDeleteCode) { stocks=stocks.filter(s=>s.code!==pendingDeleteCode); selectedCodes.delete(pendingDeleteCode); saveStorage(); updateTable(); } closeDeleteModal(); };
         window.closeDeleteModal = function() { document.getElementById('delete-modal').style.display='none'; };
         
         function searchStockCode() { const name = document.getElementById('inName').value.trim(); if(!name) return; const btn = document.querySelector('.btn-search'); btn.innerText='...'; const sc = document.createElement('script'); window.handleSearch = function(d) { btn.innerText='🔍'; if(d?.QuotationCodeTable?.Data?.length) { const r = d.QuotationCodeTable.Data[0]; let suf = r.MarketType=="1"?".SH":(r.MarketType=="2"?".SZ":(r.Code.length===5?".HK":"")); if(!suf && r.Code.length===6) suf = r.Code.startsWith('6')?".SH":".SZ"; document.getElementById('inCode').value = r.Code+suf; document.getElementById('inName').value = r.Name; } else { alert("未找到"); } sc.remove(); }; sc.src = `https://searchapi.eastmoney.com/api/suggest/get?input=${encodeURIComponent(name)}&type=14&token=D43BF722C8E33BD5D50F639205545E43&cb=handleSearch`; document.body.appendChild(sc); }
         
-        // 自动滚动修改功能（保留）
-        function editStock(c) { 
-            if(!isPanelOpen) { toggleInputPanel(); }
-            const container = document.getElementById('input-container');
-            container.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            const s=stocks.find(i=>i.code===c); 
-            if(!s)return; 
-            document.getElementById('inName').value=s.name; 
-            document.getElementById('inCode').value=s.code; 
-            document.getElementById('inTags').value=s.tags||''; 
-            document.getElementById('inProfit').value=s.profit||''; 
-            document.getElementById('inLowPE').value=s.lowPE||''; 
-            document.getElementById('inHighPE').value=s.highPE||''; 
-            document.getElementById('inRevenue').value=s.revenue||''; 
-            document.getElementById('inLowPS').value=s.lowPS||''; 
-            document.getElementById('inHighPS').value=s.highPS||''; 
-            document.getElementById('btn-save-text').innerText="💾 确认修改"; 
-        }
-
+        function editStock(c) { if(!isPanelOpen) { toggleInputPanel(); } const container = document.getElementById('input-container'); container.scrollIntoView({ behavior: 'smooth', block: 'start' }); const s=stocks.find(i=>i.code===c); if(!s)return; document.getElementById('inName').value=s.name; document.getElementById('inCode').value=s.code; document.getElementById('inTags').value=s.tags||''; document.getElementById('inProfit').value=s.profit||''; document.getElementById('inLowPE').value=s.lowPE||''; document.getElementById('inHighPE').value=s.highPE||''; document.getElementById('inRevenue').value=s.revenue||''; document.getElementById('inLowPS').value=s.lowPS||''; document.getElementById('inHighPS').value=s.highPS||''; document.getElementById('btn-save-text').innerText="💾 确认修改"; }
         function toggleInputPanel() { const c=document.getElementById('input-container'); isPanelOpen=!isPanelOpen; c.style.display=isPanelOpen?'block':'none'; document.getElementById('toggle-btn').innerText=isPanelOpen?'🔼 收起':'➕ 录入/管理 (展开)'; }
         function clearInput() { document.querySelectorAll('#input-panel input').forEach(i=>i.value=''); document.getElementById('editCode').value=''; document.getElementById('btn-save-text').innerText="💾 保存"; }
 
@@ -860,7 +467,6 @@
         function getSortIcon(k) { return sortState.key!==k?'⇅':(sortState.dir==='desc'?'⬇':'⬆'); }
         function getSortClass(k) { return sortState.key===k?'sort-icon sort-active':'sort-icon'; }
         function saveStorage() { localStorage.setItem('valuationStocks', JSON.stringify(stocks)); }
-        
         window.onclick = function(e) { if(e.target.className==='modal') e.target.style.display='none'; }
 
         updateTable();
