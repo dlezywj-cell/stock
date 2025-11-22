@@ -3,20 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>股票估值系统 (移动端增强版)</title>
+    <title>股票估值系统 (终极交付版)</title>
     <style>
         /* === 全局重置 === */
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft YaHei', sans-serif; padding: 20px; max-width: 1700px; margin: 0 auto; background-color: #f4f6f9; font-size: 13px; color: #333; height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; }
         
-        /* === 移动端专属导航 (本次修改重点) === */
+        /* === 移动端专属导航 === */
         #mobile-nav { display: none; justify-content: space-between; align-items: center; background: #fff; padding: 10px 15px; border-radius: 8px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); flex-shrink: 0; }
         #mobile-nav h3 { margin: 0; color: #2c3e50; font-size: 16px; display: flex; align-items: center; gap: 8px; }
         #mobile-status { font-size: 11px; color: #007bff; font-family: monospace; }
-        
-        /* 移动端顶部按钮组 */
-        .mobile-btn-group { display: flex; gap: 10px; }
-        .btn-mobile-nav { background: #f8f9fa; border: 1px solid #ddd; color: #333; padding: 6px 12px; border-radius: 4px; font-size: 14px; cursor: pointer; }
-        .btn-mobile-refresh { background: #17a2b8; color: white; border: none; } /* 蓝色刷新按钮 */
+        .btn-menu { background: #f8f9fa; border: 1px solid #ddd; color: #333; padding: 6px 12px; border-radius: 4px; font-size: 14px; }
 
         /* === 顶部区域 === */
         #top-area { flex-shrink: 0; }
@@ -35,18 +31,7 @@
         .spacer { flex-grow: 1; } 
 
         /* === 录入面板 === */
-        #input-container { 
-            background: #fff; 
-            border-radius: 8px; 
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08); 
-            transition: all 0.3s ease; 
-            margin-bottom: 15px; 
-            display: none; 
-            max-height: 60vh; /* 手机端滚动支持 */
-            overflow-y: auto; 
-            -webkit-overflow-scrolling: touch;
-            overscroll-behavior: contain;
-        }
+        #input-container { background: #fff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); overflow: hidden; transition: all 0.3s ease; margin-bottom: 15px; display: none; }
         #input-panel { padding: 20px; border-top: 3px solid #007bff; }
         .input-row { display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-end; margin-bottom: 15px; }
         .group-box { border: 1px solid #e9ecef; padding: 15px; border-radius: 6px; background: #f8f9fa; display: flex; gap: 10px; }
@@ -114,19 +99,30 @@
 
         /* 隔行变色修复 */
         tbody tr:nth-child(even) { background-color: #f8f9fa; }
-        tbody tr:nth-child(even) td:nth-child(1), tbody tr:nth-child(even) td:nth-child(2) { background-color: #f8f9fa; }
+        tbody tr:nth-child(even) td:nth-child(1), 
+        tbody tr:nth-child(even) td:nth-child(2) { background-color: #f8f9fa; }
+
         tbody tr:hover td { background-color: #e9ecef; }
-        tbody tr:hover td:nth-child(1), tbody tr:hover td:nth-child(2) { background-color: #e9ecef; }
-        .row-selected td, .row-selected td:nth-child(1), .row-selected td:nth-child(2) { background-color: #e8f0fe !important; }
+        tbody tr:hover td:nth-child(1), 
+        tbody tr:hover td:nth-child(2) { background-color: #e9ecef; }
+
+        .row-selected td,
+        .row-selected td:nth-child(1),
+        .row-selected td:nth-child(2) { background-color: #e8f0fe !important; }
+        
+        /* ★★★ 修复：排序高亮样式 (PC/手机通用) ★★★ */
+        th.th-sorted { color: #007bff !important; background-color: #e2e6ea !important; }
 
         .col-hidden { display: none !important; }
         .tag-badge { display: inline-block; background: #e7f5ff; color: #007bff; padding: 2px 6px; border-radius: 4px; font-size: 11px; margin: 1px; border: 1px solid #d0ebff; }
         .th-basic { border-top: 3px solid #6c757d; }
         .th-pe { border-top: 3px solid #28a745; background-color: #f3fdf6; }
         .th-ps { border-top: 3px solid #fd7e14; background-color: #fff8f3; }
+        
         .th-select, .td-select { width: 40px !important; padding: 0 !important; cursor: pointer; }
         .th-select { border-top: 3px solid #adb5bd; border-left: 2px solid #dee2e6 !important; background-color: #e9ecef; z-index: 25; }
         .td-select { border-left: 2px solid #dee2e6 !important; background-color: #f8f9fa; }
+        
         .row-checkbox { cursor: pointer; accent-color: #007bff; width: 15px; height: 15px; margin: 0 auto; display: block; }
         .filter-icon { font-size: 12px; color: #adb5bd; cursor: pointer; padding: 2px 4px; }
         .filter-active { color: #dc3545 !important; font-weight: bold; background-color: #f8d7da; }
@@ -140,21 +136,7 @@
         .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(2px); justify-content: center; align-items: center; }
         #delete-modal { z-index: 2200; } #sync-modal { z-index: 2100; } #log-modal { z-index: 2000; }
         #filter-menu { display: none; position: absolute; background: white; border: 1px solid #ccc; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border-radius: 6px; padding: 12px; z-index: 3000; min-width: 200px; }
-        
-        /* 弹窗内容滚动 */
-        .modal-content { 
-            background-color: white; 
-            padding: 25px; 
-            border-radius: 12px; 
-            width: 500px; 
-            box-shadow: 0 15px 40px rgba(0,0,0,0.3); 
-            position: relative; 
-            animation: slideDown 0.2s ease-out; 
-            max-height: 80vh; 
-            overflow-y: auto; 
-            -webkit-overflow-scrolling: touch; 
-            overscroll-behavior: contain;
-        }
+        .modal-content { background-color: white; padding: 25px; border-radius: 12px; width: 500px; box-shadow: 0 15px 40px rgba(0,0,0,0.3); position: relative; animation: slideDown 0.2s ease-out; max-height:80vh; overflow-y:auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
         .close-btn { position: absolute; top: 15px; right: 20px; font-size: 24px; cursor: pointer; color: #aaa; z-index: 10; }
         .log-entry { border-bottom: 1px solid #eee; padding: 12px 0; font-size: 13px; color: #444; }
         .log-time { color: #999; font-size: 12px; margin-bottom: 4px; }
@@ -186,26 +168,45 @@
             input { width: 100% !important; box-sizing: border-box; }
             .modal-content { width: 90%; padding: 20px; max-height: 85vh; } 
 
+            /* === 表格紧凑化 === */
             th, td { padding: 8px 3px; font-size: 12px; } 
 
-            /* 趋势列 (极窄) */
+            /* 1. 趋势列 (Trend) 极窄 - 25px */
             tbody td:nth-child(1) { 
-                width: 25px !important; min-width: 25px !important; max-width: 25px !important; 
-                left: 0 !important; padding: 0 !important; text-align: center; 
+                width: 25px !important; 
+                min-width: 25px !important; 
+                max-width: 25px !important; 
+                left: 0 !important;
+                padding: 0 !important; 
+                text-align: center; 
             }
             thead tr:nth-child(2) th:nth-child(1) { 
-                width: 25px !important; min-width: 25px !important; max-width: 25px !important;
-                left: 0 !important; padding: 0 !important;
+                width: 25px !important; 
+                min-width: 25px !important; 
+                max-width: 25px !important;
+                left: 0 !important;
+                padding: 0 !important;
             }
 
-            /* 名称列 (5个汉字宽) */
+            /* 2. 名称列 (Name) 极度压缩 - 65px (约5个汉字) */
             tbody td:nth-child(2) { 
-                left: 25px !important; width: 65px !important; min-width: 65px !important; max-width: 65px !important; 
-                font-size: 11px; padding: 8px 2px !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+                left: 25px !important; /* 紧挨趋势列 */
+                width: 65px !important; 
+                min-width: 65px !important; 
+                max-width: 65px !important; 
+                font-size: 11px;
+                padding: 8px 2px !important;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
             }
             thead tr:nth-child(2) th:nth-child(2) { 
-                left: 25px !important; width: 65px !important; min-width: 65px !important; max-width: 65px !important;
-                padding: 8px 2px !important; font-size: 11px;
+                left: 25px !important;
+                width: 65px !important;
+                min-width: 65px !important;
+                max-width: 65px !important;
+                padding: 8px 2px !important;
+                font-size: 11px;
             }
         }
         .search-row { display: flex; align-items: center; gap: 5px; }
@@ -214,13 +215,9 @@
     </style>
 </head>
 <body>
-    <!-- 移动端导航 -->
     <div id="mobile-nav">
         <h3>📈 估值系统 <span id="mobile-status"></span></h3>
-        <div class="mobile-btn-group">
-            <button class="btn-mobile-nav btn-mobile-refresh" onclick="forceRefreshTrends()" title="刷新趋势">🔄</button>
-            <button class="btn-mobile-nav" onclick="toggleMobileMenu()" id="mobile-menu-btn">⚙️</button>
-        </div>
+        <button class="btn-menu" onclick="toggleMobileMenu()" id="mobile-menu-btn">⚙️ 菜单</button>
     </div>
 
     <div id="top-area">
@@ -229,6 +226,7 @@
                 <button class="btn-cloud-pull" onclick="syncFromGithub()">☁️ 拉取数据</button>
                 <button class="btn-cloud-push" onclick="uploadToGithub()">🚀 保存到 GitHub</button>
             </div>
+            <!-- 进度条 -->
             <div id="progress-bar-container">
                 <div id="progress-bg"><div id="progress-fill"></div></div>
                 <div id="progress-text">准备中...</div>
@@ -332,6 +330,7 @@
         if (window.innerWidth <= 768) document.getElementById('top-area').style.display = 'none';
 
         let stocks = JSON.parse(localStorage.getItem('valuationStocks')) || [];
+        // 默认 cap (市值) 为 false (隐藏)
         let viewSettings = { showCode: true, showTags: true, showUpdate: true, showAction: true, showCap: false, ...JSON.parse(localStorage.getItem('viewSettings')) };
         let intervalId = null, sortState = { key: 'pe_up', dir: 'desc' }, isPanelOpen = false, pendingDeleteCode = null, pendingLogIndex = null, pendingSyncData = null, cachedMarketData = {}, selectedCodes = new Set(), columnFilters = {}, onlySelectedMode = false;
         
@@ -448,6 +447,7 @@
             historyCache[code] = null; fetchingSet.delete(code); return null;
         }
 
+        // ★★★ 修复：强制红绿箭头字符 ★★★
         function getTrendIcon(history, currentPrice, code) {
             if (!history || history.length < 19) return "";
             const data = [...history.slice(-19), currentPrice];
@@ -456,7 +456,9 @@
             const ma10 = avg(data.slice(-10));
             const ma20 = avg(data.slice(-20));
             
+            // 红色向上箭头
             if (ma5 > ma10 && ma10 > ma20) return '<span style="color:#e53935 !important;font-weight:900 !important;font-size:18px;">↑</span>';
+            // 绿色向下箭头
             if (ma5 < ma10 && ma10 < ma20) return '<span style="color:#43a047 !important;font-weight:900 !important;font-size:18px;">↓</span>';
             
             return ""; 
@@ -561,23 +563,27 @@
                 });
             }
             
+            // ★★★ 修复：排序高亮辅助函数 ★★★
+            const sk = (k) => sortState.key===k ? 'th-sorted' : '';
+            
             const icon = (k) => `<span class="${columnFilters[k]?'filter-active':''}" onclick="event.stopPropagation();openFilterMenu('${k}',event)" style="cursor:pointer">${columnFilters[k]?'▼':'▽'}</span>`;
             const show = (k) => viewSettings['show'+k.charAt(0).toUpperCase()+k.slice(1)]?'':'col-hidden';
             const allSel = rows.length>0 && rows.every(i=>selectedCodes.has(i.code));
 
+            // ★★★ 修复后的表头结构 (带排序高亮) ★★★
             let html = `<table><thead><tr>
                 <th class="th-basic" colspan="${3 + (viewSettings.showCode?1:0) + (viewSettings.showTags?1:0) + (viewSettings.showCap?1:0)}">📊 基础行情</th>
                 <th class="th-pe" colspan="4">💰 PE (利润)</th><th class="th-ps" colspan="4">🚀 PS (营收)</th>
-                <th rowspan="2" class="sortable ${show('update')}" onclick="setSort('last_update')" style="width:70px">📅 ${getSortIcon('last_update')}</th>
+                <th rowspan="2" class="sortable ${show('update')} ${sk('last_update')}" onclick="setSort('last_update')" style="width:70px">📅 ${getSortIcon('last_update')}</th>
                 <th class="th-basic ${show('action')}" rowspan="2">⚙️</th>
                 <th class="th-select" rowspan="2" onclick="toggleSelectAll()"><input type="checkbox" ${allSel?'checked':''}></th>
             </tr><tr>
-                <th onclick="setSort('trend')" class="sortable" style="width:30px">趋势 ${getSortIcon('trend')}</th>
+                <th onclick="setSort('trend')" class="sortable ${sk('trend')}" style="width:30px">趋势 ${getSortIcon('trend')}</th>
                 <th>名称</th><th class="${show('code')}">代码</th><th class="${show('tags')}">属性 ${icon('tags')}</th>
-                <th onclick="setSort('chg')" class="sortable">涨跌 ${getSortIcon('chg')}</th>
+                <th onclick="setSort('chg')" class="sortable ${sk('chg')}">涨跌 ${getSortIcon('chg')}</th>
                 <th class="${show('cap')}">市值</th>
-                <th>净利</th><th>合理PE</th><th onclick="setSort('pe_down')" class="sortable">下% ${icon('pe_down')}</th><th onclick="setSort('pe_up')" class="sortable">上% ${icon('pe_up')}</th>
-                <th>营收</th><th>合理PS</th><th onclick="setSort('ps_down')" class="sortable">下% ${icon('ps_down')}</th><th onclick="setSort('ps_up')" class="sortable">上% ${icon('ps_up')}</th>
+                <th>净利</th><th>合理PE</th><th onclick="setSort('pe_down')" class="sortable ${sk('pe_down')}">下% ${icon('pe_down')}</th><th onclick="setSort('pe_up')" class="sortable ${sk('pe_up')}">上% ${icon('pe_up')}</th>
+                <th>营收</th><th>合理PS</th><th onclick="setSort('ps_down')" class="sortable ${sk('ps_down')}">下% ${icon('ps_down')}</th><th onclick="setSort('ps_up')" class="sortable ${sk('ps_up')}">上% ${icon('ps_up')}</th>
             </tr></thead><tbody>`;
 
             if(rows.length===0) html+=`<tr><td colspan="20" style="text-align:center;padding:20px;color:#ccc">无数据</td></tr>`;
