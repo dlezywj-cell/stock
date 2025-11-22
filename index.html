@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>股票估值系统 (完美版)</title>
+    <title>股票估值系统 (移动端优化版)</title>
     <style>
         /* === 全局重置 === */
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft YaHei', sans-serif; padding: 20px; max-width: 1700px; margin: 0 auto; background-color: #f4f6f9; font-size: 13px; color: #333; height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; }
@@ -67,52 +67,39 @@
         table { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 1350px; }
         th, td { padding: 10px 12px; text-align: center; border-bottom: 1px solid #ebebeb; border-right: 1px solid #ebebeb; white-space: nowrap; }
         
-        /* 锁定列表头 */
+        /* 锁定列基础样式 (PC端默认) */
         th { background-color: #f1f3f5; color: #495057; font-weight: 700; user-select: none; position: sticky; z-index: 20; }
         thead tr:nth-child(1) th { top: 0; border-bottom: 1px solid #ccc; height: 22px; }
         thead tr:nth-child(2) th { top: 43px; box-shadow: 0 2px 2px rgba(0,0,0,0.05); }
 
-        /* 锁定列：第1列(趋势) & 第2列(名称) */
         tbody td:nth-child(1) { position: sticky; left: 0; z-index: 15; background-color: #fff; border-right: 1px solid #eee; width: 30px; max-width: 30px; padding: 0 5px; }
         tbody td:nth-child(2) { position: sticky; left: 41px; z-index: 15; background-color: #fff; border-right: 2px solid #d1d1d1; }
         
-        /* 表头锁定 */
         thead tr:nth-child(1) th:first-child { position: sticky; top: 0; z-index: 20; }
         thead tr:nth-child(2) th:nth-child(1) { position: sticky; left: 0; top: 43px; z-index: 30; border-right: 1px solid #eee; width: 30px; }
         thead tr:nth-child(2) th:nth-child(2) { position: sticky; left: 41px; top: 43px; z-index: 30; border-right: 2px solid #d1d1d1; }
 
-        /* ★★★ 视觉优化：给锁定列加右侧阴影 ★★★ */
+        /* 阴影分割线 */
         tbody td:nth-child(2), thead tr:nth-child(2) th:nth-child(2) {
             box-shadow: 4px 0 8px -4px rgba(0,0,0,0.15); 
-            clip-path: inset(0px -15px 0px 0px); /* 防止阴影遮挡左侧 */
+            clip-path: inset(0px -15px 0px 0px);
         }
 
-        /* ★★★ 隔行变色修复 ★★★ */
-        /* 偶数行背景 */
+        /* 隔行变色 */
         tbody tr:nth-child(even) { background-color: #f8f9fa; }
-        tbody tr:nth-child(even) td:nth-child(1), 
-        tbody tr:nth-child(even) td:nth-child(2) { background-color: #f8f9fa; }
-
-        /* 悬停背景 (深色) */
+        tbody tr:nth-child(even) td:nth-child(1), tbody tr:nth-child(even) td:nth-child(2) { background-color: #f8f9fa; }
         tbody tr:hover td { background-color: #e9ecef; }
-        tbody tr:hover td:nth-child(1), 
-        tbody tr:hover td:nth-child(2) { background-color: #e9ecef; }
-
-        /* 选中行 */
-        .row-selected td,
-        .row-selected td:nth-child(1),
-        .row-selected td:nth-child(2) { background-color: #e8f0fe !important; }
+        tbody tr:hover td:nth-child(1), tbody tr:hover td:nth-child(2) { background-color: #e9ecef; }
+        .row-selected td, .row-selected td:nth-child(1), .row-selected td:nth-child(2) { background-color: #e8f0fe !important; }
 
         .col-hidden { display: none !important; }
         .tag-badge { display: inline-block; background: #e7f5ff; color: #007bff; padding: 2px 6px; border-radius: 4px; font-size: 11px; margin: 1px; border: 1px solid #d0ebff; }
         .th-basic { border-top: 3px solid #6c757d; }
         .th-pe { border-top: 3px solid #28a745; background-color: #f3fdf6; }
         .th-ps { border-top: 3px solid #fd7e14; background-color: #fff8f3; }
-        
         .th-select, .td-select { width: 40px !important; padding: 0 !important; cursor: pointer; }
         .th-select { border-top: 3px solid #adb5bd; border-left: 2px solid #dee2e6 !important; background-color: #e9ecef; z-index: 25; }
         .td-select { border-left: 2px solid #dee2e6 !important; background-color: #f8f9fa; }
-        
         .row-checkbox { cursor: pointer; accent-color: #007bff; width: 15px; height: 15px; margin: 0 auto; display: block; }
         .filter-icon { font-size: 12px; color: #adb5bd; cursor: pointer; padding: 2px 4px; }
         .filter-active { color: #dc3545 !important; font-weight: bold; background-color: #f8d7da; }
@@ -136,6 +123,7 @@
         .sync-info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f1f1; }
         .sync-val.new { color: #28a745; } .sync-val.old { color: #dc3545; }
 
+        /* ★★★ 移动端深度优化 ★★★ */
         @media (max-width: 768px) {
             body { padding: 10px; }
             #mobile-nav { display: flex; }
@@ -156,6 +144,24 @@
             .group-box { width: 100%; box-sizing: border-box; }
             input { width: 100% !important; box-sizing: border-box; }
             .modal-content { width: 90%; padding: 20px; }
+
+            /* === 表格紧凑化 (关键修改) === */
+            th, td { padding: 8px 3px; font-size: 12px; } /* 减小单元格内边距 */
+
+            /* 1. 趋势列 (Trend) 极窄 */
+            tbody td:nth-child(1) { width: 22px !important; max-width: 22px !important; padding: 0; text-align: center; }
+            thead tr:nth-child(2) th:nth-child(1) { width: 22px !important; padding: 0; }
+
+            /* 2. 名称列 (Name) 压缩与左移 */
+            tbody td:nth-child(2) { 
+                left: 23px !important; /* 紧贴趋势列 */
+                max-width: 65px;       /* 限制最大宽度 */
+                white-space: nowrap; 
+                overflow: hidden; 
+                text-overflow: ellipsis; /* 超出显示省略号 */
+                font-size: 11px;       /* 字号变小 */
+            }
+            thead tr:nth-child(2) th:nth-child(2) { left: 23px !important; max-width: 65px; font-size: 11px; }
         }
         .search-row { display: flex; align-items: center; gap: 5px; }
         .action-row { display: flex; align-items: center; gap: 5px; }
@@ -174,7 +180,6 @@
                 <button class="btn-cloud-pull" onclick="syncFromGithub()">☁️ 拉取数据</button>
                 <button class="btn-cloud-push" onclick="uploadToGithub()">🚀 保存到 GitHub</button>
             </div>
-            <!-- 进度条 -->
             <div id="progress-bar-container">
                 <div id="progress-bg"><div id="progress-fill"></div></div>
                 <div id="progress-text">准备中...</div>
@@ -277,11 +282,10 @@
         if (window.innerWidth <= 768) document.getElementById('top-area').style.display = 'none';
 
         let stocks = JSON.parse(localStorage.getItem('valuationStocks')) || [];
-        // 增加 showCap 配置，默认 false
         let viewSettings = { showCode: true, showTags: true, showUpdate: true, showAction: true, showCap: false, ...JSON.parse(localStorage.getItem('viewSettings')) };
         let intervalId = null, sortState = { key: 'pe_up', dir: 'desc' }, isPanelOpen = false, pendingDeleteCode = null, pendingLogIndex = null, pendingSyncData = null, cachedMarketData = {}, selectedCodes = new Set(), columnFilters = {}, onlySelectedMode = false;
         
-        // ★★★ 并发控制核心 ★★★
+        // 并发
         let historyCache = {}; 
         let fetchQueue = [];
         let activeRequests = 0;
@@ -394,6 +398,7 @@
             historyCache[code] = null; fetchingSet.delete(code); return null;
         }
 
+        // ★★★ 修改点：使用文本箭头 + CSS颜色 ★★★
         function getTrendIcon(history, currentPrice, code) {
             if (!history || history.length < 19) return "";
             const data = [...history.slice(-19), currentPrice];
@@ -401,10 +406,12 @@
             const ma5 = avg(data.slice(-5));
             const ma10 = avg(data.slice(-10));
             const ma20 = avg(data.slice(-20));
-            // 红色上涨
-            if (ma5 > ma10 && ma10 > ma20) return '<span style="color:#e53935;font-weight:bold;font-size:16px;">⬆</span>';
-            // 绿色下跌
-            if (ma5 < ma10 && ma10 < ma20) return '<span style="color:#43a047;font-weight:bold;font-size:16px;">⬇</span>';
+            
+            // 红色向上箭头 (↑)
+            if (ma5 > ma10 && ma10 > ma20) return '<span style="color:#e53935;font-weight:bold;font-size:18px;">↑</span>';
+            // 绿色向下箭头 (↓)
+            if (ma5 < ma10 && ma10 < ma20) return '<span style="color:#43a047;font-weight:bold;font-size:18px;">↓</span>';
+            
             return ""; 
         }
 
@@ -480,11 +487,10 @@
                         const dB = b.logs?.[0]?.date || "";
                         return sortState.dir === 'desc' ? dB.localeCompare(dA) : dA.localeCompare(dB);
                     }
-                    // 趋势排序 (上涨 > 震荡 > 下跌)
                     if (sortState.key === 'trend') {
                         const getScore = (o) => {
-                            if (o.trend.includes('⬆')) return 2; 
-                            if (o.trend.includes('⬇')) return 0; 
+                            if (o.trend.includes('↑')) return 2; 
+                            if (o.trend.includes('↓')) return 0; 
                             return 1; 
                         };
                         return sortState.dir === 'desc' ? getScore(b) - getScore(a) : getScore(a) - getScore(b);
@@ -524,7 +530,7 @@
                 const u = i.logs?.[0]?.date ? `<span style="font-size:11px;color:#666;display:block;line-height:1.2">${i.logs[0].date.split(' ')[0]}<br><span style="color:#999;font-size:10px">${i.logs[0].date.split(' ')[1]}</span></span>` : '-';
                 
                 html += `<tr class="${selectedCodes.has(i.code)?'row-selected':''}">
-                    <td style="font-size:16px;text-align:center;">${i.trend}</td>
+                    <td style="text-align:center;">${i.trend}</td>
                     <td style="font-weight:600">${i.name}</td><td class="${show('code')}" style="color:#888;font-size:12px">${i.code}</td>
                     <td class="${show('tags')}" style="text-align:left">${(i.tags||"").split(' ').map(t=>t?`<span class="tag-badge">${t}</span>`:'').join('')}</td>
                     <td style="font-weight:bold;color:${parseFloat(i.chg)>=0?'#d32f2f':'#2e7d32'}">${i.chg}%</td>
