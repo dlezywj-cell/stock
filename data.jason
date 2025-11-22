@@ -111,12 +111,17 @@
     "name": "新易盛",
     "tags": "AI 光模块",
     "profit": 100,
-    "lowPE": 30,
-    "highPE": 50,
+    "lowPE": 35,
+    "highPE": 70,
     "revenue": 460,
     "lowPS": 10,
     "highPS": 16,
     "logs": [
+      {
+        "date": "2025/11/22 15:25:58",
+        "content": "PE下:30→35; PE上:50→70",
+        "note": ""
+      },
       {
         "date": "2025/11/22 14:57:14",
         "content": "更新数据",
