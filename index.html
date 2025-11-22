@@ -3,41 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>股票估值系统 (极简布局版)</title>
+    <title>股票估值系统 (趋势追踪版)</title>
     <style>
         /* === 全局重置 === */
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft YaHei', sans-serif; padding: 20px; max-width: 1700px; margin: 0 auto; background-color: #f4f6f9; font-size: 13px; color: #333; height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; }
         
-        /* === 移动端专属导航 (PC隐藏) === */
+        /* === 移动端专属导航 === */
         #mobile-nav { display: none; justify-content: space-between; align-items: center; background: #fff; padding: 10px 15px; border-radius: 8px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); flex-shrink: 0; }
         #mobile-nav h3 { margin: 0; color: #2c3e50; font-size: 16px; display: flex; align-items: center; gap: 8px; }
         #mobile-status { font-size: 11px; color: #007bff; font-family: monospace; }
         .btn-menu { background: #f8f9fa; border: 1px solid #ddd; color: #333; padding: 6px 12px; border-radius: 4px; font-size: 14px; }
 
-        /* === 顶部折叠区域 wrapper === */
+        /* === 顶部区域 wrapper === */
         #top-area { flex-shrink: 0; }
 
-        /* === 顶部工具栏 (原 header-bar 改造) === */
-        .header-bar { 
-            display: flex; 
-            justify-content: space-between; /* 左右两端对齐 */
-            align-items: center; 
-            margin-bottom: 10px; 
-            background: #fff; /* 增加背景色，统一风格 */
-            padding: 10px; 
-            border-radius: 8px; 
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-        }
-        
-        /* 分组容器 */
+        /* === 顶部工具栏 === */
+        .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; background: #fff; padding: 10px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .tool-group { display: flex; align-items: center; gap: 10px; }
 
         /* === 控制栏 === */
-        .control-bar { 
-            margin-bottom: 10px; display: flex; gap: 10px; align-items: center; 
-            background: #fff; padding: 10px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); 
-            flex-wrap: wrap; 
-        }
+        .control-bar { margin-bottom: 10px; display: flex; gap: 10px; align-items: center; background: #fff; padding: 10px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); flex-wrap: wrap; }
         .divider { border-left: 1px solid #eee; height: 20px; margin: 0 5px; }
         .spacer { flex-grow: 1; } 
 
@@ -73,26 +58,35 @@
         .btn-confirm-del { background-color: #dc3545; color: white; font-size: 14px; padding: 8px 25px; }
         .btn-cancel { background-color: #6c757d; color: white; font-size: 14px; padding: 8px 25px; }
 
-        /* === 表格区域 === */
-        #result { 
-            background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); 
-            border: 1px solid #e9ecef; flex-grow: 1; overflow: auto; position: relative; 
-        }
-        table { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 1300px; }
+        /* === 表格区域 (双列锁定升级) === */
+        #result { background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #e9ecef; flex-grow: 1; overflow: auto; position: relative; }
+        table { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 1350px; }
         th, td { padding: 10px 12px; text-align: center; border-bottom: 1px solid #ebebeb; border-right: 1px solid #ebebeb; white-space: nowrap; }
         
-        /* === 锁定逻辑 === */
+        /* 1. 垂直锁定 (表头) */
         th { background-color: #f1f3f5; color: #495057; font-weight: 700; user-select: none; position: sticky; z-index: 20; }
         thead tr:nth-child(1) th { top: 0; border-bottom: 1px solid #ccc; height: 22px; }
         thead tr:nth-child(2) th { top: 43px; box-shadow: 0 2px 2px rgba(0,0,0,0.05); }
 
-        tbody td:first-child { position: sticky; left: 0; z-index: 15; background-color: #fff; border-right: 2px solid #d1d1d1; }
-        tbody tr:nth-child(even) td:first-child { background-color: #f8f9fa; }
-        tbody tr:hover td:first-child { background-color: #e9ecef; }
-
-        thead tr:nth-child(1) th:first-child { position: sticky; top: 0; z-index: 20; }
-        thead tr:nth-child(2) th:first-child { position: sticky; left: 0; top: 43px; z-index: 30; border-right: 2px solid #d1d1d1; }
+        /* 2. 水平锁定 (前两列: 趋势 + 名称) */
         
+        /* 第一列: 趋势 (Trend) */
+        tbody td:nth-child(1) { position: sticky; left: 0; z-index: 15; background-color: #fff; border-right: 1px solid #eee; width: 30px; max-width: 30px; padding: 0 5px; }
+        /* 第二列: 名称 (Name) */
+        tbody td:nth-child(2) { position: sticky; left: 41px; z-index: 15; background-color: #fff; border-right: 2px solid #d1d1d1; }
+        
+        /* 表头第一列: 基础行情 (跨列) - 不锁定水平，让其滑走 */
+        thead tr:nth-child(1) th:first-child { position: sticky; top: 0; z-index: 20; }
+        
+        /* 表头第二行: 趋势 & 名称 - 必须锁定 */
+        thead tr:nth-child(2) th:nth-child(1) { position: sticky; left: 0; top: 43px; z-index: 30; border-right: 1px solid #eee; width: 30px; }
+        thead tr:nth-child(2) th:nth-child(2) { position: sticky; left: 41px; top: 43px; z-index: 30; border-right: 2px solid #d1d1d1; }
+
+        /* 斑马纹背景色修复 (锁定列必须指定背景) */
+        tbody tr:nth-child(even) td:nth-child(1), tbody tr:nth-child(even) td:nth-child(2) { background-color: #f8f9fa; }
+        tbody tr:hover td:nth-child(1), tbody tr:hover td:nth-child(2) { background-color: #e9ecef; }
+        .row-selected td:nth-child(1), .row-selected td:nth-child(2) { background-color: #e8f0fe !important; }
+
         .col-hidden { display: none !important; }
         .tag-badge { display: inline-block; background: #e7f5ff; color: #007bff; padding: 2px 6px; border-radius: 4px; font-size: 11px; margin: 1px; border: 1px solid #d0ebff; }
         .th-basic { border-top: 3px solid #6c757d; }
@@ -106,7 +100,7 @@
         .row-checkbox { cursor: pointer; accent-color: #007bff; width: 15px; height: 15px; margin: 0 auto; display: block; }
         .filter-icon { font-size: 12px; color: #adb5bd; cursor: pointer; padding: 2px 4px; }
         .filter-active { color: #dc3545 !important; font-weight: bold; background-color: #f8d7da; }
-        .row-selected, .row-selected td:first-child { background-color: #e8f0fe !important; } 
+        .row-selected { background-color: #e8f0fe !important; }
         .data-empty { color: #ccc; font-weight: normal; }
         #status-msg { font-size: 12px; color: #007bff; margin-right: 10px; font-family: monospace; }
         .sort-icon { font-size: 10px; margin-left: 4px; color: #adb5bd; }
@@ -133,12 +127,9 @@
             #mobile-nav { display: flex; }
             #top-area { display: none; }
             #top-area.show { display: block; animation: slideDown 0.2s ease-out; }
-            
-            /* 手机上 header-bar 样式调整，让按钮撑满 */
             .header-bar { flex-direction: column; gap: 10px; padding: 10px; }
             .tool-group { width: 100%; justify-content: space-between; }
             .tool-group button { flex: 1; justify-content: center; }
-            
             .control-bar { flex-direction: column; align-items: stretch; gap: 8px; padding: 10px; }
             .control-bar > * { width: 100%; margin: 0; }
             .spacer, .divider { display: none; }
@@ -165,13 +156,11 @@
     </div>
 
     <div id="top-area">
-        <!-- 顶部工具栏 (UI重构：去标题，左右分栏) -->
         <div class="header-bar">
             <div class="tool-group">
                 <button class="btn-cloud-pull" onclick="syncFromGithub()">☁️ 拉取数据</button>
                 <button class="btn-cloud-push" onclick="uploadToGithub()">🚀 保存到 GitHub</button>
             </div>
-            
             <div class="tool-group">
                 <span id="status-msg"></span>
                 <div class="divider"></div>
@@ -264,34 +253,24 @@
     <div id="sync-modal" class="modal"><div class="modal-content"><span class="close-btn" onclick="closeSyncModal()">&times;</span><h3 style="margin-top:0; border-bottom:2px solid #eee; padding-bottom:15px;">☁️ 同步确认</h3><div style="padding: 10px 0;"><div class="sync-info-row"><span class="sync-label">云端:</span><span class="sync-val" id="sync-cloud-date">...</span></div><div class="sync-info-row"><span class="sync-label">本地:</span><span class="sync-val" id="sync-local-date">...</span></div><div class="sync-info-row"><span class="sync-label">数量:</span><span class="sync-val" id="sync-count">...</span></div></div><div style="text-align:right; margin-top:20px;"><button class="btn-cloud-pull" onclick="confirmSyncAction()" style="padding:8px 20px;">✅ 覆盖</button><button class="btn-cancel" onclick="closeSyncModal()" style="padding:8px 20px;">取消</button></div></div></div>
 
     <script>
-        function getNowStr() {
-            const d = new Date();
-            const pad = (n) => n.toString().padStart(2, '0');
-            return `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-        }
-
-        function toggleMobileMenu(force) {
-            const area = document.getElementById('top-area');
-            const btn = document.getElementById('mobile-menu-btn');
-            const isHidden = area.style.display === 'none' || getComputedStyle(area).display === 'none';
-            const show = force !== undefined ? force : isHidden;
-            if (show) { area.style.display = 'block'; area.classList.add('show'); btn.innerText = '🔼 收起'; } 
-            else { area.style.display = 'none'; area.classList.remove('show'); btn.innerText = '⚙️ 菜单'; }
-        }
+        function getNowStr() { const d = new Date(); const pad = (n) => n.toString().padStart(2, '0'); return `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`; }
+        function toggleMobileMenu(force) { const area = document.getElementById('top-area'), btn = document.getElementById('mobile-menu-btn'), isHidden = area.style.display === 'none' || getComputedStyle(area).display === 'none', show = force !== undefined ? force : isHidden; if (show) { area.style.display = 'block'; area.classList.add('show'); btn.innerText = '🔼 收起'; } else { area.style.display = 'none'; area.classList.remove('show'); btn.innerText = '⚙️ 菜单'; } }
         if (window.innerWidth <= 768) document.getElementById('top-area').style.display = 'none';
 
         let stocks = JSON.parse(localStorage.getItem('valuationStocks')) || [];
         let viewSettings = { showCode: true, showTags: true, showUpdate: true, showAction: true, ...JSON.parse(localStorage.getItem('viewSettings')) };
         let intervalId = null, sortState = { key: 'pe_up', dir: 'desc' }, isPanelOpen = false, pendingDeleteCode = null, pendingLogIndex = null, pendingSyncData = null, cachedMarketData = {}, selectedCodes = new Set(), columnFilters = {}, onlySelectedMode = false;
         
+        // ★★★ 新增：K线历史数据缓存 ★★★
+        let historyCache = {}; 
+
         updateViewButtons();
         const GITHUB_CONFIG = { username: "dlezywj-cell", repo: "stock", path: "data.jason", branch: "main" };
         function utf8_to_b64(str) { return window.btoa(unescape(encodeURIComponent(str))); }
         function b64_to_utf8(str) { return decodeURIComponent(escape(window.atob(str))); }
 
         async function uploadToGithub() {
-            let token = localStorage.getItem("github_token");
-            if (!token) { token = prompt("🔑 请输入 GitHub Token:"); if (!token) return; localStorage.setItem("github_token", token); }
+            let token = localStorage.getItem("github_token"); if (!token) { token = prompt("🔑 请输入 GitHub Token:"); if (!token) return; localStorage.setItem("github_token", token); }
             const btn = document.querySelector('.btn-cloud-push'); const origin = btn.innerText; btn.innerText = "⏳..."; btn.disabled = true;
             try {
                 const url = `https://api.github.com/repos/${GITHUB_CONFIG.username}/${GITHUB_CONFIG.repo}/contents/${GITHUB_CONFIG.path}`;
@@ -310,10 +289,7 @@
                 const headers = { "Accept": "application/vnd.github.v3+json" }; if(token) headers["Authorization"] = `token ${token}`;
                 let res = await fetch(url, { headers, cache: "no-store" }), data;
                 if (res.ok) data = JSON.parse(b64_to_utf8((await res.json()).content));
-                else {
-                    const raw = await fetch(`https://raw.githubusercontent.com/${GITHUB_CONFIG.username}/${GITHUB_CONFIG.repo}/${GITHUB_CONFIG.branch}/${GITHUB_CONFIG.path}?t=${Date.now()}`);
-                    if(!raw.ok) throw new Error("无法访问"); data = await raw.json();
-                }
+                else { const raw = await fetch(`https://raw.githubusercontent.com/${GITHUB_CONFIG.username}/${GITHUB_CONFIG.repo}/${GITHUB_CONFIG.branch}/${GITHUB_CONFIG.path}?t=${Date.now()}`); if(!raw.ok) throw new Error("无法访问"); data = await raw.json(); }
                 if (Array.isArray(data)) {
                     pendingSyncData = data;
                     const cDate = data[0]?.logs?.[0]?.date || "无", lDate = stocks[0]?.logs?.[0]?.date || "无";
@@ -328,10 +304,48 @@
         function closeSyncModal() { document.getElementById('sync-modal').style.display='none';pendingSyncData=null; }
 
         function getSecid(c) { return (c.endsWith('.SH')?`1.${c.slice(0,-3)}`:c.endsWith('.SZ')?`0.${c.slice(0,-3)}`:c.endsWith('.HK')?`116.${c.slice(0,-3)}`:`105.${c}`); }
+        
+        // ★★★ 异步获取K线数据 (20日历史) ★★★
+        async function fetchHistory(secid, code) {
+            if(historyCache[code]) return historyCache[code]; // 有缓存直接返回
+            try {
+                // 101=日线, lmt=20, fqt=1(前复权)
+                const url = `https://push2his.eastmoney.com/api/qt/stock/kline/get?secid=${secid}&fields1=f1&fields2=f51,f52&klt=101&fqt=1&end=20500101&lmt=20`;
+                const res = await fetch(url);
+                const json = await res.json();
+                if(json?.data?.klines) {
+                    // 解析收盘价 [date, close]
+                    const closes = json.data.klines.map(k => parseFloat(k.split(',')[1]));
+                    historyCache[code] = closes; // 存入缓存
+                    return closes;
+                }
+            } catch(e) { console.error(e); }
+            return null;
+        }
+
+        // ★★★ 计算趋势图标 ★★★
+        function getTrendIcon(history, currentPrice) {
+            if (!history || history.length < 19) return ""; 
+            // 组合成最新的20天数据：历史19天 + 当前价
+            const data = [...history.slice(-19), currentPrice];
+            
+            const avg = (arr) => arr.reduce((a,b)=>a+b,0) / arr.length;
+            const ma5 = avg(data.slice(-5));
+            const ma10 = avg(data.slice(-10));
+            const ma20 = avg(data.slice(-20));
+
+            if (ma5 > ma10 && ma10 > ma20) return "📈"; // 上涨趋势
+            if (ma5 < ma10 && ma10 < ma20) return "📉"; // 下跌趋势
+            return ""; // 震荡/不明显
+        }
+
         async function updateTable() {
             const el = document.getElementById('result'), stat = document.getElementById('status-msg'), mob = document.getElementById('mobile-status');
             if (stocks.length === 0) { el.innerHTML = '<div style="padding:40px;text-align:center;color:#999;">📭 列表为空</div>'; return; }
-            const url = `https://push2.eastmoney.com/api/qt/ulist.np/get?secids=${stocks.map(s=>getSecid(s.code)).join(',')}&fields=f12,f14,f2,f3,f18,f20&invt=2&fltt=2&_=${Date.now()}`;
+            
+            const secids = stocks.map(s=>getSecid(s.code)).join(',');
+            const url = `https://push2.eastmoney.com/api/qt/ulist.np/get?secids=${secids}&fields=f12,f14,f2,f3,f18,f20&invt=2&fltt=2&_=${Date.now()}`;
+            
             try {
                 const res = await fetch(url), json = await res.json();
                 if (json?.data?.diff) {
@@ -342,17 +356,25 @@
             
             const data = stocks.map(s => {
                 const m = cachedMarketData[s.code.split('.')[0]] || {};
-                let cap=0, chg="0.00", valid=false;
+                let cap=0, chg="0.00", valid=false, currentPrice=0;
                 if (m.f12) { 
                     let p=parseFloat(m.f2)||parseFloat(m.f18), mc=parseFloat(m.f20); 
-                    if(p>0 && mc>0){ cap=mc/100000000; chg=parseFloat(m.f3).toFixed(2); valid=true; }
+                    if(p>0 && mc>0){ cap=mc/100000000; chg=parseFloat(m.f3).toFixed(2); valid=true; currentPrice=p; }
                 }
                 let pe = { down: '-', up: '-' }, ps = { down: '-', up: '-' };
                 if (valid) {
                     if (s.profit && s.lowPE) { pe.down=((s.profit*s.lowPE/cap-1)*100).toFixed(2); pe.up=((s.profit*s.highPE-cap)/cap*100).toFixed(2); }
                     if (s.revenue && s.lowPS) { ps.down=((s.revenue*s.lowPS/cap-1)*100).toFixed(2); ps.up=((s.revenue*s.highPS-cap)/cap*100).toFixed(2); }
                 }
-                return { ...s, cap, chg, valid, peRes:pe, psRes:ps };
+                
+                // ★★★ 触发历史数据获取 (不阻塞渲染) ★★★
+                if (!historyCache[s.code] && valid) {
+                    fetchHistory(getSecid(s.code), s.code).then(h => { if(h) updateTable(); }); // 获取完刷新
+                }
+                
+                const trend = getTrendIcon(historyCache[s.code], currentPrice);
+
+                return { ...s, cap, chg, valid, peRes:pe, psRes:ps, trend };
             });
             renderTable(data); updateCompareBtn();
         }
@@ -398,14 +420,15 @@
             const show = (k) => viewSettings['show'+k.charAt(0).toUpperCase()+k.slice(1)]?'':'col-hidden';
             const allSel = rows.length>0 && rows.every(i=>selectedCodes.has(i.code));
 
+            // ★★★ 修改表格结构：加入趋势列 ★★★
             let html = `<table><thead><tr>
-                <th class="th-basic" colspan="${3 + (viewSettings.showCode?1:0) + (viewSettings.showTags?1:0)}">📊 基础行情</th>
+                <th class="th-basic" colspan="${4 + (viewSettings.showCode?1:0) + (viewSettings.showTags?1:0)}">📊 基础行情</th>
                 <th class="th-pe" colspan="4">💰 PE (利润)</th><th class="th-ps" colspan="4">🚀 PS (营收)</th>
                 <th rowspan="2" class="sortable ${show('update')}" onclick="setSort('last_update')" style="width:70px">📅 ${getSortIcon('last_update')}</th>
                 <th class="th-basic ${show('action')}" rowspan="2">⚙️</th>
                 <th class="th-select" rowspan="2" onclick="toggleSelectAll()"><input type="checkbox" ${allSel?'checked':''}></th>
             </tr><tr>
-                <th>名称</th><th class="${show('code')}">代码</th><th class="${show('tags')}">属性 ${icon('tags')}</th>
+                <th>趋势</th><th>名称</th><th class="${show('code')}">代码</th><th class="${show('tags')}">属性 ${icon('tags')}</th>
                 <th onclick="setSort('chg')" class="sortable">涨跌 ${getSortIcon('chg')}</th>
                 <th>市值</th><th>净利</th><th>合理PE</th><th onclick="setSort('pe_down')" class="sortable">下% ${icon('pe_down')}</th><th onclick="setSort('pe_up')" class="sortable">上% ${icon('pe_up')}</th>
                 <th>营收</th><th>合理PS</th><th onclick="setSort('ps_down')" class="sortable">下% ${icon('ps_down')}</th><th onclick="setSort('ps_up')" class="sortable">上% ${icon('ps_up')}</th>
@@ -415,7 +438,10 @@
             else rows.forEach(i => {
                 const p = (v) => `<span style="color:${parseFloat(v)>=0?'#d32f2f':'#2e7d32'};font-weight:${Math.abs(v)>30?'800':'bold'}">${v==='-'?'-':v+'%'}</span>`;
                 const u = i.logs?.[0]?.date ? `<span style="font-size:11px;color:#666;display:block;line-height:1.2">${i.logs[0].date.split(' ')[0]}<br><span style="color:#999;font-size:10px">${i.logs[0].date.split(' ')[1]}</span></span>` : '-';
+                
+                // ★★★ 渲染趋势列 ★★★
                 html += `<tr class="${selectedCodes.has(i.code)?'row-selected':''}">
+                    <td style="font-size:16px;">${i.trend}</td>
                     <td style="font-weight:600">${i.name}</td><td class="${show('code')}" style="color:#888;font-size:12px">${i.code}</td>
                     <td class="${show('tags')}" style="text-align:left">${(i.tags||"").split(' ').map(t=>t?`<span class="tag-badge">${t}</span>`:'').join('')}</td>
                     <td style="font-weight:bold;color:${parseFloat(i.chg)>=0?'#d32f2f':'#2e7d32'}">${i.chg}%</td>
