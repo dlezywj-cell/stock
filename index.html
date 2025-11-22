@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>股票估值系统 (趋势修正版)</title>
+    <title>股票估值系统 (文字趋势版)</title>
     <style>
         /* === 全局重置 === */
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft YaHei', sans-serif; padding: 20px; max-width: 1700px; margin: 0 auto; background-color: #f4f6f9; font-size: 13px; color: #333; height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; }
         
-        /* === 移动端导航 === */
+        /* === 移动端专属导航 === */
         #mobile-nav { display: none; justify-content: space-between; align-items: center; background: #fff; padding: 10px 15px; border-radius: 8px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); flex-shrink: 0; }
         #mobile-nav h3 { margin: 0; color: #2c3e50; font-size: 16px; display: flex; align-items: center; gap: 8px; }
         #mobile-status { font-size: 11px; color: #007bff; font-family: monospace; }
@@ -65,23 +65,23 @@
         thead tr:nth-child(1) th { top: 0; border-bottom: 1px solid #ccc; height: 22px; }
         thead tr:nth-child(2) th { top: 43px; box-shadow: 0 2px 2px rgba(0,0,0,0.05); }
 
-        /* 第一列: 趋势 (Trend) - 确保足够宽度显示 Emoji */
+        /* 第一列: 趋势 (Text) - 宽度加大到 45px */
         tbody td:nth-child(1) { 
             position: sticky; left: 0; z-index: 15; 
             background-color: #fff; border-right: 1px solid #eee; 
-            width: 32px; max-width: 32px; padding: 0; 
-            font-size: 16px; vertical-align: middle;
+            width: 45px; max-width: 45px; padding: 0 2px; 
+            font-size: 12px; vertical-align: middle;
         }
-        /* 第二列: 名称 (Name) - 左偏移量 = 第一列宽 32px + border */
+        /* 第二列: 名称 (Name) - 左偏移 47px */
         tbody td:nth-child(2) { 
-            position: sticky; left: 33px; 
+            position: sticky; left: 47px; 
             z-index: 15; background-color: #fff; border-right: 2px solid #d1d1d1; 
         }
         
         /* 左上角表头处理 */
         thead tr:nth-child(1) th:first-child { position: sticky; top: 0; z-index: 20; }
-        thead tr:nth-child(2) th:nth-child(1) { position: sticky; left: 0; top: 43px; z-index: 30; border-right: 1px solid #eee; width: 32px; padding: 0; }
-        thead tr:nth-child(2) th:nth-child(2) { position: sticky; left: 33px; top: 43px; z-index: 30; border-right: 2px solid #d1d1d1; }
+        thead tr:nth-child(2) th:nth-child(1) { position: sticky; left: 0; top: 43px; z-index: 30; border-right: 1px solid #eee; width: 45px; padding: 0; }
+        thead tr:nth-child(2) th:nth-child(2) { position: sticky; left: 47px; top: 43px; z-index: 30; border-right: 2px solid #d1d1d1; }
 
         /* 斑马纹背景 */
         tbody tr:nth-child(even) td:nth-child(1), tbody tr:nth-child(even) td:nth-child(2) { background-color: #f8f9fa; }
@@ -304,19 +304,19 @@
 
         function getSecid(c) { return (c.endsWith('.SH')?`1.${c.slice(0,-3)}`:c.endsWith('.SZ')?`0.${c.slice(0,-3)}`:c.endsWith('.HK')?`116.${c.slice(0,-3)}`:`105.${c}`); }
         
-        // ★★★ JSONP获取历史数据，并统一日期格式 ★★★
+        // ★★★ JSONP 获取历史数据 ★★★
         function fetchHistory(secid, code) {
             if(historyCache[code] || fetchingFlags[code]) return;
             fetchingFlags[code] = true;
             const cbName = 'cb_hist_' + code.replace(/\W/g, '');
             window[cbName] = function(data) {
                 if(data && data.data && data.data.klines) {
-                    // 统一转为 YYYY-MM-DD 格式，避免浏览器差异
+                    // 保存 YYYY-MM-DD 格式日期和收盘价
                     historyCache[code] = data.data.klines.map(k => {
                         const parts = k.split(',');
                         return { date: parts[0].replace(/\//g, '-'), close: parseFloat(parts[1]) }; 
                     });
-                    updateTable(); // 强制刷新
+                    updateTable(); 
                 }
                 fetchingFlags[code] = false;
                 try { delete window[cbName]; document.getElementById('script_' + cbName).remove(); } catch(e){}
@@ -327,11 +327,10 @@
             document.body.appendChild(script);
         }
 
-        // ★★★ 智能合并逻辑：处理非交易时间段 ★★★
-        function getTrendIcon(history, currentPrice, currentTime) {
-            if (!history || history.length < 19) return ""; 
+        // ★★★ 趋势计算 (文字版) ★★★
+        function getTrendText(history, currentPrice, currentTime) {
+            if (!history || history.length < 19) return '<span style="color:#999;font-size:10px">...</span>'; // 数据加载中
             
-            // 1. 获取实时数据的日期 YYYY-MM-DD
             let rtDate = "";
             if (currentTime > 0) {
                 const d = new Date(currentTime * 1000);
@@ -339,30 +338,25 @@
                 rtDate = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
             }
 
-            // 2. 比较历史数据最后一天
             const lastHist = history[history.length - 1];
             let data = [];
             
-            // 如果实时日期和历史最后一天相同（说明K线已包含今日，或者非交易日），则替换最后一天的数据
             if (lastHist.date === rtDate) {
                 const historyBase = history.slice(0, -1).map(h => h.close);
                 data = [...historyBase, currentPrice];
             } else {
-                // 否则追加（新的一天）
                 const historyBase = history.map(h => h.close);
                 data = [...historyBase, currentPrice];
             }
 
-            // 计算均线
             const avg = (arr) => arr.reduce((a,b)=>a+b,0) / arr.length;
             const ma5 = avg(data.slice(-5));
             const ma10 = avg(data.slice(-10));
             const ma20 = avg(data.slice(-20));
             
-            // 输出结果（带颜色辅助）
-            if (ma5 > ma10 && ma10 > ma20) return '<span style="color:#d32f2f">📈</span>'; 
-            if (ma5 < ma10 && ma10 < ma20) return '<span style="color:#2e7d32">📉</span>'; 
-            return ""; 
+            if (ma5 > ma10 && ma10 > ma20) return '<span style="color:#d32f2f;font-weight:bold;font-size:12px">上涨</span>'; 
+            if (ma5 < ma10 && ma10 < ma20) return '<span style="color:#2e7d32;font-weight:bold;font-size:12px">下跌</span>'; 
+            return '<span style="color:#999;font-size:12px">震荡</span>'; 
         }
 
         async function updateTable() {
@@ -370,7 +364,6 @@
             if (stocks.length === 0) { el.innerHTML = '<div style="padding:40px;text-align:center;color:#999;">📭 列表为空</div>'; return; }
             
             const secids = stocks.map(s=>getSecid(s.code)).join(',');
-            // f124 = 时间戳
             const url = `https://push2.eastmoney.com/api/qt/ulist.np/get?secids=${secids}&fields=f12,f14,f2,f3,f18,f20,f124&invt=2&fltt=2&_=${Date.now()}`;
             
             try {
@@ -401,7 +394,7 @@
                     fetchHistory(getSecid(s.code), s.code);
                 }
                 
-                const trend = getTrendIcon(historyCache[s.code], currentPrice, currentTime);
+                const trend = getTrendText(historyCache[s.code], currentPrice, currentTime);
                 return { ...s, cap, chg, valid, peRes:pe, psRes:ps, trend };
             });
             renderTable(data); updateCompareBtn();
@@ -467,7 +460,7 @@
                 const u = i.logs?.[0]?.date ? `<span style="font-size:11px;color:#666;display:block;line-height:1.2">${i.logs[0].date.split(' ')[0]}<br><span style="color:#999;font-size:10px">${i.logs[0].date.split(' ')[1]}</span></span>` : '-';
                 
                 html += `<tr class="${selectedCodes.has(i.code)?'row-selected':''}">
-                    <td style="font-size:16px; text-align:center;">${i.trend}</td>
+                    <td style="text-align:center;">${i.trend}</td>
                     <td style="font-weight:600">${i.name}</td><td class="${show('code')}" style="color:#888;font-size:12px">${i.code}</td>
                     <td class="${show('tags')}" style="text-align:left">${(i.tags||"").split(' ').map(t=>t?`<span class="tag-badge">${t}</span>`:'').join('')}</td>
                     <td style="font-weight:bold;color:${parseFloat(i.chg)>=0?'#d32f2f':'#2e7d32'}">${i.chg}%</td>
