@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>股票估值系统 (调试诊断版)</title>
+    <title>股票估值系统 (强力调试版)</title>
     <style>
         /* === 全局重置 === */
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft YaHei', sans-serif; padding: 20px; max-width: 1700px; margin: 0 auto; background-color: #f4f6f9; font-size: 13px; color: #333; height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; }
@@ -70,7 +70,7 @@
             background-color: #fff; border-right: 1px solid #eee; 
             width: 45px; max-width: 45px; padding: 0 2px; 
             font-size: 12px; vertical-align: middle;
-            cursor: help; /* 鼠标悬停提示 */
+            cursor: help; 
         }
         /* 第二列: 名称 (Name) */
         tbody td:nth-child(2) { 
@@ -250,10 +250,6 @@
     <div id="sync-modal" class="modal"><div class="modal-content"><span class="close-btn" onclick="closeSyncModal()">&times;</span><h3 style="margin-top:0; border-bottom:2px solid #eee; padding-bottom:15px;">☁️ 同步确认</h3><div style="padding: 10px 0;"><div class="sync-info-row"><span class="sync-label">云端:</span><span class="sync-val" id="sync-cloud-date">...</span></div><div class="sync-info-row"><span class="sync-label">本地:</span><span class="sync-val" id="sync-local-date">...</span></div><div class="sync-info-row"><span class="sync-label">数量:</span><span class="sync-val" id="sync-count">...</span></div></div><div style="text-align:right; margin-top:20px;"><button class="btn-cloud-pull" onclick="confirmSyncAction()" style="padding:8px 20px;">✅ 覆盖</button><button class="btn-cancel" onclick="closeSyncModal()" style="padding:8px 20px;">取消</button></div></div></div>
 
     <script>
-        // 调试辅助
-        let debugMode = false;
-        let hasAlertedError = false; // 防止弹窗刷屏
-
         function getNowStr() { const d = new Date(); const pad = (n) => n.toString().padStart(2, '0'); return `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`; }
         function toggleMobileMenu(force) { const area = document.getElementById('top-area'), btn = document.getElementById('mobile-menu-btn'), isHidden = area.style.display === 'none' || getComputedStyle(area).display === 'none', show = force !== undefined ? force : isHidden; if (show) { area.style.display = 'block'; area.classList.add('show'); btn.innerText = '🔼 收起'; } else { area.style.display = 'none'; area.classList.remove('show'); btn.innerText = '⚙️ 菜单'; } }
         if (window.innerWidth <= 768) document.getElementById('top-area').style.display = 'none';
@@ -263,7 +259,7 @@
         let intervalId = null, sortState = { key: 'pe_up', dir: 'desc' }, isPanelOpen = false, pendingDeleteCode = null, pendingLogIndex = null, pendingSyncData = null, cachedMarketData = {}, selectedCodes = new Set(), columnFilters = {}, onlySelectedMode = false;
         let historyCache = {}; 
         let fetchingFlags = {}; 
-        let errorCache = {}; // 存储每个股票的错误信息
+        let errorCache = {}; // 错误信息缓存
 
         updateViewButtons();
         const GITHUB_CONFIG = { username: "dlezywj-cell", repo: "stock", path: "data.jason", branch: "main" };
@@ -306,7 +302,7 @@
 
         function getSecid(c) { return (c.endsWith('.SH')?`1.${c.slice(0,-3)}`:c.endsWith('.SZ')?`0.${c.slice(0,-3)}`:c.endsWith('.HK')?`116.${c.slice(0,-3)}`:`105.${c}`); }
         
-        // ★★★ JSONP获取实时数据 (解决跨域) ★★★
+        // ★★★ 核心修复：JSONP获取实时数据 ★★★
         function fetchRealtime(secids, cbName) {
             const script = document.createElement('script');
             script.id = 'script_rt_' + cbName;
@@ -317,23 +313,19 @@
                     document.getElementById('status-msg').innerText = `● 更新 ${t}`;
                     document.getElementById('mobile-status').innerText = `● ${t}`;
                     renderTableWrapper();
-                } else {
-                    // 记录错误
-                    if(!hasAlertedError) { alert("实时行情API返回空数据，请检查网络或代码格式"); hasAlertedError=true; }
-                }
+                } else { console.error("实时数据为空"); }
                 try { delete window[cbName]; document.getElementById('script_rt_' + cbName).remove(); } catch(e){}
             };
-            script.onerror = function() {
-                if(!hasAlertedError) { alert("实时行情脚本加载失败(Network Error)，请检查网络连接"); hasAlertedError=true; }
-            };
+            script.onerror = function() { console.error("实时数据脚本加载失败"); };
             script.src = `https://push2.eastmoney.com/api/qt/ulist.np/get?secids=${secids}&fields=f12,f14,f2,f3,f18,f20,f124&invt=2&fltt=2&cb=${cbName}&_=${Date.now()}`;
             document.body.appendChild(script);
         }
 
-        // ★★★ JSONP获取历史数据 ★★★
+        // ★★★ 核心修复：JSONP获取历史数据 + 超时重试 ★★★
         function fetchHistory(secid, code) {
             const now = Date.now();
-            if(historyCache[code] || (fetchingFlags[code] && (now - fetchingFlags[code] < 5000))) return;
+            // 3秒超时重试机制
+            if(historyCache[code] || (fetchingFlags[code] && (now - fetchingFlags[code] < 3000))) return;
             
             fetchingFlags[code] = now;
             const cbName = 'cb_hist_' + code.replace(/\W/g, '');
@@ -344,11 +336,10 @@
                         const parts = k.split(',');
                         return { date: parts[0].replace(/\//g, '-'), close: parseFloat(parts[1]) }; 
                     });
-                    errorCache[code] = null; // 清除错误
+                    errorCache[code] = null;
                     renderTableWrapper();
                 } else {
-                    errorCache[code] = "API返回数据为空";
-                    if(!hasAlertedError) { alert(`股票 ${code} 历史数据获取失败: API返回空`); hasAlertedError=true; }
+                    errorCache[code] = "API无数据";
                 }
                 delete fetchingFlags[code];
                 try { delete window[cbName]; document.getElementById('script_' + cbName).remove(); } catch(e){}
@@ -357,21 +348,18 @@
             const script = document.createElement('script');
             script.id = 'script_' + cbName;
             script.onerror = function() {
-                errorCache[code] = "网络错误/脚本加载失败";
-                delete fetchingFlags[code];
-                if(!hasAlertedError) { alert(`股票 ${code} 历史数据加载失败(Network Error)`); hasAlertedError=true; }
+                errorCache[code] = "脚本错误";
+                delete fetchingFlags[code]; // 允许重试
             };
-            script.src = `https://push2his.eastmoney.com/api/qt/stock/kline/get?secid=${secid}&fields1=f1&fields2=f51,f53&klt=101&fqt=1&end=20500101&lmt=25&cb=${cbName}`;
+            // 补全 ut 参数
+            script.src = `https://push2his.eastmoney.com/api/qt/stock/kline/get?secid=${secid}&fields1=f1&fields2=f51,f53&klt=101&fqt=1&end=20500101&lmt=25&ut=fa5fd1943c7b386f172d6893dbfba10b&cb=${cbName}`;
             document.body.appendChild(script);
         }
 
-        // 趋势计算 (带容错)
+        // 趋势计算 (点击显示错误信息)
         function getTrendText(history, currentPrice, currentTime, code) {
-            // 1. 如果有错误，显示 Err 并允许点击查看
             if (errorCache[code]) return `<span style="color:red;cursor:pointer;" onclick="alert('${errorCache[code]}')">Err</span>`;
-            
-            // 2. 数据不足
-            if (!history || history.length < 5) return '<span style="color:#ccc;font-size:12px" onclick="alert(\'历史数据加载中...\')">...</span>'; 
+            if (!history || history.length < 5) return `<span style="color:#ccc;font-size:12px;cursor:pointer;" onclick="alert('历史数据正在加载...')">...</span>`; 
             
             let rtDate = "";
             if (currentTime > 0) {
@@ -402,9 +390,9 @@
             const ma10 = avg(data.slice(-10));
             const ma20 = avg(data.slice(-20));
             
-            if (ma5 > ma10 && ma10 > ma20) return '<span style="color:#d32f2f;font-weight:bold;font-size:12px">上涨</span>'; 
-            if (ma5 < ma10 && ma10 < ma20) return '<span style="color:#2e7d32;font-weight:bold;font-size:12px">下跌</span>'; 
-            return '<span style="color:#999;font-size:12px">震荡</span>'; 
+            if (ma5 > ma10 && ma10 > ma20) return '<span style="color:#d32f2f;font-weight:bold;font-size:12px">涨</span>'; 
+            if (ma5 < ma10 && ma10 < ma20) return '<span style="color:#2e7d32;font-weight:bold;font-size:12px">跌</span>'; 
+            return '<span style="color:#999;font-size:12px">震</span>'; 
         }
 
         function updateTable() {
@@ -533,37 +521,62 @@
         function clearCurrentFilter() { delete columnFilters[document.getElementById('filter-col-key').value]; document.getElementById('filter-menu').style.display='none'; updateTable(); }
 
         function saveStock() {
-            const code=document.getElementById('inCode').value.trim(), name=document.getElementById('inName').value.trim(), note=document.getElementById('inNote').value.trim(), tags=document.getElementById('inTags').value.trim();
-            const p=parseFloat(document.getElementById('inProfit').value)||0, lpe=parseFloat(document.getElementById('inLowPE').value)||0, hpe=parseFloat(document.getElementById('inHighPE').value)||0;
-            const rev=parseFloat(document.getElementById('inRevenue').value)||0, lps=parseFloat(document.getElementById('inLowPS').value)||0, hps=parseFloat(document.getElementById('inHighPS').value)||0;
-            if(!code||!name){alert("请先搜索并匹配股票代码！");return;}
-            const now=new Date().toLocaleString('zh-CN',{hour12:false});
-            let changes=[], newLog=null, stockData={code,name,tags,profit:p,lowPE:lpe,highPE:hpe,revenue:rev,lowPS:lps,highPS:hps,logs:[]};
-            const idx=stocks.findIndex(s=>s.code===code);
-            if(idx>=0){
-                const old=stocks[idx]; stockData.logs=old.logs||[];
-                if(old.profit!==p)changes.push(`净利:${old.profit}→${p}`); if(old.lowPE!==lpe)changes.push(`PE下:${old.lowPE}→${lpe}`); if(old.highPE!==hpe)changes.push(`PE上:${old.highPE}→${hpe}`);
-                if(old.revenue!==rev)changes.push(`营收:${old.revenue}→${rev}`); if(old.lowPS!==lps)changes.push(`PS下:${old.lowPS}→${lps}`); if(old.highPS!==hps)changes.push(`PS上:${old.highPS}→${hps}`);
-                if((old.tags||"")!==tags)changes.push(`属性:${old.tags||""}→${tags}`);
-                if(changes.length>0||note){ newLog={date:now, content:changes.length>0?changes.join('; '):"添加备注", note:note}; stockData.logs.unshift(newLog); }
-                stocks[idx]=stockData;
-            } else { newLog={date:now, content:"首次创建", note:note||"初始化"}; stockData.logs.push(newLog); stocks.push(stockData); }
+            const code=document.getElementById('inCode').value.trim(), name=document.getElementById('inName').value.trim();
+            if(!code) { alert("请先搜索"); return; }
+            const s = { code, name, tags:document.getElementById('inTags').value.trim(), profit:parseFloat(document.getElementById('inProfit').value)||0, lowPE:parseFloat(document.getElementById('inLowPE').value)||0, highPE:parseFloat(document.getElementById('inHighPE').value)||0, revenue:parseFloat(document.getElementById('inRevenue').value)||0, lowPS:parseFloat(document.getElementById('inLowPS').value)||0, highPS:parseFloat(document.getElementById('inHighPS').value)||0, logs:[] };
+            const idx = stocks.findIndex(i=>i.code===code);
+            const now = getNowStr();
+            const note = document.getElementById('inNote').value.trim();
+            
+            let log = { date: now, content: "更新数据", note: note };
+            if(idx>=0) {
+                s.logs = stocks[idx].logs || [];
+                const old = stocks[idx];
+                let diff = [];
+                if(old.profit!=s.profit) diff.push(`净利${old.profit}→${s.profit}`);
+                if(old.lowPE!=s.lowPE) diff.push(`PE下${old.lowPE}→${s.lowPE}`);
+                if(diff.length>0) log.content = diff.join(';');
+                if(diff.length>0 || note) s.logs.unshift(log);
+                stocks[idx] = s;
+            } else {
+                log.content = "首次创建";
+                s.logs.push(log);
+                stocks.push(s);
+            }
             saveStorage(); clearInput(); updateTable();
         }
 
-        function searchStockCode() { const name = document.getElementById('inName').value.trim(); if(!name) return; const btn = document.querySelector('.btn-search'); btn.innerText='...'; const sc = document.createElement('script'); window.handleSearch = function(d) { btn.innerText='🔍'; if(d?.QuotationCodeTable?.Data?.length) { const r = d.QuotationCodeTable.Data[0]; let suf = r.MarketType=="1"?".SH":(r.MarketType=="2"?".SZ":(r.Code.length===5?".HK":"")); if(!suf && r.Code.length===6) suf = r.Code.startsWith('6')?".SH":".SZ"; document.getElementById('inCode').value = r.Code+suf; document.getElementById('inName').value = r.Name; } else { alert("未找到"); } sc.remove(); }; sc.src = `https://searchapi.eastmoney.com/api/suggest/get?input=${encodeURIComponent(name)}&type=14&token=D43BF722C8E33BD5D50F639205545E43&cb=handleSearch`; document.body.appendChild(sc); }
-        
-        function editStock(c) { if(!isPanelOpen) { toggleInputPanel(); } const container = document.getElementById('input-container'); container.scrollIntoView({ behavior: 'smooth', block: 'start' }); const s=stocks.find(i=>i.code===c); if(!s)return; document.getElementById('inName').value=s.name; document.getElementById('inCode').value=s.code; document.getElementById('inTags').value=s.tags||''; document.getElementById('inProfit').value=s.profit||''; document.getElementById('inLowPE').value=s.lowPE||''; document.getElementById('inHighPE').value=s.highPE||''; document.getElementById('inRevenue').value=s.revenue||''; document.getElementById('inLowPS').value=s.lowPS||''; document.getElementById('inHighPS').value=s.highPS||''; document.getElementById('btn-save-text').innerText="💾 确认修改"; }
-        function toggleInputPanel() { const c=document.getElementById('input-container'); isPanelOpen=!isPanelOpen; c.style.display=isPanelOpen?'block':'none'; document.getElementById('toggle-btn').innerText=isPanelOpen?'🔼 收起':'➕ 录入/管理 (展开)'; }
-        function clearInput() { document.querySelectorAll('#input-panel input').forEach(i=>i.value=''); document.getElementById('editCode').value=''; document.getElementById('btn-save-text').innerText="💾 保存"; }
+        function searchStockCode() { 
+            const n=document.getElementById('inName').value.trim(); if(!n)return; 
+            const sc=document.createElement('script'); 
+            window.handleSearch=function(d){ if(d?.QuotationCodeTable?.Data?.length){ const r=d.QuotationCodeTable.Data[0]; let s=r.MarketType=="1"?".SH":(r.MarketType=="2"?".SZ":".HK"); if(r.Code.length==6 && !r.MarketType) s=r.Code.startsWith('6')?".SH":".SZ"; document.getElementById('inCode').value=r.Code+s; document.getElementById('inName').value=r.Name; }else alert("未找到"); sc.remove(); };
+            sc.src=`https://searchapi.eastmoney.com/api/suggest/get?input=${encodeURIComponent(n)}&type=14&token=D43BF722C8E33BD5D50F639205545E43&cb=handleSearch`; document.body.appendChild(sc);
+        }
 
+        function editStock(c) {
+            if(window.innerWidth<=768) toggleMobileMenu(true); else if(!isPanelOpen) toggleInputPanel();
+            document.getElementById('input-container').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            document.getElementById('input-container').style.display='block';
+            const s=stocks.find(i=>i.code===c); if(!s)return;
+            document.getElementById('inName').value=s.name; document.getElementById('inCode').value=s.code; document.getElementById('inTags').value=s.tags||''; 
+            document.getElementById('inProfit').value=s.profit||''; document.getElementById('inLowPE').value=s.lowPE||''; document.getElementById('inHighPE').value=s.highPE||'';
+            document.getElementById('inRevenue').value=s.revenue||''; document.getElementById('inLowPS').value=s.lowPS||''; document.getElementById('inHighPS').value=s.highPS||''; 
+            document.getElementById('btn-save-text').innerText="💾 修改";
+        }
+
+        function toggleInputPanel() { const c=document.getElementById('input-container'); isPanelOpen=!isPanelOpen; c.style.display=isPanelOpen?'block':'none'; document.getElementById('toggle-btn').innerText=isPanelOpen?'🔼 收起':'➕ 录入/管理'; }
+        function clearInput() { document.querySelectorAll('#input-panel input').forEach(i=>i.value=''); document.getElementById('btn-save-text').innerText="💾 保存"; }
+        function showLogs(c) { const s=stocks.find(i=>i.code===c); document.getElementById('modal-body').innerHTML=s?.logs?.map((l,i)=>`<div class="log-entry"><div style="display:flex;justify-content:space-between"><span class="log-time">${l.date}</span><span class="log-del-btn" onclick="deleteLog('${c}',${i})">🗑️</span></div><div style="font-weight:600">${l.content}</div>${l.note?`<div class="log-note">${l.note}</div>`:''}</div>`).join('')||'无'; document.getElementById('log-modal').style.display='flex'; }
+        function deleteLog(c,i) { pendingDeleteCode=c; pendingLogIndex=i; document.getElementById('delete-msg').innerText="删日志?"; document.getElementById('delete-modal').style.display='flex'; }
+        window.openDeleteModal=function(c){pendingDeleteCode=c;pendingLogIndex=null;document.getElementById('delete-msg').innerText=`删 ${c}?`;document.getElementById('delete-modal').style.display='flex';};
+        window.confirmDeleteAction=function(){if(pendingDeleteCode){if(pendingLogIndex!==null){const s=stocks.find(i=>i.code===pendingDeleteCode);if(s&&s.logs){s.logs.splice(pendingLogIndex,1);saveStorage();showLogs(pendingDeleteCode);updateTable();}pendingLogIndex=null;}else{stocks=stocks.filter(s=>s.code!==pendingDeleteCode);selectedCodes.delete(pendingDeleteCode);saveStorage();updateTable();}}closeDeleteModal();};
+        window.closeDeleteModal=function(){document.getElementById('delete-modal').style.display='none';}; function closeLogModal(){document.getElementById('log-modal').style.display='none';}
         function startRealtime() { if(!intervalId) { updateTable(); intervalId=setInterval(updateTable, 5000); } }
         function stopRealtime() { clearInterval(intervalId); intervalId=null; document.getElementById('status-msg').innerText="⏸ 暂停"; }
         function setSort(k) { if(sortState.key===k) sortState.dir=sortState.dir==='desc'?'asc':'desc'; else {sortState.key=k; sortState.dir='desc';} updateTable(); }
-        function getSortIcon(k) { return sortState.key!==k?'⇅':(sortState.dir==='desc'?'⬇':'⬆'); }
-        function getSortClass(k) { return sortState.key===k?'sort-icon sort-active':'sort-icon'; }
+        function getSortIcon(k) { return sortState.key!==k?'':(sortState.dir==='desc'?'⬇':'⬆'); }
         function saveStorage() { localStorage.setItem('valuationStocks', JSON.stringify(stocks)); }
-        window.onclick = function(e) { if(e.target.className==='modal') e.target.style.display='none'; }
+        window.onclick=function(e){if(e.target.className==='modal')e.target.style.display='none';}
 
         updateTable();
     </script>
