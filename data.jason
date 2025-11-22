@@ -1323,13 +1323,23 @@
     "code": "002050.SZ",
     "name": "三花智控",
     "tags": "汽车零部件 机器人",
-    "profit": 0,
-    "lowPE": 0,
-    "highPE": 0,
+    "profit": 41,
+    "lowPE": 35,
+    "highPE": 55,
     "revenue": 330,
-    "lowPS": 3,
-    "highPS": 6,
+    "lowPS": 4,
+    "highPS": 7,
     "logs": [
+      {
+        "date": "2025/11/22 15:52:36",
+        "content": "PS下:3→4; PS上:6→7",
+        "note": ""
+      },
+      {
+        "date": "2025/11/22 15:51:55",
+        "content": "净利:0→41; PE下:0→35; PE上:0→55",
+        "note": "给到了偏高的估值"
+      },
       {
         "date": "2025/11/20 21:12:40",
         "content": "属性:→汽车零部件 机器人",
