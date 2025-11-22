@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>股票估值系统 (队列防抖版)</title>
+    <title>股票估值系统 (直连极速版)</title>
     <style>
         /* === 全局重置 === */
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft YaHei', sans-serif; padding: 20px; max-width: 1700px; margin: 0 auto; background-color: #f4f6f9; font-size: 13px; color: #333; height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; }
@@ -250,10 +250,7 @@
         let viewSettings = { showCode: true, showTags: true, showUpdate: true, showAction: true, ...JSON.parse(localStorage.getItem('viewSettings')) };
         let intervalId = null, sortState = { key: 'pe_up', dir: 'desc' }, isPanelOpen = false, pendingDeleteCode = null, pendingLogIndex = null, pendingSyncData = null, cachedMarketData = {}, selectedCodes = new Set(), columnFilters = {}, onlySelectedMode = false;
         let historyCache = {}; 
-        
-        // ★★★ 队列管理核心 ★★★
-        let histQueue = [];
-        let isProcessingQueue = false;
+        let fetchingFlags = {}; 
         let errorCache = {}; 
 
         updateViewButtons();
@@ -310,20 +307,19 @@
                 }
                 try { delete window[cbName]; document.getElementById('script_rt_' + cbName).remove(); } catch(e){}
             };
+            // 使用标准的 push2 实时接口
             script.src = `https://push2.eastmoney.com/api/qt/ulist.np/get?secids=${secids}&fields=f12,f14,f2,f3,f18,f20,f124&invt=2&fltt=2&cb=${cbName}&_=${Date.now()}`;
             document.body.appendChild(script);
         }
 
-        // ★★★ 队列处理器：每200ms处理一个历史数据请求 ★★★
-        function processHistoryQueue() {
-            if (isProcessingQueue || histQueue.length === 0) return;
-            isProcessingQueue = true;
-
-            const item = histQueue.shift(); // 取出第一个任务
-            const { secid, code } = item;
-
-            // 执行获取
-            const cbName = 'cb_hist_' + code.replace(/\W/g, '') + '_' + Date.now();
+        // ★★★ 历史数据核心修复：改用 push2His，移除 ut 参数，增强稳定性 ★★★
+        function fetchHistory(secid, code) {
+            const now = Date.now();
+            if(historyCache[code] || (fetchingFlags[code] && (now - fetchingFlags[code] < 3000))) return;
+            
+            fetchingFlags[code] = now;
+            const cbName = 'cb_hist_' + code.replace(/\W/g, '');
+            
             window[cbName] = function(data) {
                 if(data && data.data && data.data.klines) {
                     historyCache[code] = data.data.klines.map(k => {
@@ -331,45 +327,29 @@
                         return { date: parts[0].replace(/\//g, '-'), close: parseFloat(parts[1]) }; 
                     });
                     errorCache[code] = null;
-                    renderTableWrapper(); // 拿到一个就刷新一次，产生逐个蹦出的效果
+                    renderTableWrapper();
                 } else {
                     errorCache[code] = "API无数据";
                 }
-                
-                // 清理并处理下一个
+                delete fetchingFlags[code];
                 try { delete window[cbName]; document.getElementById('script_' + cbName).remove(); } catch(e){}
-                setTimeout(() => { isProcessingQueue = false; processHistoryQueue(); }, 200); // 200ms间隔
             };
 
             const script = document.createElement('script');
             script.id = 'script_' + cbName;
             script.onerror = function() {
-                errorCache[code] = "网络错误";
-                setTimeout(() => { isProcessingQueue = false; processHistoryQueue(); }, 200);
+                errorCache[code] = "连接中断"; // 脚本加载失败
+                delete fetchingFlags[code];
             };
-            // 使用最稳的移动端接口
-            script.src = `https://push2his.eastmoney.com/api/qt/stock/kline/get?secid=${secid}&fields1=f1&fields2=f51,f53&klt=101&fqt=1&end=20500101&lmt=25&cb=${cbName}`;
+            
+            // ★★★ 关键修改：完全模拟官方网页参数，移除 ut，保留 klt=101(日线) 和 fqt=1(前复权) ★★★
+            script.src = `https://push2his.eastmoney.com/api/qt/stock/kline/get?secid=${secid}&fields1=f1&fields2=f51,f53&klt=101&fqt=1&end=20500101&lmt=30&cb=${cbName}`;
             document.body.appendChild(script);
         }
 
-        // 添加到队列
-        function queueFetchHistory(secid, code) {
-            if(historyCache[code] || errorCache[code]) return; // 有缓存或已报错就不再排队
-            // 检查队列中是否已存在
-            if(!histQueue.some(i => i.code === code)) {
-                histQueue.push({ secid, code });
-                processHistoryQueue(); // 尝试启动处理器
-            }
-        }
-
         function getTrendText(history, currentPrice, currentTime, code) {
-            if (errorCache[code]) return `<span style="color:red;cursor:pointer;" onclick="alert('${errorCache[code]}')">Err</span>`;
-            
-            // 正在排队或加载中
-            if (!history) {
-                const inQueue = histQueue.some(i => i.code === code);
-                return `<span style="color:#ccc;font-size:12px;cursor:pointer;" onclick="alert('${inQueue?"排队中":"加载中"}...')">...</span>`; 
-            }
+            if (errorCache[code]) return `<span style="color:orange;cursor:pointer;font-size:12px" onclick="fetchingFlags['${code}']=0;updateTable();" title="${errorCache[code]}">重试</span>`;
+            if (!history) return `<span style="color:#ccc;font-size:12px">...</span>`; 
             
             let rtDate = "";
             if (currentTime > 0) {
@@ -385,15 +365,14 @@
             const lastHist = history[history.length - 1];
             let data = [];
             
-            if (lastHist && (lastHist.date === rtDate || (new Date(rtDate).getDay()%6===0))) {
+            // ★★★ 周末对齐：如果历史最后一天 >= 实时日期，直接覆盖，避免追加重复数据 ★★★
+            if (lastHist.date >= rtDate) {
                 const historyBase = history.slice(0, -1).map(h => h.close);
                 data = [...historyBase, currentPrice];
             } else {
                 const historyBase = history.map(h => h.close);
                 data = [...historyBase, currentPrice];
             }
-
-            if (data.length < 20) return '<span style="color:#999">新</span>';
 
             const avg = (arr) => arr.reduce((a,b)=>a+b,0) / arr.length;
             const ma5 = avg(data.slice(-5));
@@ -432,9 +411,9 @@
                     if (s.revenue && s.lowPS) { ps.down=((s.revenue*s.lowPS/cap-1)*100).toFixed(2); ps.up=((s.revenue*s.highPS-cap)/cap*100).toFixed(2); }
                 }
                 
-                // ★★★ 加入队列，而不是直接获取 ★★★
+                // 立即触发获取（不再排队，直接并发）
                 if (!historyCache[s.code] && valid) {
-                    queueFetchHistory(getSecid(s.code), s.code);
+                    fetchHistory(getSecid(s.code), s.code);
                 }
                 
                 const trend = getTrendText(historyCache[s.code], currentPrice, currentTime, s.code);
