@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>股票估值系统 (极速并发版)</title>
+    <title>股票估值系统 (完美版)</title>
     <style>
         /* === 全局重置 === */
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft YaHei', sans-serif; padding: 20px; max-width: 1700px; margin: 0 auto; background-color: #f4f6f9; font-size: 13px; color: #333; height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; }
         
-        /* === 移动端专属 === */
+        /* === 移动端专属导航 === */
         #mobile-nav { display: none; justify-content: space-between; align-items: center; background: #fff; padding: 10px 15px; border-radius: 8px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); flex-shrink: 0; }
         #mobile-nav h3 { margin: 0; color: #2c3e50; font-size: 16px; display: flex; align-items: center; gap: 8px; }
         #mobile-status { font-size: 11px; color: #007bff; font-family: monospace; }
@@ -19,7 +19,7 @@
         .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; background: #fff; padding: 10px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .tool-group { display: flex; align-items: center; gap: 10px; }
 
-        /* === 进度条样式 === */
+        /* === 进度条 === */
         #progress-bar-container { flex-grow:1; margin: 0 15px; display:none; align-items:center; gap:10px; }
         #progress-bg { flex-grow:1; height:8px; background:#eee; border-radius:4px; overflow:hidden; }
         #progress-fill { height:100%; width:0%; background:linear-gradient(90deg, #007bff, #00c6ff); transition: width 0.2s; }
@@ -67,21 +67,41 @@
         table { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 1350px; }
         th, td { padding: 10px 12px; text-align: center; border-bottom: 1px solid #ebebeb; border-right: 1px solid #ebebeb; white-space: nowrap; }
         
-        /* 锁定列 */
+        /* 锁定列表头 */
         th { background-color: #f1f3f5; color: #495057; font-weight: 700; user-select: none; position: sticky; z-index: 20; }
         thead tr:nth-child(1) th { top: 0; border-bottom: 1px solid #ccc; height: 22px; }
         thead tr:nth-child(2) th { top: 43px; box-shadow: 0 2px 2px rgba(0,0,0,0.05); }
 
+        /* 锁定列：第1列(趋势) & 第2列(名称) */
         tbody td:nth-child(1) { position: sticky; left: 0; z-index: 15; background-color: #fff; border-right: 1px solid #eee; width: 30px; max-width: 30px; padding: 0 5px; }
         tbody td:nth-child(2) { position: sticky; left: 41px; z-index: 15; background-color: #fff; border-right: 2px solid #d1d1d1; }
         
+        /* 表头锁定 */
         thead tr:nth-child(1) th:first-child { position: sticky; top: 0; z-index: 20; }
         thead tr:nth-child(2) th:nth-child(1) { position: sticky; left: 0; top: 43px; z-index: 30; border-right: 1px solid #eee; width: 30px; }
         thead tr:nth-child(2) th:nth-child(2) { position: sticky; left: 41px; top: 43px; z-index: 30; border-right: 2px solid #d1d1d1; }
 
-        tbody tr:nth-child(even) td:nth-child(1), tbody tr:nth-child(even) td:nth-child(2) { background-color: #f8f9fa; }
-        tbody tr:hover td:nth-child(1), tbody tr:hover td:nth-child(2) { background-color: #e9ecef; }
-        .row-selected td:nth-child(1), .row-selected td:nth-child(2) { background-color: #e8f0fe !important; }
+        /* ★★★ 视觉优化：给锁定列加右侧阴影 ★★★ */
+        tbody td:nth-child(2), thead tr:nth-child(2) th:nth-child(2) {
+            box-shadow: 4px 0 8px -4px rgba(0,0,0,0.15); 
+            clip-path: inset(0px -15px 0px 0px); /* 防止阴影遮挡左侧 */
+        }
+
+        /* ★★★ 隔行变色修复 ★★★ */
+        /* 偶数行背景 */
+        tbody tr:nth-child(even) { background-color: #f8f9fa; }
+        tbody tr:nth-child(even) td:nth-child(1), 
+        tbody tr:nth-child(even) td:nth-child(2) { background-color: #f8f9fa; }
+
+        /* 悬停背景 (深色) */
+        tbody tr:hover td { background-color: #e9ecef; }
+        tbody tr:hover td:nth-child(1), 
+        tbody tr:hover td:nth-child(2) { background-color: #e9ecef; }
+
+        /* 选中行 */
+        .row-selected td,
+        .row-selected td:nth-child(1),
+        .row-selected td:nth-child(2) { background-color: #e8f0fe !important; }
 
         .col-hidden { display: none !important; }
         .tag-badge { display: inline-block; background: #e7f5ff; color: #007bff; padding: 2px 6px; border-radius: 4px; font-size: 11px; margin: 1px; border: 1px solid #d0ebff; }
@@ -96,7 +116,6 @@
         .row-checkbox { cursor: pointer; accent-color: #007bff; width: 15px; height: 15px; margin: 0 auto; display: block; }
         .filter-icon { font-size: 12px; color: #adb5bd; cursor: pointer; padding: 2px 4px; }
         .filter-active { color: #dc3545 !important; font-weight: bold; background-color: #f8d7da; }
-        .row-selected { background-color: #e8f0fe !important; }
         .data-empty { color: #ccc; font-weight: normal; }
         #status-msg { font-size: 12px; color: #007bff; margin-right: 10px; font-family: monospace; }
         .sort-icon { font-size: 10px; margin-left: 4px; color: #adb5bd; }
@@ -182,6 +201,7 @@
                 <span class="control-label desktop-only" style="margin-right:5px;font-size:12px;color:#666;">👁️:</span>
                 <button class="btn-view active" id="btn-toggle-code" onclick="toggleColumn('code')">代码</button>
                 <button class="btn-view active" id="btn-toggle-tags" onclick="toggleColumn('tags')">属性</button>
+                <button class="btn-view" id="btn-toggle-cap" onclick="toggleColumn('cap')">市值</button>
                 <button class="btn-view active" id="btn-toggle-update" onclick="toggleColumn('update')">更新</button>
                 <button class="btn-view active" id="btn-toggle-action" onclick="toggleColumn('action')">操作</button>
             </div>
@@ -257,21 +277,21 @@
         if (window.innerWidth <= 768) document.getElementById('top-area').style.display = 'none';
 
         let stocks = JSON.parse(localStorage.getItem('valuationStocks')) || [];
-        let viewSettings = { showCode: true, showTags: true, showUpdate: true, showAction: true, ...JSON.parse(localStorage.getItem('viewSettings')) };
+        // 增加 showCap 配置，默认 false
+        let viewSettings = { showCode: true, showTags: true, showUpdate: true, showAction: true, showCap: false, ...JSON.parse(localStorage.getItem('viewSettings')) };
         let intervalId = null, sortState = { key: 'pe_up', dir: 'desc' }, isPanelOpen = false, pendingDeleteCode = null, pendingLogIndex = null, pendingSyncData = null, cachedMarketData = {}, selectedCodes = new Set(), columnFilters = {}, onlySelectedMode = false;
         
         // ★★★ 并发控制核心 ★★★
         let historyCache = {}; 
         let fetchQueue = [];
         let activeRequests = 0;
-        const MAX_CONCURRENT = 8; // 8路并发，速度飞快
+        const MAX_CONCURRENT = 8; 
+        let fetchingSet = new Set();
         
-        // 进度条
         function updateProgress(done, total) {
             const bar = document.getElementById('progress-bar-container');
             if (!bar) return;
             if (done >= total && total > 0) {
-                // 完成
                 setTimeout(() => bar.style.display = 'none', 1000);
             } else if (total > 0) {
                 bar.style.display = 'flex';
@@ -327,41 +347,29 @@
             const mkt = parts[0], code = parts[1];
             if (mkt === '0') return code + '.SZ';
             if (mkt === '1') return code + '.SS';
-            // 港股补零至4位
             if (mkt === '116') { let n = parseInt(code,10); return n.toString().padStart(4,'0') + '.HK'; }
             if (mkt === '105') return code;
             return code;
         }
 
-        // ★★★ 核心并发调度器 ★★★
         async function runFetcher() {
             while (fetchQueue.length > 0 && activeRequests < MAX_CONCURRENT) {
                 const { secid, code, resolve } = fetchQueue.shift();
                 activeRequests++;
-                
-                fetchHistoryImpl(secid, code).then(res => {
-                    resolve(res);
-                }).finally(() => {
+                fetchHistoryImpl(secid, code).then(res => { resolve(res); }).finally(() => {
                     activeRequests--;
-                    // 触发一次UI更新（让进度条动起来）
                     updateProgress(Object.keys(historyCache).length, stocks.length);
-                    // 简单重绘一下表格显示最新图标
-                    // renderTable(currentVisibleStocks); (太频繁闪烁，改为完成后统一刷或局部刷，这里简化为不管)
                     runFetcher();
                 });
             }
-            
-            // 如果队列空了且没有请求了，刷新一次表格
-            if (fetchQueue.length === 0 && activeRequests === 0) {
-                updateTable(true); // true = skip fetch check
-            }
+            if (fetchQueue.length === 0 && activeRequests === 0) { updateTable(true); }
         }
 
         function queueFetchHistory(secid, code) {
             return new Promise((resolve) => {
-                // 如果缓存里有（包括 null），直接返回
                 if (historyCache[code] !== undefined) { resolve(historyCache[code]); return; }
-                
+                if (fetchingSet.has(code)) return;
+                fetchingSet.add(code);
                 fetchQueue.push({ secid, code, resolve });
                 runFetcher();
             });
@@ -371,23 +379,19 @@
             const yahooSymbol = toYahooSymbol(secid);
             const targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${yahooSymbol}?range=1mo&interval=1d`;
             const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
-            
             try {
                 const res = await fetch(proxyUrl);
-                if (!res.ok) {
-                    historyCache[code] = null; // 标记失败，防止重试
-                    return null;
-                }
+                if (!res.ok) { historyCache[code] = null; fetchingSet.delete(code); return null; }
                 const json = await res.json();
                 const result = json?.chart?.result?.[0];
                 if (result?.indicators?.quote?.[0]?.close) {
                     const closes = result.indicators.quote[0].close.filter(p => p !== null);
                     historyCache[code] = closes;
+                    fetchingSet.delete(code);
                     return closes;
                 }
             } catch(e) { }
-            historyCache[code] = null; // 异常也标记失败
-            return null;
+            historyCache[code] = null; fetchingSet.delete(code); return null;
         }
 
         function getTrendIcon(history, currentPrice, code) {
@@ -397,16 +401,17 @@
             const ma5 = avg(data.slice(-5));
             const ma10 = avg(data.slice(-10));
             const ma20 = avg(data.slice(-20));
-            if (ma5 > ma10 && ma10 > ma20) return "📈"; 
-            if (ma5 < ma10 && ma10 < ma20) return "📉";
-            return "➖"; 
+            // 红色上涨
+            if (ma5 > ma10 && ma10 > ma20) return '<span style="color:#e53935;font-weight:bold;font-size:16px;">⬆</span>';
+            // 绿色下跌
+            if (ma5 < ma10 && ma10 < ma20) return '<span style="color:#43a047;font-weight:bold;font-size:16px;">⬇</span>';
+            return ""; 
         }
 
         async function updateTable(skipFetch = false) {
             const el = document.getElementById('result'), stat = document.getElementById('status-msg');
             if (stocks.length === 0) { el.innerHTML = '<div style="padding:40px;text-align:center;color:#999;">📭 列表为空</div>'; return; }
             
-            // 如果不是“纯刷新渲染”，则更新实时数据
             if (!skipFetch) {
                 const secids = stocks.map(s=>getSecid(s.code)).join(',');
                 const url = `https://push2.eastmoney.com/api/qt/ulist.np/get?secids=${secids}&fields=f12,f14,f2,f3,f18,f20&invt=2&fltt=2&_=${Date.now()}`;
@@ -433,7 +438,6 @@
                     if (s.revenue && s.lowPS) { ps.down=((s.revenue*s.lowPS/cap-1)*100).toFixed(2); ps.up=((s.revenue*s.highPS-cap)/cap*100).toFixed(2); }
                 }
                 
-                // 如果没有缓存且不是失败状态(null)，则加入队列
                 if (historyCache[s.code] === undefined && valid) {
                     queueFetchHistory(getSecid(s.code), s.code);
                     missingHistory++;
@@ -447,7 +451,6 @@
             renderTable(data); updateCompareBtn();
         }
 
-        // 缓存 currentVisibleStocks 以便局部刷新
         let currentVisibleStocks = [];
 
         function renderTable(data) {
@@ -468,7 +471,7 @@
                 }
                 return true;
             });
-            currentVisibleStocks = rows; // 保存当前视图数据
+            currentVisibleStocks = rows;
             
             if (sortState.key) {
                 rows.sort((a, b) => {
@@ -476,6 +479,15 @@
                         const dA = a.logs?.[0]?.date || "";
                         const dB = b.logs?.[0]?.date || "";
                         return sortState.dir === 'desc' ? dB.localeCompare(dA) : dA.localeCompare(dB);
+                    }
+                    // 趋势排序 (上涨 > 震荡 > 下跌)
+                    if (sortState.key === 'trend') {
+                        const getScore = (o) => {
+                            if (o.trend.includes('⬆')) return 2; 
+                            if (o.trend.includes('⬇')) return 0; 
+                            return 1; 
+                        };
+                        return sortState.dir === 'desc' ? getScore(b) - getScore(a) : getScore(a) - getScore(b);
                     }
                     const val = (o) => {
                         if(sortState.key=='chg') return parseFloat(o.chg);
@@ -492,15 +504,17 @@
             const allSel = rows.length>0 && rows.every(i=>selectedCodes.has(i.code));
 
             let html = `<table><thead><tr>
-                <th class="th-basic" colspan="${4 + (viewSettings.showCode?1:0) + (viewSettings.showTags?1:0)}">📊 基础行情</th>
+                <th class="th-basic" colspan="${4 + (viewSettings.showCode?1:0) + (viewSettings.showTags?1:0) + (viewSettings.showCap?1:0)}">📊 基础行情</th>
                 <th class="th-pe" colspan="4">💰 PE (利润)</th><th class="th-ps" colspan="4">🚀 PS (营收)</th>
                 <th rowspan="2" class="sortable ${show('update')}" onclick="setSort('last_update')" style="width:70px">📅 ${getSortIcon('last_update')}</th>
                 <th class="th-basic ${show('action')}" rowspan="2">⚙️</th>
                 <th class="th-select" rowspan="2" onclick="toggleSelectAll()"><input type="checkbox" ${allSel?'checked':''}></th>
             </tr><tr>
-                <th>趋势</th><th>名称</th><th class="${show('code')}">代码</th><th class="${show('tags')}">属性 ${icon('tags')}</th>
+                <th onclick="setSort('trend')" class="sortable" style="width:30px">趋势 ${getSortIcon('trend')}</th>
+                <th>名称</th><th class="${show('code')}">代码</th><th class="${show('tags')}">属性 ${icon('tags')}</th>
                 <th onclick="setSort('chg')" class="sortable">涨跌 ${getSortIcon('chg')}</th>
-                <th>市值</th><th>净利</th><th>合理PE</th><th onclick="setSort('pe_down')" class="sortable">下% ${icon('pe_down')}</th><th onclick="setSort('pe_up')" class="sortable">上% ${icon('pe_up')}</th>
+                <th class="${show('cap')}">市值</th>
+                <th>净利</th><th>合理PE</th><th onclick="setSort('pe_down')" class="sortable">下% ${icon('pe_down')}</th><th onclick="setSort('pe_up')" class="sortable">上% ${icon('pe_up')}</th>
                 <th>营收</th><th>合理PS</th><th onclick="setSort('ps_down')" class="sortable">下% ${icon('ps_down')}</th><th onclick="setSort('ps_up')" class="sortable">上% ${icon('ps_up')}</th>
             </tr></thead><tbody>`;
 
@@ -510,11 +524,11 @@
                 const u = i.logs?.[0]?.date ? `<span style="font-size:11px;color:#666;display:block;line-height:1.2">${i.logs[0].date.split(' ')[0]}<br><span style="color:#999;font-size:10px">${i.logs[0].date.split(' ')[1]}</span></span>` : '-';
                 
                 html += `<tr class="${selectedCodes.has(i.code)?'row-selected':''}">
-                    <td style="font-size:16px;">${i.trend}</td>
+                    <td style="font-size:16px;text-align:center;">${i.trend}</td>
                     <td style="font-weight:600">${i.name}</td><td class="${show('code')}" style="color:#888;font-size:12px">${i.code}</td>
                     <td class="${show('tags')}" style="text-align:left">${(i.tags||"").split(' ').map(t=>t?`<span class="tag-badge">${t}</span>`:'').join('')}</td>
                     <td style="font-weight:bold;color:${parseFloat(i.chg)>=0?'#d32f2f':'#2e7d32'}">${i.chg}%</td>
-                    <td style="font-family:monospace">${i.cap?i.cap.toFixed(2):'-'}</td>
+                    <td class="${show('cap')}" style="font-family:monospace">${i.cap?i.cap.toFixed(2):'-'}</td>
                     <td>${i.profit||'-'}</td><td style="font-size:12px">${i.lowPE||'-'}~${i.highPE||'-'}</td><td>${p(i.peRes.down)}</td><td>${p(i.peRes.up)}</td>
                     <td>${i.revenue||'-'}</td><td style="font-size:12px">${i.lowPS||'-'}~${i.highPS||'-'}</td><td>${p(i.psRes.down)}</td><td>${p(i.psRes.up)}</td>
                     <td class="${show('update')}">${u}</td>
@@ -531,7 +545,7 @@
         function toggleShowSelected() { onlySelectedMode=!onlySelectedMode; const b=document.getElementById('btn-compare'); if(onlySelectedMode){b.classList.add('active');b.innerText="🔙 全部";}else{b.classList.remove('active');updateCompareBtn();} updateTable(); }
         function updateCompareBtn() { if(!onlySelectedMode)document.getElementById('btn-compare').innerText=`📊 选中 (${selectedCodes.size})`; }
         function toggleColumn(c) { const k='show'+c.charAt(0).toUpperCase()+c.slice(1); viewSettings[k]=!viewSettings[k]; localStorage.setItem('viewSettings',JSON.stringify(viewSettings)); updateViewButtons(); updateTable(); }
-        function updateViewButtons() { ['code','tags','update','action'].forEach(c => { const b=document.getElementById('btn-toggle-'+c); if(viewSettings['show'+c.charAt(0).toUpperCase()+c.slice(1)])b.classList.add('active');else b.classList.remove('active'); }); }
+        function updateViewButtons() { ['code','tags','update','action','cap'].forEach(c => { const b=document.getElementById('btn-toggle-'+c); if(viewSettings['show'+c.charAt(0).toUpperCase()+c.slice(1)])b.classList.add('active');else b.classList.remove('active'); }); }
 
         function openFilterMenu(k,e) { const m=document.getElementById('filter-menu'); m.style.display='block'; const r=e.target.getBoundingClientRect(); m.style.top=(window.scrollY+r.bottom+5)+'px'; m.style.left=Math.min(window.innerWidth-220, r.left-100)+'px'; document.getElementById('filter-col-key').value=k; const t=k==='tags'; document.getElementById('filter-row-numeric').style.display=t?'none':'flex'; document.getElementById('filter-row-text').style.display=t?'flex':'none'; setTimeout(()=>document.addEventListener('click',closeFilterMenuOutside),0); }
         function closeFilterMenuOutside(e) { const m=document.getElementById('filter-menu'); if(!m.contains(e.target)){m.style.display='none';document.removeEventListener('click',closeFilterMenuOutside);} }
