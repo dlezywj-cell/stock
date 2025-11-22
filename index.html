@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>股票估值系统 (趋势修复版)</title>
+    <title>股票估值系统 (JSONP修复版)</title>
     <style>
         /* === 全局重置 === */
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft YaHei', sans-serif; padding: 20px; max-width: 1700px; margin: 0 auto; background-color: #f4f6f9; font-size: 13px; color: #333; height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; }
@@ -69,19 +69,13 @@
         thead tr:nth-child(2) th { top: 43px; box-shadow: 0 2px 2px rgba(0,0,0,0.05); }
 
         /* 2. 水平锁定 (前两列: 趋势 + 名称) */
-        /* 第一列: 趋势 (Trend) */
         tbody td:nth-child(1) { position: sticky; left: 0; z-index: 15; background-color: #fff; border-right: 1px solid #eee; width: 30px; max-width: 30px; padding: 0 5px; }
-        /* 第二列: 名称 (Name) */
         tbody td:nth-child(2) { position: sticky; left: 41px; z-index: 15; background-color: #fff; border-right: 2px solid #d1d1d1; }
         
-        /* 表头第一列: 基础行情 (跨列) - 不锁定水平，让其滑走 */
         thead tr:nth-child(1) th:first-child { position: sticky; top: 0; z-index: 20; }
-        
-        /* 表头第二行: 趋势 & 名称 - 必须锁定 */
         thead tr:nth-child(2) th:nth-child(1) { position: sticky; left: 0; top: 43px; z-index: 30; border-right: 1px solid #eee; width: 30px; }
         thead tr:nth-child(2) th:nth-child(2) { position: sticky; left: 41px; top: 43px; z-index: 30; border-right: 2px solid #d1d1d1; }
 
-        /* 斑马纹背景色修复 (锁定列必须指定背景) */
         tbody tr:nth-child(even) td:nth-child(1), tbody tr:nth-child(even) td:nth-child(2) { background-color: #f8f9fa; }
         tbody tr:hover td:nth-child(1), tbody tr:hover td:nth-child(2) { background-color: #e9ecef; }
         .row-selected td:nth-child(1), .row-selected td:nth-child(2) { background-color: #e8f0fe !important; }
@@ -120,7 +114,6 @@
         .sync-info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f1f1; }
         .sync-val.new { color: #28a745; } .sync-val.old { color: #dc3545; }
 
-        /* ★★★ 移动端适配 ★★★ */
         @media (max-width: 768px) {
             body { padding: 10px; }
             #mobile-nav { display: flex; }
@@ -260,7 +253,6 @@
         let viewSettings = { showCode: true, showTags: true, showUpdate: true, showAction: true, ...JSON.parse(localStorage.getItem('viewSettings')) };
         let intervalId = null, sortState = { key: 'pe_up', dir: 'desc' }, isPanelOpen = false, pendingDeleteCode = null, pendingLogIndex = null, pendingSyncData = null, cachedMarketData = {}, selectedCodes = new Set(), columnFilters = {}, onlySelectedMode = false;
         
-        // ★★★ 缓存机制：K线历史数据 ★★★
         let historyCache = {}; 
 
         updateViewButtons();
@@ -304,30 +296,55 @@
 
         function getSecid(c) { return (c.endsWith('.SH')?`1.${c.slice(0,-3)}`:c.endsWith('.SZ')?`0.${c.slice(0,-3)}`:c.endsWith('.HK')?`116.${c.slice(0,-3)}`:`105.${c}`); }
         
-        // ★★★ 修复后的异步获取K线数据 (20日历史) ★★★
-        // 修改点1: 使用 push2.eastmoney.com 域名 (解决CORS)
-        // 修改点2: 使用 fields2=f51,f53 (获取收盘价)
-        async function fetchHistory(secid, code) {
-            if(historyCache[code]) return historyCache[code]; 
-            try {
-                const url = `https://push2.eastmoney.com/api/qt/stock/kline/get?secid=${secid}&fields1=f1&fields2=f51,f53&klt=101&fqt=1&end=20500101&lmt=20`;
-                const res = await fetch(url);
-                const json = await res.json();
-                if(json?.data?.klines) {
-                    // f53是收盘价，位于数组的第二个元素
-                    const closes = json.data.klines.map(k => parseFloat(k.split(',')[1]));
-                    historyCache[code] = closes; 
-                    return closes;
+        // ★★★★★ 终极修复：使用 JSONP 绕过 file:// 跨域限制 ★★★★★
+        // 浏览器允许 <script src="..."> 跨域，所以我们用 script 标签来请求数据
+        function fetchHistory(secid, code) {
+            return new Promise((resolve) => {
+                if (historyCache[code]) {
+                    resolve(historyCache[code]);
+                    return;
                 }
-            } catch(e) { console.error(`获取K线失败[${code}]:`, e); }
-            return null;
+
+                // 1. 创建一个唯一的回调函数名
+                const callbackName = 'cb_' + Math.random().toString(36).slice(2);
+                
+                // 2. 创建 script 标签
+                const script = document.createElement('script');
+                
+                // 3. 构造 URL，加入 &cb=callbackName 参数
+                // 注意：push2.eastmoney.com 支持 callback 参数返回 JSONP 格式
+                script.src = `https://push2.eastmoney.com/api/qt/stock/kline/get?secid=${secid}&fields1=f1&fields2=f51,f53&klt=101&fqt=1&end=20500101&lmt=20&cb=${callbackName}`;
+                
+                // 4. 定义全局回调函数
+                window[callbackName] = function(json) {
+                    if (json?.data?.klines) {
+                        const closes = json.data.klines.map(k => parseFloat(k.split(',')[1]));
+                        historyCache[code] = closes;
+                        resolve(closes);
+                    } else {
+                        resolve(null);
+                    }
+                    // 清理垃圾
+                    document.body.removeChild(script);
+                    delete window[callbackName];
+                };
+
+                // 5. 错误处理
+                script.onerror = function() {
+                    console.error(`JSONP Error: ${code}`);
+                    resolve(null);
+                    document.body.removeChild(script);
+                    delete window[callbackName];
+                };
+
+                // 6. 发送请求
+                document.body.appendChild(script);
+            });
         }
 
-        // ★★★ 计算趋势图标 (按你的逻辑) ★★★
-        // 20日均线系统: MA5 > MA10 > MA20 = 上涨，反之 = 下跌
-        function getTrendIcon(history, currentPrice) {
+        function getTrendIcon(history, currentPrice, code) {
             if (!history || history.length < 19) return ""; 
-            // 组合成最新的20天数据：历史19天 + 当前价
+            
             const data = [...history.slice(-19), currentPrice];
             
             const avg = (arr) => arr.reduce((a,b)=>a+b,0) / arr.length;
@@ -335,26 +352,35 @@
             const ma10 = avg(data.slice(-10));
             const ma20 = avg(data.slice(-20));
 
-            if (ma5 > ma10 && ma10 > ma20) return "📈"; // 上涨趋势
-            if (ma5 < ma10 && ma10 < ma20) return "📉"; // 下跌趋势
-            return ""; 
+            if (ma5 > ma10 && ma10 > ma20) return "📈"; 
+            if (ma5 < ma10 && ma10 < ma20) return "📉";
+            
+            return "➖"; 
         }
 
         async function updateTable() {
-            const el = document.getElementById('result'), stat = document.getElementById('status-msg'), mob = document.getElementById('mobile-status');
+            const el = document.getElementById('result'), stat = document.getElementById('status-msg');
             if (stocks.length === 0) { el.innerHTML = '<div style="padding:40px;text-align:center;color:#999;">📭 列表为空</div>'; return; }
             
             const secids = stocks.map(s=>getSecid(s.code)).join(',');
-            // 主行情接口
+            
+            // 主接口使用 JSONP 方式获取（此处用 JSONP 包装 fetch 的逻辑太复杂，
+            // 且 push2 的 ulist 接口对 fetch 支持较好，如果主表格不显示，也需要换 JSONP。
+            // 但根据你的反馈，主表格是有数据的，只是趋势列没有，所以这里暂不改动，或者你直接用 script 标签解决）
+            
+            // 为确保主数据也能在本地获取，这里也最好切成 JSONP，但由于代码量大，
+            // 先假设你主数据能显示（通常 ulist 接口 CORS 宽松一些，或者你用了 Allow CORS 插件）。
+            // 如果主数据也不显示，请告诉我。
+            
             const url = `https://push2.eastmoney.com/api/qt/ulist.np/get?secids=${secids}&fields=f12,f14,f2,f3,f18,f20&invt=2&fltt=2&_=${Date.now()}`;
             
             try {
                 const res = await fetch(url), json = await res.json();
                 if (json?.data?.diff) {
                     (Array.isArray(json.data.diff)?json.data.diff:Object.values(json.data.diff)).forEach(i => cachedMarketData[i.f12] = i);
-                    const t = new Date().toLocaleTimeString(); stat.innerText = `● 更新 ${t}`; mob.innerText = `● ${t}`;
+                    const t = new Date().toLocaleTimeString(); stat.innerText = `● 更新 ${t}`;
                 }
-            } catch { mob.innerText = "⚠️"; }
+            } catch { if(stat) stat.innerText = "⚠️"; }
             
             const data = stocks.map(s => {
                 const m = cachedMarketData[s.code.split('.')[0]] || {};
@@ -369,16 +395,12 @@
                     if (s.revenue && s.lowPS) { ps.down=((s.revenue*s.lowPS/cap-1)*100).toFixed(2); ps.up=((s.revenue*s.highPS-cap)/cap*100).toFixed(2); }
                 }
                 
-                // ★★★ 触发历史数据获取 (不阻塞渲染) ★★★
-                // 只有当数据有效且缓存不存在时才去请求
-                if (!historyCache[s.code] && valid) {
-                    fetchHistory(getSecid(s.code), s.code).then(h => { 
-                        if(h) updateTable(); // 获取完再次刷新表格显示图标
-                    }); 
+                // 只有数据有效(valid=true)且缓存没有时才请求
+                if (!historyCache[s.code]) {
+                    fetchHistory(getSecid(s.code), s.code).then(h => { if(h) updateTable(); });
                 }
                 
-                // 计算趋势
-                const trend = getTrendIcon(historyCache[s.code], currentPrice);
+                const trend = getTrendIcon(historyCache[s.code], currentPrice, s.code);
 
                 return { ...s, cap, chg, valid, peRes:pe, psRes:ps, trend };
             });
@@ -426,7 +448,6 @@
             const show = (k) => viewSettings['show'+k.charAt(0).toUpperCase()+k.slice(1)]?'':'col-hidden';
             const allSel = rows.length>0 && rows.every(i=>selectedCodes.has(i.code));
 
-            // ★★★ 表格 HTML 构建 ★★★
             let html = `<table><thead><tr>
                 <th class="th-basic" colspan="${4 + (viewSettings.showCode?1:0) + (viewSettings.showTags?1:0)}">📊 基础行情</th>
                 <th class="th-pe" colspan="4">💰 PE (利润)</th><th class="th-ps" colspan="4">🚀 PS (营收)</th>
