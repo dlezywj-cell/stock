@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>股票估值系统 (最终完美版)</title>
+    <title>股票估值系统 (参数变动日志版)</title>
     <style>
         /* === 全局重置 === */
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft YaHei', sans-serif; padding: 20px; max-width: 1700px; margin: 0 auto; background-color: #f4f6f9; font-size: 13px; color: #333; height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; }
@@ -74,7 +74,7 @@
 
         /* 锁定列：第1列(趋势) & 第2列(名称) - PC默认样式 */
         tbody td:nth-child(1) { position: sticky; left: 0; z-index: 15; background-color: #fff; border-right: 1px solid #eee; width: 30px; max-width: 30px; padding: 0 5px; }
-        /* PC端名称列：限制宽度 */
+        /* PC端名称列 */
         tbody td:nth-child(2) { 
             position: sticky; left: 41px; z-index: 15; 
             background-color: #fff; border-right: 2px solid #d1d1d1; 
@@ -164,10 +164,10 @@
             input { width: 100% !important; box-sizing: border-box; }
             .modal-content { width: 90%; padding: 20px; }
 
-            /* === 表格紧凑化 (关键修改) === */
+            /* === 表格紧凑化 === */
             th, td { padding: 8px 3px; font-size: 12px; } 
 
-            /* 1. 趋势列 (Trend) 极窄 - 25px */
+            /* 1. 趋势列 (Trend) 极窄 */
             tbody td:nth-child(1) { 
                 width: 25px !important; 
                 min-width: 25px !important; 
@@ -325,6 +325,7 @@
         if (window.innerWidth <= 768) document.getElementById('top-area').style.display = 'none';
 
         let stocks = JSON.parse(localStorage.getItem('valuationStocks')) || [];
+        // 默认 cap (市值) 为 false (隐藏)
         let viewSettings = { showCode: true, showTags: true, showUpdate: true, showAction: true, showCap: false, ...JSON.parse(localStorage.getItem('viewSettings')) };
         let intervalId = null, sortState = { key: 'pe_up', dir: 'desc' }, isPanelOpen = false, pendingDeleteCode = null, pendingLogIndex = null, pendingSyncData = null, cachedMarketData = {}, selectedCodes = new Set(), columnFilters = {}, onlySelectedMode = false;
         
@@ -450,9 +451,10 @@
             const ma10 = avg(data.slice(-10));
             const ma20 = avg(data.slice(-20));
             
-            // 使用内联样式强制颜色，防止被CSS覆盖
-            if (ma5 > ma10 && ma10 > ma20) return '<span style="color:#d32f2f !important;font-weight:900;font-size:18px;">↑</span>';
-            if (ma5 < ma10 && ma10 < ma20) return '<span style="color:#2e7d32 !important;font-weight:900;font-size:18px;">↓</span>';
+            // 红色向上箭头
+            if (ma5 > ma10 && ma10 > ma20) return '<span style="color:#e53935 !important;font-weight:900 !important;font-size:18px;">↑</span>';
+            // 绿色向下箭头
+            if (ma5 < ma10 && ma10 < ma20) return '<span style="color:#43a047 !important;font-weight:900 !important;font-size:18px;">↓</span>';
             
             return ""; 
         }
@@ -551,6 +553,8 @@
             const show = (k) => viewSettings['show'+k.charAt(0).toUpperCase()+k.slice(1)]?'':'col-hidden';
             const allSel = rows.length>0 && rows.every(i=>selectedCodes.has(i.code));
 
+            // ★★★ 修复后的表头结构 ★★★
+            // Colspan = 3 (Trend+Name+Chg) + Optional(Code+Tags+Cap)
             let html = `<table><thead><tr>
                 <th class="th-basic" colspan="${3 + (viewSettings.showCode?1:0) + (viewSettings.showTags?1:0) + (viewSettings.showCap?1:0)}">📊 基础行情</th>
                 <th class="th-pe" colspan="4">💰 PE (利润)</th><th class="th-ps" colspan="4">🚀 PS (营收)</th>
@@ -587,7 +591,6 @@
             document.getElementById('result').innerHTML = html + '</tbody></table>';
         }
 
-        // ... [其他函数保持不变] ...
         function toggleSelectRow(c) { if(selectedCodes.has(c))selectedCodes.delete(c);else selectedCodes.add(c); updateTable(); }
         function toggleSelectAll() { if(currentVisibleStocks.length===0)return; const all=currentVisibleStocks.every(i=>selectedCodes.has(i.code)); currentVisibleStocks.forEach(i=>all?selectedCodes.delete(i.code):selectedCodes.add(i.code)); updateTable(); }
         function clearAllFilters() { columnFilters={}; document.getElementById('findInput').value=''; document.getElementById('findTags').value=''; if(onlySelectedMode)toggleShowSelected(); updateTable(); }
@@ -601,28 +604,60 @@
         function confirmFilter() { const k=document.getElementById('filter-col-key').value, t=k==='tags'; if(t){const v=document.getElementById('filter-text-val').value.trim();if(v)columnFilters[k]={type:'text',val:v};else delete columnFilters[k];}else{const o=document.getElementById('filter-op').value,v=document.getElementById('filter-val').value;if(v)columnFilters[k]={type:'num',op:o,val:parseFloat(v)};else delete columnFilters[k];} document.getElementById('filter-menu').style.display='none'; updateTable(); }
         function clearCurrentFilter() { delete columnFilters[document.getElementById('filter-col-key').value]; document.getElementById('filter-menu').style.display='none'; updateTable(); }
 
+        // ★★★ 恢复参数变动日志功能 ★★★
         function saveStock() {
             const code=document.getElementById('inCode').value.trim(), name=document.getElementById('inName').value.trim();
             if(!code) { alert("请先搜索"); return; }
-            const s = { code, name, tags:document.getElementById('inTags').value.trim(), profit:parseFloat(document.getElementById('inProfit').value)||0, lowPE:parseFloat(document.getElementById('inLowPE').value)||0, highPE:parseFloat(document.getElementById('inHighPE').value)||0, revenue:parseFloat(document.getElementById('inRevenue').value)||0, lowPS:parseFloat(document.getElementById('inLowPS').value)||0, highPS:parseFloat(document.getElementById('inHighPS').value)||0, logs:[] };
+            
+            // 获取新值
+            const profit = parseFloat(document.getElementById('inProfit').value)||0;
+            const lowPE = parseFloat(document.getElementById('inLowPE').value)||0;
+            const highPE = parseFloat(document.getElementById('inHighPE').value)||0;
+            const revenue = parseFloat(document.getElementById('inRevenue').value)||0;
+            const lowPS = parseFloat(document.getElementById('inLowPS').value)||0;
+            const highPS = parseFloat(document.getElementById('inHighPS').value)||0;
+            const tags = document.getElementById('inTags').value.trim();
+            const note = document.getElementById('inNote').value.trim();
+
             const idx = stocks.findIndex(i=>i.code===code);
             const now = getNowStr();
-            const note = document.getElementById('inNote').value.trim();
-            let log = { date: now, content: "更新数据", note: note };
-            if(idx>=0) {
-                s.logs = stocks[idx].logs || [];
+            let logContent = "";
+
+            // 如果已存在，进行比对
+            if(idx >= 0) {
                 const old = stocks[idx];
-                let diff = [];
-                if(old.profit!=s.profit) diff.push(`净利${old.profit}→${s.profit}`);
-                if(old.lowPE!=s.lowPE) diff.push(`PE下${old.lowPE}→${s.lowPE}`);
-                if(diff.length>0) log.content = diff.join(';');
-                if(diff.length>0 || note) s.logs.unshift(log);
-                stocks[idx] = s;
+                let changes = [];
+                if(old.profit !== profit) changes.push(`净利:${old.profit}→${profit}`);
+                if(old.lowPE !== lowPE) changes.push(`PE下:${old.lowPE}→${lowPE}`);
+                if(old.highPE !== highPE) changes.push(`PE上:${old.highPE}→${highPE}`);
+                if(old.revenue !== revenue) changes.push(`营收:${old.revenue}→${revenue}`);
+                if(old.lowPS !== lowPS) changes.push(`PS下:${old.lowPS}→${lowPS}`);
+                if(old.highPS !== highPS) changes.push(`PS上:${old.highPS}→${highPS}`);
+                
+                if(changes.length > 0) logContent = changes.join('; ');
+                else logContent = "无参数变更";
             } else {
-                log.content = "首次创建";
-                s.logs.push(log);
-                stocks.push(s);
+                logContent = "首次录入";
             }
+
+            // 构建新对象，保留旧日志
+            const s = { 
+                code, name, tags, profit, lowPE, highPE, revenue, lowPS, highPS, 
+                logs: (idx >= 0 ? stocks[idx].logs : []) 
+            };
+
+            // 如果有变更或有备注，插入新日志
+            if(logContent !== "无参数变更" || note) {
+                s.logs.unshift({
+                    date: now,
+                    content: logContent,
+                    note: note
+                });
+            }
+
+            if(idx >= 0) stocks[idx] = s;
+            else stocks.push(s);
+            
             saveStorage(); clearInput(); updateTable();
         }
 
