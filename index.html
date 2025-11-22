@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>股票估值系统 (移动端优化版)</title>
+    <title>股票估值系统 (最终精简版)</title>
     <style>
         /* === 全局重置 === */
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft YaHei', sans-serif; padding: 20px; max-width: 1700px; margin: 0 auto; background-color: #f4f6f9; font-size: 13px; color: #333; height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; }
@@ -67,17 +67,29 @@
         table { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 1350px; }
         th, td { padding: 10px 12px; text-align: center; border-bottom: 1px solid #ebebeb; border-right: 1px solid #ebebeb; white-space: nowrap; }
         
-        /* 锁定列基础样式 (PC端默认) */
+        /* 锁定列表头 */
         th { background-color: #f1f3f5; color: #495057; font-weight: 700; user-select: none; position: sticky; z-index: 20; }
         thead tr:nth-child(1) th { top: 0; border-bottom: 1px solid #ccc; height: 22px; }
         thead tr:nth-child(2) th { top: 43px; box-shadow: 0 2px 2px rgba(0,0,0,0.05); }
 
+        /* 锁定列：第1列(趋势) & 第2列(名称) - PC默认样式 */
         tbody td:nth-child(1) { position: sticky; left: 0; z-index: 15; background-color: #fff; border-right: 1px solid #eee; width: 30px; max-width: 30px; padding: 0 5px; }
-        tbody td:nth-child(2) { position: sticky; left: 41px; z-index: 15; background-color: #fff; border-right: 2px solid #d1d1d1; }
+        /* PC端名称列：限制宽度，大约5-6个汉字 */
+        tbody td:nth-child(2) { 
+            position: sticky; left: 41px; z-index: 15; 
+            background-color: #fff; border-right: 2px solid #d1d1d1; 
+            max-width: 80px; /* 限制宽度 */
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; /* 超出省略 */
+        }
         
+        /* 表头锁定 */
         thead tr:nth-child(1) th:first-child { position: sticky; top: 0; z-index: 20; }
         thead tr:nth-child(2) th:nth-child(1) { position: sticky; left: 0; top: 43px; z-index: 30; border-right: 1px solid #eee; width: 30px; }
-        thead tr:nth-child(2) th:nth-child(2) { position: sticky; left: 41px; top: 43px; z-index: 30; border-right: 2px solid #d1d1d1; }
+        thead tr:nth-child(2) th:nth-child(2) { 
+            position: sticky; left: 41px; top: 43px; z-index: 30; 
+            border-right: 2px solid #d1d1d1;
+            max-width: 80px; /* 表头也限制宽度 */
+        }
 
         /* 阴影分割线 */
         tbody td:nth-child(2), thead tr:nth-child(2) th:nth-child(2) {
@@ -85,21 +97,29 @@
             clip-path: inset(0px -15px 0px 0px);
         }
 
-        /* 隔行变色 */
+        /* 隔行变色修复 */
         tbody tr:nth-child(even) { background-color: #f8f9fa; }
-        tbody tr:nth-child(even) td:nth-child(1), tbody tr:nth-child(even) td:nth-child(2) { background-color: #f8f9fa; }
+        tbody tr:nth-child(even) td:nth-child(1), 
+        tbody tr:nth-child(even) td:nth-child(2) { background-color: #f8f9fa; }
+
         tbody tr:hover td { background-color: #e9ecef; }
-        tbody tr:hover td:nth-child(1), tbody tr:hover td:nth-child(2) { background-color: #e9ecef; }
-        .row-selected td, .row-selected td:nth-child(1), .row-selected td:nth-child(2) { background-color: #e8f0fe !important; }
+        tbody tr:hover td:nth-child(1), 
+        tbody tr:hover td:nth-child(2) { background-color: #e9ecef; }
+
+        .row-selected td,
+        .row-selected td:nth-child(1),
+        .row-selected td:nth-child(2) { background-color: #e8f0fe !important; }
 
         .col-hidden { display: none !important; }
         .tag-badge { display: inline-block; background: #e7f5ff; color: #007bff; padding: 2px 6px; border-radius: 4px; font-size: 11px; margin: 1px; border: 1px solid #d0ebff; }
         .th-basic { border-top: 3px solid #6c757d; }
         .th-pe { border-top: 3px solid #28a745; background-color: #f3fdf6; }
         .th-ps { border-top: 3px solid #fd7e14; background-color: #fff8f3; }
+        
         .th-select, .td-select { width: 40px !important; padding: 0 !important; cursor: pointer; }
         .th-select { border-top: 3px solid #adb5bd; border-left: 2px solid #dee2e6 !important; background-color: #e9ecef; z-index: 25; }
         .td-select { border-left: 2px solid #dee2e6 !important; background-color: #f8f9fa; }
+        
         .row-checkbox { cursor: pointer; accent-color: #007bff; width: 15px; height: 15px; margin: 0 auto; display: block; }
         .filter-icon { font-size: 12px; color: #adb5bd; cursor: pointer; padding: 2px 4px; }
         .filter-active { color: #dc3545 !important; font-weight: bold; background-color: #f8d7da; }
@@ -145,23 +165,23 @@
             input { width: 100% !important; box-sizing: border-box; }
             .modal-content { width: 90%; padding: 20px; }
 
-            /* === 表格紧凑化 (关键修改) === */
-            th, td { padding: 8px 3px; font-size: 12px; } /* 减小单元格内边距 */
+            /* === 表格紧凑化 === */
+            th, td { padding: 8px 3px; font-size: 12px; } 
 
             /* 1. 趋势列 (Trend) 极窄 */
             tbody td:nth-child(1) { width: 22px !important; max-width: 22px !important; padding: 0; text-align: center; }
             thead tr:nth-child(2) th:nth-child(1) { width: 22px !important; padding: 0; }
 
-            /* 2. 名称列 (Name) 压缩与左移 */
+            /* 2. 名称列 (Name) 极度压缩 */
             tbody td:nth-child(2) { 
-                left: 23px !important; /* 紧贴趋势列 */
-                max-width: 65px;       /* 限制最大宽度 */
+                left: 23px !important; 
+                max-width: 60px !important; /* 手机端强制60px (约4-5汉字) */
                 white-space: nowrap; 
                 overflow: hidden; 
-                text-overflow: ellipsis; /* 超出显示省略号 */
-                font-size: 11px;       /* 字号变小 */
+                text-overflow: ellipsis; 
+                font-size: 11px;       
             }
-            thead tr:nth-child(2) th:nth-child(2) { left: 23px !important; max-width: 65px; font-size: 11px; }
+            thead tr:nth-child(2) th:nth-child(2) { left: 23px !important; max-width: 60px !important; font-size: 11px; }
         }
         .search-row { display: flex; align-items: center; gap: 5px; }
         .action-row { display: flex; align-items: center; gap: 5px; }
@@ -180,6 +200,7 @@
                 <button class="btn-cloud-pull" onclick="syncFromGithub()">☁️ 拉取数据</button>
                 <button class="btn-cloud-push" onclick="uploadToGithub()">🚀 保存到 GitHub</button>
             </div>
+            <!-- 进度条 -->
             <div id="progress-bar-container">
                 <div id="progress-bg"><div id="progress-fill"></div></div>
                 <div id="progress-text">准备中...</div>
@@ -282,6 +303,7 @@
         if (window.innerWidth <= 768) document.getElementById('top-area').style.display = 'none';
 
         let stocks = JSON.parse(localStorage.getItem('valuationStocks')) || [];
+        // 默认 cap (市值) 为 false (隐藏)
         let viewSettings = { showCode: true, showTags: true, showUpdate: true, showAction: true, showCap: false, ...JSON.parse(localStorage.getItem('viewSettings')) };
         let intervalId = null, sortState = { key: 'pe_up', dir: 'desc' }, isPanelOpen = false, pendingDeleteCode = null, pendingLogIndex = null, pendingSyncData = null, cachedMarketData = {}, selectedCodes = new Set(), columnFilters = {}, onlySelectedMode = false;
         
@@ -398,19 +420,21 @@
             historyCache[code] = null; fetchingSet.delete(code); return null;
         }
 
-        // ★★★ 修改点：使用文本箭头 + CSS颜色 ★★★
+        // ★★★ 趋势计算 (完全保留你的逻辑) ★★★
         function getTrendIcon(history, currentPrice, code) {
             if (!history || history.length < 19) return "";
+            // 历史19天 + 当前实时价 = 20天数据池
             const data = [...history.slice(-19), currentPrice];
+            
             const avg = (arr) => arr.reduce((a,b)=>a+b,0) / arr.length;
             const ma5 = avg(data.slice(-5));
             const ma10 = avg(data.slice(-10));
             const ma20 = avg(data.slice(-20));
             
-            // 红色向上箭头 (↑)
-            if (ma5 > ma10 && ma10 > ma20) return '<span style="color:#e53935;font-weight:bold;font-size:18px;">↑</span>';
-            // 绿色向下箭头 (↓)
-            if (ma5 < ma10 && ma10 < ma20) return '<span style="color:#43a047;font-weight:bold;font-size:18px;">↓</span>';
+            // 红色上涨: 5 > 10 > 20
+            if (ma5 > ma10 && ma10 > ma20) return '<span style="color:#e53935;font-weight:bold;font-size:16px;">⬆</span>';
+            // 绿色下跌: 5 < 10 < 20
+            if (ma5 < ma10 && ma10 < ma20) return '<span style="color:#43a047;font-weight:bold;font-size:16px;">⬇</span>';
             
             return ""; 
         }
@@ -487,10 +511,11 @@
                         const dB = b.logs?.[0]?.date || "";
                         return sortState.dir === 'desc' ? dB.localeCompare(dA) : dA.localeCompare(dB);
                     }
+                    // 趋势排序
                     if (sortState.key === 'trend') {
                         const getScore = (o) => {
-                            if (o.trend.includes('↑')) return 2; 
-                            if (o.trend.includes('↓')) return 0; 
+                            if (o.trend.includes('⬆')) return 2; 
+                            if (o.trend.includes('⬇')) return 0; 
                             return 1; 
                         };
                         return sortState.dir === 'desc' ? getScore(b) - getScore(a) : getScore(a) - getScore(b);
@@ -509,8 +534,10 @@
             const show = (k) => viewSettings['show'+k.charAt(0).toUpperCase()+k.slice(1)]?'':'col-hidden';
             const allSel = rows.length>0 && rows.every(i=>selectedCodes.has(i.code));
 
+            // ★★★ 修复后的表头结构 ★★★
+            // Colspan = 3 (Trend+Name+Chg) + Optional(Code+Tags+Cap)
             let html = `<table><thead><tr>
-                <th class="th-basic" colspan="${4 + (viewSettings.showCode?1:0) + (viewSettings.showTags?1:0) + (viewSettings.showCap?1:0)}">📊 基础行情</th>
+                <th class="th-basic" colspan="${3 + (viewSettings.showCode?1:0) + (viewSettings.showTags?1:0) + (viewSettings.showCap?1:0)}">📊 基础行情</th>
                 <th class="th-pe" colspan="4">💰 PE (利润)</th><th class="th-ps" colspan="4">🚀 PS (营收)</th>
                 <th rowspan="2" class="sortable ${show('update')}" onclick="setSort('last_update')" style="width:70px">📅 ${getSortIcon('last_update')}</th>
                 <th class="th-basic ${show('action')}" rowspan="2">⚙️</th>
