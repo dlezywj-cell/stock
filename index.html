@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>股票估值系统 (终极交付版)</title>
+    <title>股票估值系统 (标签精确搜索版)</title>
     <style>
         /* === 全局重置 === */
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft YaHei', sans-serif; padding: 20px; max-width: 1700px; margin: 0 auto; background-color: #f4f6f9; font-size: 13px; color: #333; height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; }
@@ -110,7 +110,6 @@
         .row-selected td:nth-child(1),
         .row-selected td:nth-child(2) { background-color: #e8f0fe !important; }
         
-        /* ★★★ 修复：排序高亮样式 (PC/手机通用) ★★★ */
         th.th-sorted { color: #007bff !important; background-color: #e2e6ea !important; }
 
         .col-hidden { display: none !important; }
@@ -136,7 +135,21 @@
         .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(2px); justify-content: center; align-items: center; }
         #delete-modal { z-index: 2200; } #sync-modal { z-index: 2100; } #log-modal { z-index: 2000; }
         #filter-menu { display: none; position: absolute; background: white; border: 1px solid #ccc; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border-radius: 6px; padding: 12px; z-index: 3000; min-width: 200px; }
-        .modal-content { background-color: white; padding: 25px; border-radius: 12px; width: 500px; box-shadow: 0 15px 40px rgba(0,0,0,0.3); position: relative; animation: slideDown 0.2s ease-out; max-height:80vh; overflow-y:auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+        
+        /* 弹窗内容 */
+        .modal-content { 
+            background-color: white; 
+            padding: 25px; 
+            border-radius: 12px; 
+            width: 500px; 
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3); 
+            position: relative; 
+            animation: slideDown 0.2s ease-out; 
+            max-height: 80vh; 
+            overflow-y: auto; 
+            -webkit-overflow-scrolling: touch; 
+            overscroll-behavior: contain;
+        }
         .close-btn { position: absolute; top: 15px; right: 20px; font-size: 24px; cursor: pointer; color: #aaa; z-index: 10; }
         .log-entry { border-bottom: 1px solid #eee; padding: 12px 0; font-size: 13px; color: #444; }
         .log-time { color: #999; font-size: 12px; margin-bottom: 4px; }
@@ -168,45 +181,26 @@
             input { width: 100% !important; box-sizing: border-box; }
             .modal-content { width: 90%; padding: 20px; max-height: 85vh; } 
 
-            /* === 表格紧凑化 === */
             th, td { padding: 8px 3px; font-size: 12px; } 
 
-            /* 1. 趋势列 (Trend) 极窄 - 25px */
+            /* 1. 趋势列 (Trend) */
             tbody td:nth-child(1) { 
-                width: 25px !important; 
-                min-width: 25px !important; 
-                max-width: 25px !important; 
-                left: 0 !important;
-                padding: 0 !important; 
-                text-align: center; 
+                width: 25px !important; min-width: 25px !important; max-width: 25px !important; 
+                left: 0 !important; padding: 0 !important; text-align: center; 
             }
             thead tr:nth-child(2) th:nth-child(1) { 
-                width: 25px !important; 
-                min-width: 25px !important; 
-                max-width: 25px !important;
-                left: 0 !important;
-                padding: 0 !important;
+                width: 25px !important; min-width: 25px !important; max-width: 25px !important;
+                left: 0 !important; padding: 0 !important;
             }
 
-            /* 2. 名称列 (Name) 极度压缩 - 65px (约5个汉字) */
+            /* 2. 名称列 (Name) */
             tbody td:nth-child(2) { 
-                left: 25px !important; /* 紧挨趋势列 */
-                width: 65px !important; 
-                min-width: 65px !important; 
-                max-width: 65px !important; 
-                font-size: 11px;
-                padding: 8px 2px !important;
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
+                left: 25px !important; width: 65px !important; min-width: 65px !important; max-width: 65px !important; 
+                font-size: 11px; padding: 8px 2px !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
             }
             thead tr:nth-child(2) th:nth-child(2) { 
-                left: 25px !important;
-                width: 65px !important;
-                min-width: 65px !important;
-                max-width: 65px !important;
-                padding: 8px 2px !important;
-                font-size: 11px;
+                left: 25px !important; width: 65px !important; min-width: 65px !important; max-width: 65px !important;
+                padding: 8px 2px !important; font-size: 11px;
             }
         }
         .search-row { display: flex; align-items: center; gap: 5px; }
@@ -330,7 +324,6 @@
         if (window.innerWidth <= 768) document.getElementById('top-area').style.display = 'none';
 
         let stocks = JSON.parse(localStorage.getItem('valuationStocks')) || [];
-        // 默认 cap (市值) 为 false (隐藏)
         let viewSettings = { showCode: true, showTags: true, showUpdate: true, showAction: true, showCap: false, ...JSON.parse(localStorage.getItem('viewSettings')) };
         let intervalId = null, sortState = { key: 'pe_up', dir: 'desc' }, isPanelOpen = false, pendingDeleteCode = null, pendingLogIndex = null, pendingSyncData = null, cachedMarketData = {}, selectedCodes = new Set(), columnFilters = {}, onlySelectedMode = false;
         
@@ -521,9 +514,19 @@
         function renderTable(data) {
             let rows = data.filter(i => {
                 if (onlySelectedMode && !selectedCodes.has(i.code)) return false;
-                const k = document.getElementById('findInput').value.toUpperCase(), t = document.getElementById('findTags').value.toLowerCase();
+                // ★★★ 修复：精确标签搜索逻辑 ★★★
+                const k = document.getElementById('findInput').value.toUpperCase();
                 if (k && !i.code.includes(k) && !i.name.includes(k)) return false;
-                if (t && !(i.tags||"").toLowerCase().includes(t)) return false;
+
+                const tagInput = document.getElementById('findTags').value.trim().toLowerCase();
+                if (tagInput) {
+                    const stockTagsArr = (i.tags || "").toLowerCase().split(/\s+/);
+                    const searchTagsArr = tagInput.split(/\s+/);
+                    // 每一个搜索词都必须在股票标签中找到精确匹配
+                    const match = searchTagsArr.every(searchTag => stockTagsArr.includes(searchTag));
+                    if (!match) return false;
+                }
+
                 for (let c in columnFilters) {
                     const r = columnFilters[c]; if (!r) continue;
                     if (r.type === 'text') { if (!(i[c]||"").toLowerCase().includes(r.val)) return false; }
@@ -563,14 +566,11 @@
                 });
             }
             
-            // ★★★ 修复：排序高亮辅助函数 ★★★
-            const sk = (k) => sortState.key===k ? 'th-sorted' : '';
-            
             const icon = (k) => `<span class="${columnFilters[k]?'filter-active':''}" onclick="event.stopPropagation();openFilterMenu('${k}',event)" style="cursor:pointer">${columnFilters[k]?'▼':'▽'}</span>`;
             const show = (k) => viewSettings['show'+k.charAt(0).toUpperCase()+k.slice(1)]?'':'col-hidden';
+            const sk = (k) => sortState.key===k ? 'th-sorted' : ''; // 排序高亮
             const allSel = rows.length>0 && rows.every(i=>selectedCodes.has(i.code));
 
-            // ★★★ 修复后的表头结构 (带排序高亮) ★★★
             let html = `<table><thead><tr>
                 <th class="th-basic" colspan="${3 + (viewSettings.showCode?1:0) + (viewSettings.showTags?1:0) + (viewSettings.showCap?1:0)}">📊 基础行情</th>
                 <th class="th-pe" colspan="4">💰 PE (利润)</th><th class="th-ps" colspan="4">🚀 PS (营收)</th>
