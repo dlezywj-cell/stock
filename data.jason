@@ -113,10 +113,15 @@
     "profit": 100,
     "lowPE": 30,
     "highPE": 50,
-    "revenue": 250,
+    "revenue": 460,
     "lowPS": 10,
     "highPS": 16,
     "logs": [
+      {
+        "date": "2025/11/22 14:57:14",
+        "content": "更新数据",
+        "note": "统一给到26年的收入"
+      },
       {
         "date": "2025/11/20 20:55:12",
         "content": "属性:→AI 光模块",
