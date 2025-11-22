@@ -549,10 +549,15 @@
     "profit": 0,
     "lowPE": 0,
     "highPE": 0,
-    "revenue": 180,
+    "revenue": 185,
     "lowPS": 2.2,
     "highPS": 3,
     "logs": [
+      {
+        "date": "2025/11/22 16:06:35",
+        "content": "营收:180→185",
+        "note": ""
+      },
       {
         "date": "2025/11/20 21:12:23",
         "content": "属性:→出口 扫地机",
