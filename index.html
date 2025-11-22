@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>股票估值系统 (参数变动日志版)</title>
+    <title>股票估值系统 (手机滚动修复版)</title>
     <style>
         /* === 全局重置 === */
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft YaHei', sans-serif; padding: 20px; max-width: 1700px; margin: 0 auto; background-color: #f4f6f9; font-size: 13px; color: #333; height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; }
@@ -30,8 +30,22 @@
         .divider { border-left: 1px solid #eee; height: 20px; margin: 0 5px; }
         .spacer { flex-grow: 1; } 
 
-        /* === 录入面板 === */
-        #input-container { background: #fff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); overflow: hidden; transition: all 0.3s ease; margin-bottom: 15px; display: none; }
+        /* === 录入面板 (本次核心修复: 增加滚动能力) === */
+        #input-container { 
+            background: #fff; 
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08); 
+            transition: all 0.3s ease; 
+            margin-bottom: 15px; 
+            display: none; 
+            
+            /* ★★★ 关键修复开始 ★★★ */
+            max-height: 75vh; /* 限制最大高度为屏幕的75% */
+            overflow-y: auto; /* 内容过多时允许垂直滚动 */
+            -webkit-overflow-scrolling: touch; /* 让iOS滚动更丝滑 */
+            /* ★★★ 关键修复结束 ★★★ */
+        }
+        
         #input-panel { padding: 20px; border-top: 3px solid #007bff; }
         .input-row { display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-end; margin-bottom: 15px; }
         .group-box { border: 1px solid #e9ecef; padding: 15px; border-radius: 6px; background: #f8f9fa; display: flex; gap: 10px; }
@@ -167,7 +181,7 @@
             /* === 表格紧凑化 === */
             th, td { padding: 8px 3px; font-size: 12px; } 
 
-            /* 1. 趋势列 (Trend) 极窄 */
+            /* 1. 趋势列 (Trend) 极窄 - 25px */
             tbody td:nth-child(1) { 
                 width: 25px !important; 
                 min-width: 25px !important; 
@@ -531,6 +545,7 @@
                         const dB = b.logs?.[0]?.date || "";
                         return sortState.dir === 'desc' ? dB.localeCompare(dA) : dA.localeCompare(dB);
                     }
+                    // 趋势排序
                     if (sortState.key === 'trend') {
                         const getScore = (o) => {
                             if (o.trend.includes('↑')) return 2; 
@@ -553,7 +568,6 @@
             const show = (k) => viewSettings['show'+k.charAt(0).toUpperCase()+k.slice(1)]?'':'col-hidden';
             const allSel = rows.length>0 && rows.every(i=>selectedCodes.has(i.code));
 
-            // ★★★ 修复后的表头结构 ★★★
             // Colspan = 3 (Trend+Name+Chg) + Optional(Code+Tags+Cap)
             let html = `<table><thead><tr>
                 <th class="th-basic" colspan="${3 + (viewSettings.showCode?1:0) + (viewSettings.showTags?1:0) + (viewSettings.showCap?1:0)}">📊 基础行情</th>
