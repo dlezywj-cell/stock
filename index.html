@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>股票估值系统 (周末修复版)</title>
+    <title>股票估值系统 (队列防抖版)</title>
     <style>
         /* === 全局重置 === */
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft YaHei', sans-serif; padding: 20px; max-width: 1700px; margin: 0 auto; background-color: #f4f6f9; font-size: 13px; color: #333; height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; }
@@ -64,19 +64,13 @@
         thead tr:nth-child(1) th { top: 0; border-bottom: 1px solid #ccc; height: 22px; }
         thead tr:nth-child(2) th { top: 43px; box-shadow: 0 2px 2px rgba(0,0,0,0.05); }
 
-        /* 第一列: 趋势 */
         tbody td:nth-child(1) { 
             position: sticky; left: 0; z-index: 15; 
             background-color: #fff; border-right: 1px solid #eee; 
             width: 45px; max-width: 45px; padding: 0 2px; 
-            font-size: 12px; vertical-align: middle;
-            font-weight: bold;
+            font-size: 12px; vertical-align: middle; cursor: help; 
         }
-        /* 第二列: 名称 */
-        tbody td:nth-child(2) { 
-            position: sticky; left: 47px; 
-            z-index: 15; background-color: #fff; border-right: 2px solid #d1d1d1; 
-        }
+        tbody td:nth-child(2) { position: sticky; left: 47px; z-index: 15; background-color: #fff; border-right: 2px solid #d1d1d1; }
         
         thead tr:nth-child(1) th:first-child { position: sticky; top: 0; z-index: 20; }
         thead tr:nth-child(2) th:nth-child(1) { position: sticky; left: 0; top: 43px; z-index: 30; border-right: 1px solid #eee; width: 45px; padding: 0; }
@@ -91,10 +85,8 @@
         .th-basic { border-top: 3px solid #6c757d; }
         .th-pe { border-top: 3px solid #28a745; background-color: #f3fdf6; }
         .th-ps { border-top: 3px solid #fd7e14; background-color: #fff8f3; }
-        
-        .th-select, .td-select { width: 40px !important; padding: 0 !important; cursor: pointer; }
-        .th-select { border-top: 3px solid #adb5bd; border-left: 2px solid #dee2e6 !important; background-color: #e9ecef; z-index: 25; }
-        .td-select { border-left: 2px solid #dee2e6 !important; background-color: #f8f9fa; }
+        .th-select { border-top: 3px solid #adb5bd; border-left: 2px solid #dee2e6 !important; background-color: #e9ecef; width: 40px !important; padding: 0 !important; cursor: pointer; z-index: 25; }
+        .td-select { border-left: 2px solid #dee2e6 !important; background-color: #f8f9fa; width: 40px !important; padding: 0 !important; cursor: pointer; }
         .row-checkbox { cursor: pointer; accent-color: #007bff; width: 15px; height: 15px; margin: 0 auto; display: block; }
         .filter-icon { font-size: 12px; color: #adb5bd; cursor: pointer; padding: 2px 4px; }
         .filter-active { color: #dc3545 !important; font-weight: bold; background-color: #f8d7da; }
@@ -258,7 +250,10 @@
         let viewSettings = { showCode: true, showTags: true, showUpdate: true, showAction: true, ...JSON.parse(localStorage.getItem('viewSettings')) };
         let intervalId = null, sortState = { key: 'pe_up', dir: 'desc' }, isPanelOpen = false, pendingDeleteCode = null, pendingLogIndex = null, pendingSyncData = null, cachedMarketData = {}, selectedCodes = new Set(), columnFilters = {}, onlySelectedMode = false;
         let historyCache = {}; 
-        let fetchingFlags = {}; 
+        
+        // ★★★ 队列管理核心 ★★★
+        let histQueue = [];
+        let isProcessingQueue = false;
         let errorCache = {}; 
 
         updateViewButtons();
@@ -319,13 +314,16 @@
             document.body.appendChild(script);
         }
 
-        function fetchHistory(secid, code) {
-            const now = Date.now();
-            if(historyCache[code] || (fetchingFlags[code] && (now - fetchingFlags[code] < 3000))) return;
-            
-            fetchingFlags[code] = now;
-            const cbName = 'cb_hist_' + code.replace(/\W/g, '');
-            
+        // ★★★ 队列处理器：每200ms处理一个历史数据请求 ★★★
+        function processHistoryQueue() {
+            if (isProcessingQueue || histQueue.length === 0) return;
+            isProcessingQueue = true;
+
+            const item = histQueue.shift(); // 取出第一个任务
+            const { secid, code } = item;
+
+            // 执行获取
+            const cbName = 'cb_hist_' + code.replace(/\W/g, '') + '_' + Date.now();
             window[cbName] = function(data) {
                 if(data && data.data && data.data.klines) {
                     historyCache[code] = data.data.klines.map(k => {
@@ -333,23 +331,45 @@
                         return { date: parts[0].replace(/\//g, '-'), close: parseFloat(parts[1]) }; 
                     });
                     errorCache[code] = null;
-                    renderTableWrapper();
-                } else { errorCache[code] = "API空数据"; }
-                delete fetchingFlags[code];
+                    renderTableWrapper(); // 拿到一个就刷新一次，产生逐个蹦出的效果
+                } else {
+                    errorCache[code] = "API无数据";
+                }
+                
+                // 清理并处理下一个
                 try { delete window[cbName]; document.getElementById('script_' + cbName).remove(); } catch(e){}
+                setTimeout(() => { isProcessingQueue = false; processHistoryQueue(); }, 200); // 200ms间隔
             };
 
             const script = document.createElement('script');
             script.id = 'script_' + cbName;
-            script.onerror = function() { errorCache[code] = "网络错误"; delete fetchingFlags[code]; };
-            // ★★★ 修复：移除ut参数，改用基础公共接口参数 ★★★
-            script.src = `https://push2his.eastmoney.com/api/qt/stock/kline/get?secid=${secid}&fields1=f1&fields2=f51,f53&klt=101&fqt=1&end=20500101&lmt=30&cb=${cbName}`;
+            script.onerror = function() {
+                errorCache[code] = "网络错误";
+                setTimeout(() => { isProcessingQueue = false; processHistoryQueue(); }, 200);
+            };
+            // 使用最稳的移动端接口
+            script.src = `https://push2his.eastmoney.com/api/qt/stock/kline/get?secid=${secid}&fields1=f1&fields2=f51,f53&klt=101&fqt=1&end=20500101&lmt=25&cb=${cbName}`;
             document.body.appendChild(script);
+        }
+
+        // 添加到队列
+        function queueFetchHistory(secid, code) {
+            if(historyCache[code] || errorCache[code]) return; // 有缓存或已报错就不再排队
+            // 检查队列中是否已存在
+            if(!histQueue.some(i => i.code === code)) {
+                histQueue.push({ secid, code });
+                processHistoryQueue(); // 尝试启动处理器
+            }
         }
 
         function getTrendText(history, currentPrice, currentTime, code) {
             if (errorCache[code]) return `<span style="color:red;cursor:pointer;" onclick="alert('${errorCache[code]}')">Err</span>`;
-            if (!history || history.length < 5) return `<span style="color:#ccc;font-size:12px;cursor:pointer;" onclick="alert('加载中...')">...</span>`; 
+            
+            // 正在排队或加载中
+            if (!history) {
+                const inQueue = histQueue.some(i => i.code === code);
+                return `<span style="color:#ccc;font-size:12px;cursor:pointer;" onclick="alert('${inQueue?"排队中":"加载中"}...')">...</span>`; 
+            }
             
             let rtDate = "";
             if (currentTime > 0) {
@@ -357,7 +377,6 @@
                 const pad = (n) => n.toString().padStart(2,'0');
                 rtDate = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
             } else {
-                // 容错：如果没有时间戳，取今天日期
                 const d = new Date();
                 const pad = (n) => n.toString().padStart(2,'0');
                 rtDate = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
@@ -366,13 +385,10 @@
             const lastHist = history[history.length - 1];
             let data = [];
             
-            // ★★★ 周末核心修复：如果历史最后一天是今天，或者是“未来”（比如周五收盘后看数据），则认为是同一天 ★★★
-            // 如果是周末(周六周日)，实时数据可能是周五的，历史数据也是周五的，所以只要日期 <= 历史最后一天，就覆盖
-            if (lastHist.date >= rtDate || (new Date(rtDate).getDay()%6===0)) {
+            if (lastHist && (lastHist.date === rtDate || (new Date(rtDate).getDay()%6===0))) {
                 const historyBase = history.slice(0, -1).map(h => h.close);
                 data = [...historyBase, currentPrice];
             } else {
-                // 只有当实时日期 > 历史日期（比如周一开盘），才追加
                 const historyBase = history.map(h => h.close);
                 data = [...historyBase, currentPrice];
             }
@@ -416,8 +432,9 @@
                     if (s.revenue && s.lowPS) { ps.down=((s.revenue*s.lowPS/cap-1)*100).toFixed(2); ps.up=((s.revenue*s.highPS-cap)/cap*100).toFixed(2); }
                 }
                 
+                // ★★★ 加入队列，而不是直接获取 ★★★
                 if (!historyCache[s.code] && valid) {
-                    fetchHistory(getSecid(s.code), s.code);
+                    queueFetchHistory(getSecid(s.code), s.code);
                 }
                 
                 const trend = getTrendText(historyCache[s.code], currentPrice, currentTime, s.code);
