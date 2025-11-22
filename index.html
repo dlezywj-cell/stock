@@ -3,20 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>股票估值系统 (滚动完美修复版)</title>
+    <title>股票估值系统 (移动端增强版)</title>
     <style>
         /* === 全局重置 === */
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft YaHei', sans-serif; padding: 20px; max-width: 1700px; margin: 0 auto; background-color: #f4f6f9; font-size: 13px; color: #333; height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; }
         
-        /* === 移动端专属导航 === */
+        /* === 移动端专属导航 (本次修改重点) === */
         #mobile-nav { display: none; justify-content: space-between; align-items: center; background: #fff; padding: 10px 15px; border-radius: 8px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); flex-shrink: 0; }
         #mobile-nav h3 { margin: 0; color: #2c3e50; font-size: 16px; display: flex; align-items: center; gap: 8px; }
         #mobile-status { font-size: 11px; color: #007bff; font-family: monospace; }
-        .btn-menu { background: #f8f9fa; border: 1px solid #ddd; color: #333; padding: 6px 12px; border-radius: 4px; font-size: 14px; }
+        
+        /* 移动端顶部按钮组 */
+        .mobile-btn-group { display: flex; gap: 10px; }
+        .btn-mobile-nav { background: #f8f9fa; border: 1px solid #ddd; color: #333; padding: 6px 12px; border-radius: 4px; font-size: 14px; cursor: pointer; }
+        .btn-mobile-refresh { background: #17a2b8; color: white; border: none; } /* 蓝色刷新按钮 */
 
         /* === 顶部区域 === */
-        #top-area { flex-shrink: 0; display: flex; flex-direction: column; } /* 确保子元素垂直排列 */
-        .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; background: #fff; padding: 10px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); flex-shrink: 0; }
+        #top-area { flex-shrink: 0; }
+        .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; background: #fff; padding: 10px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .tool-group { display: flex; align-items: center; gap: 10px; }
 
         /* === 进度条 === */
@@ -26,11 +30,11 @@
         #progress-text { font-size:11px; color:#666; font-family:monospace; white-space:nowrap; }
 
         /* === 控制栏 === */
-        .control-bar { margin-bottom: 10px; display: flex; gap: 10px; align-items: center; background: #fff; padding: 10px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); flex-wrap: wrap; flex-shrink: 0; }
+        .control-bar { margin-bottom: 10px; display: flex; gap: 10px; align-items: center; background: #fff; padding: 10px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); flex-wrap: wrap; }
         .divider { border-left: 1px solid #eee; height: 20px; margin: 0 5px; }
         .spacer { flex-grow: 1; } 
 
-        /* === 录入面板 (核心修复：增加滚动支持) === */
+        /* === 录入面板 === */
         #input-container { 
             background: #fff; 
             border-radius: 8px; 
@@ -38,14 +42,11 @@
             transition: all 0.3s ease; 
             margin-bottom: 15px; 
             display: none; 
-            
-            /* ★★★ 这里的设置让面板内容过多时可以滚动 ★★★ */
-            max-height: 60vh; /* 限制最大高度为视口的60% */
-            overflow-y: auto; /* 允许垂直滚动 */
-            -webkit-overflow-scrolling: touch; /* iOS顺滑滚动 */
-            overscroll-behavior: contain; /* 防止滚动穿透到底层 */
+            max-height: 60vh; /* 手机端滚动支持 */
+            overflow-y: auto; 
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
         }
-        
         #input-panel { padding: 20px; border-top: 3px solid #007bff; }
         .input-row { display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-end; margin-bottom: 15px; }
         .group-box { border: 1px solid #e9ecef; padding: 15px; border-radius: 6px; background: #f8f9fa; display: flex; gap: 10px; }
@@ -75,6 +76,7 @@
         .btn-reset-all { background-color: #6c757d; color: white; }
         .btn-confirm-del { background-color: #dc3545; color: white; font-size: 14px; padding: 8px 25px; }
         .btn-cancel { background-color: #6c757d; color: white; font-size: 14px; padding: 8px 25px; }
+        .btn-refresh-trend { background-color: #007bff; color: white; border: 1px solid #0056b3; }
 
         /* === 表格区域 === */
         #result { background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #e9ecef; flex-grow: 1; overflow: auto; position: relative; }
@@ -112,27 +114,19 @@
 
         /* 隔行变色修复 */
         tbody tr:nth-child(even) { background-color: #f8f9fa; }
-        tbody tr:nth-child(even) td:nth-child(1), 
-        tbody tr:nth-child(even) td:nth-child(2) { background-color: #f8f9fa; }
-
+        tbody tr:nth-child(even) td:nth-child(1), tbody tr:nth-child(even) td:nth-child(2) { background-color: #f8f9fa; }
         tbody tr:hover td { background-color: #e9ecef; }
-        tbody tr:hover td:nth-child(1), 
-        tbody tr:hover td:nth-child(2) { background-color: #e9ecef; }
-
-        .row-selected td,
-        .row-selected td:nth-child(1),
-        .row-selected td:nth-child(2) { background-color: #e8f0fe !important; }
+        tbody tr:hover td:nth-child(1), tbody tr:hover td:nth-child(2) { background-color: #e9ecef; }
+        .row-selected td, .row-selected td:nth-child(1), .row-selected td:nth-child(2) { background-color: #e8f0fe !important; }
 
         .col-hidden { display: none !important; }
         .tag-badge { display: inline-block; background: #e7f5ff; color: #007bff; padding: 2px 6px; border-radius: 4px; font-size: 11px; margin: 1px; border: 1px solid #d0ebff; }
         .th-basic { border-top: 3px solid #6c757d; }
         .th-pe { border-top: 3px solid #28a745; background-color: #f3fdf6; }
         .th-ps { border-top: 3px solid #fd7e14; background-color: #fff8f3; }
-        
         .th-select, .td-select { width: 40px !important; padding: 0 !important; cursor: pointer; }
         .th-select { border-top: 3px solid #adb5bd; border-left: 2px solid #dee2e6 !important; background-color: #e9ecef; z-index: 25; }
         .td-select { border-left: 2px solid #dee2e6 !important; background-color: #f8f9fa; }
-        
         .row-checkbox { cursor: pointer; accent-color: #007bff; width: 15px; height: 15px; margin: 0 auto; display: block; }
         .filter-icon { font-size: 12px; color: #adb5bd; cursor: pointer; padding: 2px 4px; }
         .filter-active { color: #dc3545 !important; font-weight: bold; background-color: #f8d7da; }
@@ -147,7 +141,7 @@
         #delete-modal { z-index: 2200; } #sync-modal { z-index: 2100; } #log-modal { z-index: 2000; }
         #filter-menu { display: none; position: absolute; background: white; border: 1px solid #ccc; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border-radius: 6px; padding: 12px; z-index: 3000; min-width: 200px; }
         
-        /* === 弹窗内容滚动修复 === */
+        /* 弹窗内容滚动 */
         .modal-content { 
             background-color: white; 
             padding: 25px; 
@@ -156,14 +150,12 @@
             box-shadow: 0 15px 40px rgba(0,0,0,0.3); 
             position: relative; 
             animation: slideDown 0.2s ease-out; 
-            
-            /* ★★★ 关键修复 ★★★ */
-            max-height: 80vh; /* 限制高度 */
-            overflow-y: auto; /* 内容溢出滚动 */
+            max-height: 80vh; 
+            overflow-y: auto; 
             -webkit-overflow-scrolling: touch; 
             overscroll-behavior: contain;
         }
-        .close-btn { position: absolute; top: 15px; right: 20px; font-size: 24px; cursor: pointer; color: #aaa; z-index: 10; } /* 提高层级 */
+        .close-btn { position: absolute; top: 15px; right: 20px; font-size: 24px; cursor: pointer; color: #aaa; z-index: 10; }
         .log-entry { border-bottom: 1px solid #eee; padding: 12px 0; font-size: 13px; color: #444; }
         .log-time { color: #999; font-size: 12px; margin-bottom: 4px; }
         .log-note { display: block; margin-top: 6px; color: #555; background: #fff3cd; padding: 6px 10px; border-radius: 4px; border-left: 3px solid #ffc107; }
@@ -192,47 +184,28 @@
             .input-row { flex-direction: column; gap: 10px; margin-bottom: 10px; }
             .group-box { width: 100%; box-sizing: border-box; }
             input { width: 100% !important; box-sizing: border-box; }
-            .modal-content { width: 90%; padding: 20px; max-height: 85vh; } /* 手机端弹窗更充裕 */
+            .modal-content { width: 90%; padding: 20px; max-height: 85vh; } 
 
-            /* === 表格紧凑化 === */
             th, td { padding: 8px 3px; font-size: 12px; } 
 
-            /* 1. 趋势列 (Trend) 极窄 - 25px */
+            /* 趋势列 (极窄) */
             tbody td:nth-child(1) { 
-                width: 25px !important; 
-                min-width: 25px !important; 
-                max-width: 25px !important; 
-                left: 0 !important;
-                padding: 0 !important; 
-                text-align: center; 
+                width: 25px !important; min-width: 25px !important; max-width: 25px !important; 
+                left: 0 !important; padding: 0 !important; text-align: center; 
             }
             thead tr:nth-child(2) th:nth-child(1) { 
-                width: 25px !important; 
-                min-width: 25px !important; 
-                max-width: 25px !important;
-                left: 0 !important;
-                padding: 0 !important;
+                width: 25px !important; min-width: 25px !important; max-width: 25px !important;
+                left: 0 !important; padding: 0 !important;
             }
 
-            /* 2. 名称列 (Name) 极度压缩 - 65px (约5个汉字) */
+            /* 名称列 (5个汉字宽) */
             tbody td:nth-child(2) { 
-                left: 25px !important; /* 紧挨趋势列 */
-                width: 65px !important; 
-                min-width: 65px !important; 
-                max-width: 65px !important; 
-                font-size: 11px;
-                padding: 8px 2px !important;
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
+                left: 25px !important; width: 65px !important; min-width: 65px !important; max-width: 65px !important; 
+                font-size: 11px; padding: 8px 2px !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
             }
             thead tr:nth-child(2) th:nth-child(2) { 
-                left: 25px !important;
-                width: 65px !important;
-                min-width: 65px !important;
-                max-width: 65px !important;
-                padding: 8px 2px !important;
-                font-size: 11px;
+                left: 25px !important; width: 65px !important; min-width: 65px !important; max-width: 65px !important;
+                padding: 8px 2px !important; font-size: 11px;
             }
         }
         .search-row { display: flex; align-items: center; gap: 5px; }
@@ -241,9 +214,13 @@
     </style>
 </head>
 <body>
+    <!-- 移动端导航 -->
     <div id="mobile-nav">
         <h3>📈 估值系统 <span id="mobile-status"></span></h3>
-        <button class="btn-menu" onclick="toggleMobileMenu()" id="mobile-menu-btn">⚙️ 菜单</button>
+        <div class="mobile-btn-group">
+            <button class="btn-mobile-nav btn-mobile-refresh" onclick="forceRefreshTrends()" title="刷新趋势">🔄</button>
+            <button class="btn-mobile-nav" onclick="toggleMobileMenu()" id="mobile-menu-btn">⚙️</button>
+        </div>
     </div>
 
     <div id="top-area">
@@ -252,14 +229,13 @@
                 <button class="btn-cloud-pull" onclick="syncFromGithub()">☁️ 拉取数据</button>
                 <button class="btn-cloud-push" onclick="uploadToGithub()">🚀 保存到 GitHub</button>
             </div>
-            <!-- 进度条 -->
             <div id="progress-bar-container">
                 <div id="progress-bg"><div id="progress-fill"></div></div>
                 <div id="progress-text">准备中...</div>
             </div>
             <div class="tool-group">
                 <span id="status-msg"></span>
-                <button class="btn-refresh-trend" onclick="forceRefreshTrends()" title="清空缓存并重新拉取所有趋势数据" style="padding:6px 12px; border-radius:4px; background:#17a2b8; color:white; border:none; cursor:pointer;">🔄 刷新趋势</button>
+                <button class="btn-refresh-trend desktop-only" onclick="forceRefreshTrends()" title="清空缓存并重新拉取所有趋势数据" style="padding:6px 12px; border-radius:4px; background:#17a2b8; color:white; border:none; cursor:pointer;">🔄 刷新趋势</button>
                 <div class="divider"></div>
                 <button class="btn-control" onclick="startRealtime()">▶ 开启</button>
                 <button class="btn-control" onclick="stopRealtime()">⏹ 暂停</button>
@@ -359,6 +335,7 @@
         let viewSettings = { showCode: true, showTags: true, showUpdate: true, showAction: true, showCap: false, ...JSON.parse(localStorage.getItem('viewSettings')) };
         let intervalId = null, sortState = { key: 'pe_up', dir: 'desc' }, isPanelOpen = false, pendingDeleteCode = null, pendingLogIndex = null, pendingSyncData = null, cachedMarketData = {}, selectedCodes = new Set(), columnFilters = {}, onlySelectedMode = false;
         
+        // 并发
         let historyCache = {}; 
         let fetchQueue = [];
         let activeRequests = 0;
@@ -479,9 +456,7 @@
             const ma10 = avg(data.slice(-10));
             const ma20 = avg(data.slice(-20));
             
-            // 红色上涨
             if (ma5 > ma10 && ma10 > ma20) return '<span style="color:#e53935 !important;font-weight:900 !important;font-size:18px;">↑</span>';
-            // 绿色下跌
             if (ma5 < ma10 && ma10 < ma20) return '<span style="color:#43a047 !important;font-weight:900 !important;font-size:18px;">↓</span>';
             
             return ""; 
@@ -590,7 +565,6 @@
             const show = (k) => viewSettings['show'+k.charAt(0).toUpperCase()+k.slice(1)]?'':'col-hidden';
             const allSel = rows.length>0 && rows.every(i=>selectedCodes.has(i.code));
 
-            // Colspan = 3 (Trend+Name+Chg) + Optional(Code+Tags+Cap)
             let html = `<table><thead><tr>
                 <th class="th-basic" colspan="${3 + (viewSettings.showCode?1:0) + (viewSettings.showTags?1:0) + (viewSettings.showCap?1:0)}">📊 基础行情</th>
                 <th class="th-pe" colspan="4">💰 PE (利润)</th><th class="th-ps" colspan="4">🚀 PS (营收)</th>
