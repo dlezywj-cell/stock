@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>股票估值系统 (强力调试版)</title>
+    <title>股票估值系统 (周末修复版)</title>
     <style>
         /* === 全局重置 === */
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft YaHei', sans-serif; padding: 20px; max-width: 1700px; margin: 0 auto; background-color: #f4f6f9; font-size: 13px; color: #333; height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; }
@@ -64,15 +64,15 @@
         thead tr:nth-child(1) th { top: 0; border-bottom: 1px solid #ccc; height: 22px; }
         thead tr:nth-child(2) th { top: 43px; box-shadow: 0 2px 2px rgba(0,0,0,0.05); }
 
-        /* 第一列: 趋势 (Text) */
+        /* 第一列: 趋势 */
         tbody td:nth-child(1) { 
             position: sticky; left: 0; z-index: 15; 
             background-color: #fff; border-right: 1px solid #eee; 
             width: 45px; max-width: 45px; padding: 0 2px; 
             font-size: 12px; vertical-align: middle;
-            cursor: help; 
+            font-weight: bold;
         }
-        /* 第二列: 名称 (Name) */
+        /* 第二列: 名称 */
         tbody td:nth-child(2) { 
             position: sticky; left: 47px; 
             z-index: 15; background-color: #fff; border-right: 2px solid #d1d1d1; 
@@ -259,7 +259,7 @@
         let intervalId = null, sortState = { key: 'pe_up', dir: 'desc' }, isPanelOpen = false, pendingDeleteCode = null, pendingLogIndex = null, pendingSyncData = null, cachedMarketData = {}, selectedCodes = new Set(), columnFilters = {}, onlySelectedMode = false;
         let historyCache = {}; 
         let fetchingFlags = {}; 
-        let errorCache = {}; // 错误信息缓存
+        let errorCache = {}; 
 
         updateViewButtons();
         const GITHUB_CONFIG = { username: "dlezywj-cell", repo: "stock", path: "data.jason", branch: "main" };
@@ -302,7 +302,6 @@
 
         function getSecid(c) { return (c.endsWith('.SH')?`1.${c.slice(0,-3)}`:c.endsWith('.SZ')?`0.${c.slice(0,-3)}`:c.endsWith('.HK')?`116.${c.slice(0,-3)}`:`105.${c}`); }
         
-        // ★★★ 核心修复：JSONP获取实时数据 ★★★
         function fetchRealtime(secids, cbName) {
             const script = document.createElement('script');
             script.id = 'script_rt_' + cbName;
@@ -313,18 +312,15 @@
                     document.getElementById('status-msg').innerText = `● 更新 ${t}`;
                     document.getElementById('mobile-status').innerText = `● ${t}`;
                     renderTableWrapper();
-                } else { console.error("实时数据为空"); }
+                }
                 try { delete window[cbName]; document.getElementById('script_rt_' + cbName).remove(); } catch(e){}
             };
-            script.onerror = function() { console.error("实时数据脚本加载失败"); };
             script.src = `https://push2.eastmoney.com/api/qt/ulist.np/get?secids=${secids}&fields=f12,f14,f2,f3,f18,f20,f124&invt=2&fltt=2&cb=${cbName}&_=${Date.now()}`;
             document.body.appendChild(script);
         }
 
-        // ★★★ 核心修复：JSONP获取历史数据 + 超时重试 ★★★
         function fetchHistory(secid, code) {
             const now = Date.now();
-            // 3秒超时重试机制
             if(historyCache[code] || (fetchingFlags[code] && (now - fetchingFlags[code] < 3000))) return;
             
             fetchingFlags[code] = now;
@@ -338,28 +334,22 @@
                     });
                     errorCache[code] = null;
                     renderTableWrapper();
-                } else {
-                    errorCache[code] = "API无数据";
-                }
+                } else { errorCache[code] = "API空数据"; }
                 delete fetchingFlags[code];
                 try { delete window[cbName]; document.getElementById('script_' + cbName).remove(); } catch(e){}
             };
 
             const script = document.createElement('script');
             script.id = 'script_' + cbName;
-            script.onerror = function() {
-                errorCache[code] = "脚本错误";
-                delete fetchingFlags[code]; // 允许重试
-            };
-            // 补全 ut 参数
-            script.src = `https://push2his.eastmoney.com/api/qt/stock/kline/get?secid=${secid}&fields1=f1&fields2=f51,f53&klt=101&fqt=1&end=20500101&lmt=25&ut=fa5fd1943c7b386f172d6893dbfba10b&cb=${cbName}`;
+            script.onerror = function() { errorCache[code] = "网络错误"; delete fetchingFlags[code]; };
+            // ★★★ 修复：移除ut参数，改用基础公共接口参数 ★★★
+            script.src = `https://push2his.eastmoney.com/api/qt/stock/kline/get?secid=${secid}&fields1=f1&fields2=f51,f53&klt=101&fqt=1&end=20500101&lmt=30&cb=${cbName}`;
             document.body.appendChild(script);
         }
 
-        // 趋势计算 (点击显示错误信息)
         function getTrendText(history, currentPrice, currentTime, code) {
             if (errorCache[code]) return `<span style="color:red;cursor:pointer;" onclick="alert('${errorCache[code]}')">Err</span>`;
-            if (!history || history.length < 5) return `<span style="color:#ccc;font-size:12px;cursor:pointer;" onclick="alert('历史数据正在加载...')">...</span>`; 
+            if (!history || history.length < 5) return `<span style="color:#ccc;font-size:12px;cursor:pointer;" onclick="alert('加载中...')">...</span>`; 
             
             let rtDate = "";
             if (currentTime > 0) {
@@ -367,6 +357,7 @@
                 const pad = (n) => n.toString().padStart(2,'0');
                 rtDate = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
             } else {
+                // 容错：如果没有时间戳，取今天日期
                 const d = new Date();
                 const pad = (n) => n.toString().padStart(2,'0');
                 rtDate = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
@@ -375,10 +366,13 @@
             const lastHist = history[history.length - 1];
             let data = [];
             
-            if (lastHist && lastHist.date === rtDate) {
+            // ★★★ 周末核心修复：如果历史最后一天是今天，或者是“未来”（比如周五收盘后看数据），则认为是同一天 ★★★
+            // 如果是周末(周六周日)，实时数据可能是周五的，历史数据也是周五的，所以只要日期 <= 历史最后一天，就覆盖
+            if (lastHist.date >= rtDate || (new Date(rtDate).getDay()%6===0)) {
                 const historyBase = history.slice(0, -1).map(h => h.close);
                 data = [...historyBase, currentPrice];
             } else {
+                // 只有当实时日期 > 历史日期（比如周一开盘），才追加
                 const historyBase = history.map(h => h.close);
                 data = [...historyBase, currentPrice];
             }
@@ -409,9 +403,9 @@
                 const m = cachedMarketData[s.code.split('.')[0]] || {};
                 let cap=0, chg="0.00", valid=false, currentPrice=0, currentTime=0;
                 if (m.f12) { 
-                    let p=parseFloat(m.f2); if (isNaN(p)) p = parseFloat(m.f18);
+                    let p=parseFloat(m.f2); if (isNaN(p) || p<=0) p = parseFloat(m.f18);
                     let mc=parseFloat(m.f20); 
-                    if(p>0 && mc>0){ 
+                    if(p>0){ 
                         cap=mc/100000000; chg=parseFloat(m.f3).toFixed(2); valid=true; 
                         currentPrice=p; currentTime=m.f124 || 0; 
                     }
