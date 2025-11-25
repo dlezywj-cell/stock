@@ -2174,5 +2174,23 @@
         "note": "初始化估值模型"
       }
     ]
+  },
+  {
+    "code": "TSLA",
+    "name": "特斯拉",
+    "tags": "",
+    "profit": 50,
+    "lowPE": 125,
+    "highPE": 250,
+    "revenue": 950,
+    "lowPS": 8,
+    "highPS": 16,
+    "logs": [
+      {
+        "date": "2025/11/25 09:35:14",
+        "content": "首次录入",
+        "note": ""
+      }
+    ]
   }
 ]
