@@ -2174,23 +2174,5 @@
         "note": "初始化估值模型"
       }
     ]
-  },
-  {
-    "code": "TSLA.HK",
-    "name": "特斯拉",
-    "tags": "机器人 汽车",
-    "profit": 50,
-    "lowPE": 125,
-    "highPE": 250,
-    "revenue": 970,
-    "lowPS": 8,
-    "highPS": 16,
-    "logs": [
-      {
-        "date": "2025/11/25 09:24:38",
-        "content": "首次录入",
-        "note": "收入和ps更合理"
-      }
-    ]
   }
 ]
