@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>股票估值系统 (标签精确搜索版)</title>
+    <title>股票估值系统 (多市场修复版)</title>
     <style>
         /* === 全局重置 === */
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft YaHei', sans-serif; padding: 20px; max-width: 1700px; margin: 0 auto; background-color: #f4f6f9; font-size: 13px; color: #333; height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; }
@@ -39,7 +39,7 @@
         label { font-size: 12px; color: #666; display: block; margin-bottom: 4px; font-weight: 500; }
         input { padding: 6px 8px; border: 1px solid #ced4da; border-radius: 4px; width: 100px; transition: border-color 0.2s; }
         input:focus { border-color: #007bff; outline: none; }
-        input[readonly] { background-color: #e9ecef; color: #495057; cursor: not-allowed; }
+        /* 移除了 input[readonly] 的灰色样式，因为代码框现在可编辑了 */
         
         button { padding: 6px 12px; cursor: pointer; border: none; border-radius: 4px; font-weight: 600; transition: all 0.2s; font-size: 12px; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
         button:hover { opacity: 0.85; transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
@@ -73,16 +73,14 @@
         thead tr:nth-child(1) th { top: 0; border-bottom: 1px solid #ccc; height: 22px; }
         thead tr:nth-child(2) th { top: 43px; box-shadow: 0 2px 2px rgba(0,0,0,0.05); }
 
-        /* 锁定列：第1列(趋势) & 第2列(名称) - PC默认样式 */
+        /* 锁定列 */
         tbody td:nth-child(1) { position: sticky; left: 0; z-index: 15; background-color: #fff; border-right: 1px solid #eee; width: 30px; max-width: 30px; padding: 0 5px; }
-        /* PC端名称列 */
         tbody td:nth-child(2) { 
             position: sticky; left: 41px; z-index: 15; 
             background-color: #fff; border-right: 2px solid #d1d1d1; 
             max-width: 80px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; 
         }
         
-        /* 表头锁定 */
         thead tr:nth-child(1) th:first-child { position: sticky; top: 0; z-index: 20; }
         thead tr:nth-child(2) th:nth-child(1) { position: sticky; left: 0; top: 43px; z-index: 30; border-right: 1px solid #eee; width: 30px; }
         thead tr:nth-child(2) th:nth-child(2) { 
@@ -91,13 +89,11 @@
             max-width: 80px;
         }
 
-        /* 阴影分割线 */
         tbody td:nth-child(2), thead tr:nth-child(2) th:nth-child(2) {
             box-shadow: 4px 0 8px -4px rgba(0,0,0,0.15); 
             clip-path: inset(0px -15px 0px 0px);
         }
 
-        /* 隔行变色修复 */
         tbody tr:nth-child(even) { background-color: #f8f9fa; }
         tbody tr:nth-child(even) td:nth-child(1), 
         tbody tr:nth-child(even) td:nth-child(2) { background-color: #f8f9fa; }
@@ -271,7 +267,8 @@
                         </div>
                         <div style="display:flex; gap:5px; width:100%; align-items:center; margin-top:5px;">
                             <label style="width:40px">代码</label>
-                            <input type="text" id="inCode" readonly placeholder="自动" style="flex:1; background:#f0f0f0">
+                            <!-- 修复：移除 readonly 属性，移除灰色背景，允许用户手动修改 -->
+                            <input type="text" id="inCode" placeholder="自动/手输" style="flex:1;">
                         </div>
                     </div>
                     <div class="group-box" style="background: #fff; border-color: #ddd; flex: 2; flex-direction: column;">
@@ -440,7 +437,6 @@
             historyCache[code] = null; fetchingSet.delete(code); return null;
         }
 
-        // ★★★ 修复：强制红绿箭头字符 ★★★
         function getTrendIcon(history, currentPrice, code) {
             if (!history || history.length < 19) return "";
             const data = [...history.slice(-19), currentPrice];
@@ -449,9 +445,7 @@
             const ma10 = avg(data.slice(-10));
             const ma20 = avg(data.slice(-20));
             
-            // 红色向上箭头
             if (ma5 > ma10 && ma10 > ma20) return '<span style="color:#e53935 !important;font-weight:900 !important;font-size:18px;">↑</span>';
-            // 绿色向下箭头
             if (ma5 < ma10 && ma10 < ma20) return '<span style="color:#43a047 !important;font-weight:900 !important;font-size:18px;">↓</span>';
             
             return ""; 
@@ -514,7 +508,6 @@
         function renderTable(data) {
             let rows = data.filter(i => {
                 if (onlySelectedMode && !selectedCodes.has(i.code)) return false;
-                // ★★★ 修复：精确标签搜索逻辑 ★★★
                 const k = document.getElementById('findInput').value.toUpperCase();
                 if (k && !i.code.includes(k) && !i.name.includes(k)) return false;
 
@@ -522,7 +515,6 @@
                 if (tagInput) {
                     const stockTagsArr = (i.tags || "").toLowerCase().split(/\s+/);
                     const searchTagsArr = tagInput.split(/\s+/);
-                    // 每一个搜索词都必须在股票标签中找到精确匹配
                     const match = searchTagsArr.every(searchTag => stockTagsArr.includes(searchTag));
                     if (!match) return false;
                 }
@@ -568,7 +560,7 @@
             
             const icon = (k) => `<span class="${columnFilters[k]?'filter-active':''}" onclick="event.stopPropagation();openFilterMenu('${k}',event)" style="cursor:pointer">${columnFilters[k]?'▼':'▽'}</span>`;
             const show = (k) => viewSettings['show'+k.charAt(0).toUpperCase()+k.slice(1)]?'':'col-hidden';
-            const sk = (k) => sortState.key===k ? 'th-sorted' : ''; // 排序高亮
+            const sk = (k) => sortState.key===k ? 'th-sorted' : ''; 
             const allSel = rows.length>0 && rows.every(i=>selectedCodes.has(i.code));
 
             let html = `<table><thead><tr>
@@ -622,7 +614,7 @@
 
         function saveStock() {
             const code=document.getElementById('inCode').value.trim(), name=document.getElementById('inName').value.trim();
-            if(!code) { alert("请先搜索"); return; }
+            if(!code) { alert("请先搜索或输入代码"); return; }
             
             const profit = parseFloat(document.getElementById('inProfit').value)||0;
             const lowPE = parseFloat(document.getElementById('inLowPE').value)||0;
@@ -672,10 +664,33 @@
             saveStorage(); clearInput(); updateTable();
         }
 
+        // ★★★ 修复后的搜索逻辑 ★★★
         function searchStockCode() { 
             const n=document.getElementById('inName').value.trim(); if(!n)return; 
             const sc=document.createElement('script'); 
-            window.handleSearch=function(d){ if(d?.QuotationCodeTable?.Data?.length){ const r=d.QuotationCodeTable.Data[0]; let s=r.MarketType=="1"?".SH":(r.MarketType=="2"?".SZ":".HK"); if(r.Code.length==6 && !r.MarketType) s=r.Code.startsWith('6')?".SH":".SZ"; document.getElementById('inCode').value=r.Code+s; document.getElementById('inName').value=r.Name; }else alert("未找到"); sc.remove(); };
+            window.handleSearch=function(d){ 
+                if(d?.QuotationCodeTable?.Data?.length){ 
+                    const r=d.QuotationCodeTable.Data[0];
+                    let finalCode = r.Code;
+                    
+                    // 逻辑优化：
+                    // 1. A股: 纯数字6位 (MarketType 1=沪, 2=深)
+                    if (/^\d{6}$/.test(r.Code)) {
+                        if (r.MarketType == "1" || r.Code.startsWith('6')) finalCode += ".SH";
+                        else finalCode += ".SZ";
+                    }
+                    // 2. 港股: 纯数字5位 (腾讯 00700)
+                    else if (/^\d{5}$/.test(r.Code)) {
+                        finalCode += ".HK";
+                    }
+                    // 3. 美股: 包含字母 (TSLA, AAPL)，不做后缀处理，后续系统会自动识别为美股 (105)
+                    // (无需操作，finalCode 保持 "TSLA")
+
+                    document.getElementById('inCode').value = finalCode; 
+                    document.getElementById('inName').value = r.Name; 
+                } else alert("未找到"); 
+                sc.remove(); 
+            };
             sc.src=`https://searchapi.eastmoney.com/api/suggest/get?input=${encodeURIComponent(n)}&type=14&token=D43BF722C8E33BD5D50F639205545E43&cb=handleSearch`; document.body.appendChild(sc);
         }
 
