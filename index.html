@@ -643,9 +643,11 @@
         function clearCurrentFilter() { delete columnFilters[document.getElementById('filter-col-key').value]; document.getElementById('filter-menu').style.display='none'; updateTable(); }
 
         function saveStock() {
-            const code=document.getElementById('inCode').value.trim(), name=document.getElementById('inName').value.trim();
+            const code=document.getElementById('inCode').value.trim();
+            const name=document.getElementById('inName').value.trim();
             if(!code) { alert("请先搜索或输入代码"); return; }
             
+            // 获取所有输入值
             const profit = parseFloat(document.getElementById('inProfit').value)||0;
             const lowPE = parseFloat(document.getElementById('inLowPE').value)||0;
             const highPE = parseFloat(document.getElementById('inHighPE').value)||0;
@@ -660,8 +662,11 @@
             let logContent = "";
 
             if(idx >= 0) {
+                // === 编辑模式 ===
                 const old = stocks[idx];
                 let changes = [];
+                
+                // 比较数值
                 if(old.profit !== profit) changes.push(`净利:${old.profit}→${profit}`);
                 if(old.lowPE !== lowPE) changes.push(`PE下:${old.lowPE}→${lowPE}`);
                 if(old.highPE !== highPE) changes.push(`PE上:${old.highPE}→${highPE}`);
@@ -669,38 +674,54 @@
                 if(old.lowPS !== lowPS) changes.push(`PS下:${old.lowPS}→${lowPS}`);
                 if(old.highPS !== highPS) changes.push(`PS上:${old.highPS}→${highPS}`);
                 
+                // 比较属性/赛道
+                if((old.tags||"") !== tags) changes.push(`属性:${old.tags||""}→${tags}`);
+                
+                // 比较名称
+                if((old.name||"") !== name) changes.push(`名称:${old.name}→${name}`);
+
                 if(changes.length > 0) logContent = changes.join('; ');
                 else logContent = "无参数变更";
             } else {
-                // 首次录入逻辑优化：记录所有非空初始值
+                // === 首次录入模式 ===
+                // 记录所有填写的参数
                 let details = ["首次创建"];
+                if(name) details.push(`名称:${name}`);
+                if(tags) details.push(`属性:${tags}`);
+                
                 if(profit) details.push(`净利:${profit}`);
                 if(lowPE) details.push(`PE下:${lowPE}`);
                 if(highPE) details.push(`PE上:${highPE}`);
+                
                 if(revenue) details.push(`营收:${revenue}`);
                 if(lowPS) details.push(`PS下:${lowPS}`);
                 if(highPS) details.push(`PS上:${highPS}`);
-                if(tags) details.push(`属性:${tags}`);
+
                 logContent = details.join('; ');
             }
 
+            // 构建对象
             const s = { 
                 code, name, tags, profit, lowPE, highPE, revenue, lowPS, highPS, 
                 logs: (idx >= 0 ? stocks[idx].logs : []) 
             };
 
+            // 如果有变更内容 或者 有备注，则生成日志
             if(logContent !== "无参数变更" || note) {
                 s.logs.unshift({
                     date: now,
                     content: logContent,
-                    note: note
+                    note: note // 备注在这里保存，显示时会用 log-note 样式高亮
                 });
             }
 
+            // 保存
             if(idx >= 0) stocks[idx] = s;
             else stocks.push(s);
             
-            saveStorage(); clearInput(); updateTable();
+            saveStorage(); 
+            clearInput(); 
+            updateTable();
         }
 
         // ★★★ 修复后的搜索逻辑 ★★★
