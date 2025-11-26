@@ -39,7 +39,6 @@
         label { font-size: 12px; color: #666; display: block; margin-bottom: 4px; font-weight: 500; }
         input { padding: 6px 8px; border: 1px solid #ced4da; border-radius: 4px; width: 100px; transition: border-color 0.2s; }
         input:focus { border-color: #007bff; outline: none; }
-        /* 移除了 input[readonly] 的灰色样式，因为代码框现在可编辑了 */
         
         button { padding: 6px 12px; cursor: pointer; border: none; border-radius: 4px; font-weight: 600; transition: all 0.2s; font-size: 12px; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
         button:hover { opacity: 0.85; transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
@@ -282,24 +281,55 @@
                         </div>
                     </div>
                 </div>
+                
+                <!-- 修改后的布局区域 Start -->
                 <div class="input-row">
-                    <div class="group-box" style="border-left: 4px solid #28a745; flex:1;">
+                    <div class="group-box" style="border-left: 4px solid #28a745; flex:1; flex-direction: column;">
                         <div style="width:100%; margin-bottom:5px;"><span style="color:#28a745; font-weight:bold;">① PE 估值 (净利)</span></div>
-                        <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                            <div><label>净利(亿)</label><input type="number" id="inProfit" step="0.1"></div>
-                            <div><label>PE下限</label><input type="number" id="inLowPE"></div>
-                            <div><label>PE上限</label><input type="number" id="inHighPE"></div>
+                        
+                        <!-- 第一行：净利 -->
+                        <div style="display:flex; gap:5px; align-items:center; margin-bottom: 5px;">
+                            <label style="width:60px">净利(亿)</label>
+                            <input type="number" id="inProfit" step="0.1" style="flex:1">
+                        </div>
+
+                        <!-- 第二行：下限/上限 -->
+                        <div style="display:flex; gap:10px;">
+                            <div style="display:flex; gap:5px; align-items:center; flex:1;">
+                                <label style="white-space:nowrap">PE下限</label>
+                                <input type="number" id="inLowPE" style="width: 100%; flex:1;">
+                            </div>
+                            <div style="display:flex; gap:5px; align-items:center; flex:1;">
+                                <label style="white-space:nowrap">PE上限</label>
+                                <input type="number" id="inHighPE" style="width: 100%; flex:1;">
+                            </div>
                         </div>
                     </div>
-                    <div class="group-box" style="border-left: 4px solid #fd7e14; flex:1;">
+                    
+                    <div class="group-box" style="border-left: 4px solid #fd7e14; flex:1; flex-direction: column;">
                         <div style="width:100%; margin-bottom:5px;"><span style="color:#fd7e14; font-weight:bold;">② PS 估值 (营收)</span></div>
-                        <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                            <div><label>营收(亿)</label><input type="number" id="inRevenue" step="0.1"></div>
-                            <div><label>PS下限</label><input type="number" id="inLowPS" step="0.1"></div>
-                            <div><label>PS上限</label><input type="number" id="inHighPS" step="0.1"></div>
+                        
+                        <!-- 第一行：营收 -->
+                        <div style="display:flex; gap:5px; align-items:center; margin-bottom: 5px;">
+                            <label style="width:60px">营收(亿)</label>
+                            <input type="number" id="inRevenue" step="0.1" style="flex:1">
+                        </div>
+
+                        <!-- 第二行：下限/上限 -->
+                        <div style="display:flex; gap:10px;">
+                            <div style="display:flex; gap:5px; align-items:center; flex:1;">
+                                <label style="white-space:nowrap">PS下限</label>
+                                <input type="number" id="inLowPS" step="0.1" style="width: 100%; flex:1;">
+                            </div>
+                            <div style="display:flex; gap:5px; align-items:center; flex:1;">
+                                <label style="white-space:nowrap">PS上限</label>
+                                <input type="number" id="inHighPS" step="0.1" style="width: 100%; flex:1;">
+                            </div>
                         </div>
                     </div>
                 </div>
+                <!-- 修改后的布局区域 End -->
+
                 <div style="text-align:center; margin-top:10px;">
                     <button class="btn-add" onclick="saveStock()" id="btn-save-text" style="padding:8px 30px; font-size:14px;">💾 保存</button>
                     <button onclick="clearInput()" style="padding:8px 20px; margin-left:10px;">重置</button>
