@@ -2197,5 +2197,23 @@
         "note": ""
       }
     ]
+  },
+  {
+    "code": "GOOG",
+    "name": "谷歌-C",
+    "tags": "AI 美股",
+    "profit": 1300,
+    "lowPE": 24,
+    "highPE": 40,
+    "revenue": 3800,
+    "lowPS": 7.5,
+    "highPS": 13,
+    "logs": [
+      {
+        "date": "2025/11/26 11:36:25",
+        "content": "首次录入",
+        "note": ""
+      }
+    ]
   }
 ]
