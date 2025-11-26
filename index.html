@@ -672,7 +672,16 @@
                 if(changes.length > 0) logContent = changes.join('; ');
                 else logContent = "无参数变更";
             } else {
-                logContent = "首次录入";
+                // 首次录入逻辑优化：记录所有非空初始值
+                let details = ["首次创建"];
+                if(profit) details.push(`净利:${profit}`);
+                if(lowPE) details.push(`PE下:${lowPE}`);
+                if(highPE) details.push(`PE上:${highPE}`);
+                if(revenue) details.push(`营收:${revenue}`);
+                if(lowPS) details.push(`PS下:${lowPS}`);
+                if(highPS) details.push(`PS上:${highPS}`);
+                if(tags) details.push(`属性:${tags}`);
+                logContent = details.join('; ');
             }
 
             const s = { 
