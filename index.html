@@ -49,7 +49,22 @@
         .btn-log { background-color: #6f42c1; color: white; }
         .btn-delete { background-color: #dc3545; color: white; }
         .btn-cloud-pull { background-color: #6610f2; color: white; } 
-        .btn-cloud-push { background-color: #fd7e14; color: white; }
+        /* 修改：基础样式，未保存样式在下方定义 */
+        .btn-cloud-push { background-color: #fd7e14; color: white; transition: all 0.3s ease; }
+        
+        /* ★★★ 新增：未保存时的提醒样式 ★★★ */
+        .btn-cloud-push.unsaved { 
+            background-color: #dc3545 !important; 
+            font-weight: 800;
+            box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+            animation: pulse-red 2s infinite;
+        }
+        @keyframes pulse-red {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(220, 53, 69, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+        }
+
         .btn-control { background-color: #6c757d; color: white; }
         .btn-toggle { background-color: #f8f9fa; border: 1px solid #ccc; color: #333; margin-right: 10px; }
         .btn-find { background-color: #fd7e14; color: white; }
@@ -266,7 +281,6 @@
                         </div>
                         <div style="display:flex; gap:5px; width:100%; align-items:center; margin-top:5px;">
                             <label style="width:40px">代码</label>
-                            <!-- 修复：移除 readonly 属性，移除灰色背景，允许用户手动修改 -->
                             <input type="text" id="inCode" placeholder="自动/手输" style="flex:1;">
                         </div>
                     </div>
@@ -282,18 +296,13 @@
                     </div>
                 </div>
                 
-                <!-- 修改后的布局区域 Start -->
                 <div class="input-row">
                     <div class="group-box" style="border-left: 4px solid #28a745; flex:1; flex-direction: column;">
                         <div style="width:100%; margin-bottom:5px;"><span style="color:#28a745; font-weight:bold;">① PE 估值 (净利)</span></div>
-                        
-                        <!-- 第一行：净利 -->
                         <div style="display:flex; gap:5px; align-items:center; margin-bottom: 5px;">
                             <label style="width:60px">净利(亿)</label>
                             <input type="number" id="inProfit" step="0.1" style="flex:1">
                         </div>
-
-                        <!-- 第二行：下限/上限 -->
                         <div style="display:flex; gap:10px;">
                             <div style="display:flex; gap:5px; align-items:center; flex:1;">
                                 <label style="white-space:nowrap">PE下限</label>
@@ -308,14 +317,10 @@
                     
                     <div class="group-box" style="border-left: 4px solid #fd7e14; flex:1; flex-direction: column;">
                         <div style="width:100%; margin-bottom:5px;"><span style="color:#fd7e14; font-weight:bold;">② PS 估值 (营收)</span></div>
-                        
-                        <!-- 第一行：营收 -->
                         <div style="display:flex; gap:5px; align-items:center; margin-bottom: 5px;">
                             <label style="width:60px">营收(亿)</label>
                             <input type="number" id="inRevenue" step="0.1" style="flex:1">
                         </div>
-
-                        <!-- 第二行：下限/上限 -->
                         <div style="display:flex; gap:10px;">
                             <div style="display:flex; gap:5px; align-items:center; flex:1;">
                                 <label style="white-space:nowrap">PS下限</label>
@@ -328,7 +333,6 @@
                         </div>
                     </div>
                 </div>
-                <!-- 修改后的布局区域 End -->
 
                 <div style="text-align:center; margin-top:10px;">
                     <button class="btn-add" onclick="saveStock()" id="btn-save-text" style="padding:8px 30px; font-size:14px;">💾 保存</button>
@@ -354,7 +358,6 @@
         let viewSettings = { showCode: true, showTags: true, showUpdate: true, showAction: true, showCap: false, ...JSON.parse(localStorage.getItem('viewSettings')) };
         let intervalId = null, sortState = { key: 'pe_up', dir: 'desc' }, isPanelOpen = false, pendingDeleteCode = null, pendingLogIndex = null, pendingSyncData = null, cachedMarketData = {}, selectedCodes = new Set(), columnFilters = {}, onlySelectedMode = false;
         
-        // 并发
         let historyCache = {}; 
         let fetchQueue = [];
         let activeRequests = 0;
@@ -379,6 +382,24 @@
         function utf8_to_b64(str) { return window.btoa(unescape(encodeURIComponent(str))); }
         function b64_to_utf8(str) { return decodeURIComponent(escape(window.atob(str))); }
 
+        // ★★★ 新增：管理未保存状态 ★★★
+        function checkUnsavedStatus() {
+            const dirty = localStorage.getItem('hasUnsavedChanges') === 'true';
+            const btn = document.querySelector('.btn-cloud-push');
+            if (dirty) {
+                btn.classList.add('unsaved');
+                btn.innerHTML = "🔴 待同步 GitHub";
+            } else {
+                btn.classList.remove('unsaved');
+                btn.innerHTML = "🚀 保存到 GitHub";
+            }
+        }
+
+        function setLocalChanges(isDirty) {
+            localStorage.setItem('hasUnsavedChanges', isDirty);
+            checkUnsavedStatus();
+        }
+
         async function uploadToGithub() {
             let token = localStorage.getItem("github_token"); if (!token) { token = prompt("🔑 请输入 GitHub Token:"); if (!token) return; localStorage.setItem("github_token", token); }
             const btn = document.querySelector('.btn-cloud-push'); const origin = btn.innerText; btn.innerText = "⏳..."; btn.disabled = true;
@@ -387,8 +408,11 @@
                 const get = await fetch(url, { headers: { "Authorization": `token ${token}` }, cache: "no-store" });
                 let sha = null; if (get.ok) sha = (await get.json()).sha;
                 const put = await fetch(url, { method: "PUT", headers: { "Authorization": `token ${token}` }, body: JSON.stringify({ message: "Update", content: utf8_to_b64(JSON.stringify(stocks,null,2)), sha }) });
-                if (put.ok) alert("✅ 成功"); else throw new Error((await put.json()).message);
-            } catch (e) { if(e.message.includes("401")){alert("Token失效");localStorage.removeItem("github_token");}else alert("❌ "+e.message); } finally { btn.innerText = origin; btn.disabled = false; }
+                if (put.ok) {
+                    alert("✅ 成功"); 
+                    setLocalChanges(false); // ★★★ 修改：上传成功，清除脏标记
+                } else throw new Error((await put.json()).message);
+            } catch (e) { if(e.message.includes("401")){alert("Token失效");localStorage.removeItem("github_token");}else alert("❌ "+e.message); } finally { btn.innerText = origin; btn.disabled = false; checkUnsavedStatus(); }
         }
 
         async function syncFromGithub() {
@@ -410,7 +434,7 @@
                 }
             } catch (e) { alert("❌ "+e.message); } finally { btn.innerText = origin; btn.disabled = false; }
         }
-        function confirmSyncAction() { if(pendingSyncData){stocks=pendingSyncData;saveStorage();updateTable();closeSyncModal();} }
+        function confirmSyncAction() { if(pendingSyncData){stocks=pendingSyncData;saveStorage();setLocalChanges(false);updateTable();closeSyncModal();} } // ★★★ 修改：同步后清除脏标记
         function closeSyncModal() { document.getElementById('sync-modal').style.display='none';pendingSyncData=null; }
 
         function getSecid(c) { return (c.endsWith('.SH')?`1.${c.slice(0,-3)}`:c.endsWith('.SZ')?`0.${c.slice(0,-3)}`:c.endsWith('.HK')?`116.${c.slice(0,-3)}`:`105.${c}`); }
@@ -647,7 +671,6 @@
             const name=document.getElementById('inName').value.trim();
             if(!code) { alert("请先搜索或输入代码"); return; }
             
-            // 获取所有输入值
             const profit = parseFloat(document.getElementById('inProfit').value)||0;
             const lowPE = parseFloat(document.getElementById('inLowPE').value)||0;
             const highPE = parseFloat(document.getElementById('inHighPE').value)||0;
@@ -662,37 +685,26 @@
             let logContent = "";
 
             if(idx >= 0) {
-                // === 编辑模式 ===
                 const old = stocks[idx];
                 let changes = [];
-                
-                // 比较数值
                 if(old.profit !== profit) changes.push(`净利:${old.profit}→${profit}`);
                 if(old.lowPE !== lowPE) changes.push(`PE下:${old.lowPE}→${lowPE}`);
                 if(old.highPE !== highPE) changes.push(`PE上:${old.highPE}→${highPE}`);
                 if(old.revenue !== revenue) changes.push(`营收:${old.revenue}→${revenue}`);
                 if(old.lowPS !== lowPS) changes.push(`PS下:${old.lowPS}→${lowPS}`);
                 if(old.highPS !== highPS) changes.push(`PS上:${old.highPS}→${highPS}`);
-                
-                // 比较属性/赛道
                 if((old.tags||"") !== tags) changes.push(`属性:${old.tags||""}→${tags}`);
-                
-                // 比较名称
                 if((old.name||"") !== name) changes.push(`名称:${old.name}→${name}`);
 
                 if(changes.length > 0) logContent = changes.join('; ');
                 else logContent = "无参数变更";
             } else {
-                // === 首次录入模式 ===
-                // 记录所有填写的参数
                 let details = ["首次创建"];
                 if(name) details.push(`名称:${name}`);
                 if(tags) details.push(`属性:${tags}`);
-                
                 if(profit) details.push(`净利:${profit}`);
                 if(lowPE) details.push(`PE下:${lowPE}`);
                 if(highPE) details.push(`PE上:${highPE}`);
-                
                 if(revenue) details.push(`营收:${revenue}`);
                 if(lowPS) details.push(`PS下:${lowPS}`);
                 if(highPS) details.push(`PS上:${highPS}`);
@@ -700,31 +712,28 @@
                 logContent = details.join('; ');
             }
 
-            // 构建对象
             const s = { 
                 code, name, tags, profit, lowPE, highPE, revenue, lowPS, highPS, 
                 logs: (idx >= 0 ? stocks[idx].logs : []) 
             };
 
-            // 如果有变更内容 或者 有备注，则生成日志
             if(logContent !== "无参数变更" || note) {
                 s.logs.unshift({
                     date: now,
                     content: logContent,
-                    note: note // 备注在这里保存，显示时会用 log-note 样式高亮
+                    note: note 
                 });
             }
 
-            // 保存
             if(idx >= 0) stocks[idx] = s;
             else stocks.push(s);
             
             saveStorage(); 
+            setLocalChanges(true); // ★★★ 修改：本地保存后，标记为dirty
             clearInput(); 
             updateTable();
         }
 
-        // ★★★ 修复后的搜索逻辑 ★★★
         function searchStockCode() { 
             const n=document.getElementById('inName').value.trim(); if(!n)return; 
             const sc=document.createElement('script'); 
@@ -732,20 +741,13 @@
                 if(d?.QuotationCodeTable?.Data?.length){ 
                     const r=d.QuotationCodeTable.Data[0];
                     let finalCode = r.Code;
-                    
-                    // 逻辑优化：
-                    // 1. A股: 纯数字6位 (MarketType 1=沪, 2=深)
                     if (/^\d{6}$/.test(r.Code)) {
                         if (r.MarketType == "1" || r.Code.startsWith('6')) finalCode += ".SH";
                         else finalCode += ".SZ";
                     }
-                    // 2. 港股: 纯数字5位 (腾讯 00700)
                     else if (/^\d{5}$/.test(r.Code)) {
                         finalCode += ".HK";
                     }
-                    // 3. 美股: 包含字母 (TSLA, AAPL)，不做后缀处理，后续系统会自动识别为美股 (105)
-                    // (无需操作，finalCode 保持 "TSLA")
-
                     document.getElementById('inCode').value = finalCode; 
                     document.getElementById('inName').value = r.Name; 
                 } else alert("未找到"); 
@@ -770,7 +772,30 @@
         function showLogs(c) { const s=stocks.find(i=>i.code===c); document.getElementById('modal-body').innerHTML=s?.logs?.map((l,i)=>`<div class="log-entry"><div style="display:flex;justify-content:space-between"><span class="log-time">${l.date}</span><span class="log-del-btn" onclick="deleteLog('${c}',${i})">🗑️</span></div><div style="font-weight:600">${l.content}</div>${l.note?`<div class="log-note">${l.note}</div>`:''}</div>`).join('')||'无'; document.getElementById('log-modal').style.display='flex'; }
         function deleteLog(c,i) { pendingDeleteCode=c; pendingLogIndex=i; document.getElementById('delete-msg').innerText="删日志?"; document.getElementById('delete-modal').style.display='flex'; }
         window.openDeleteModal=function(c){pendingDeleteCode=c;pendingLogIndex=null;document.getElementById('delete-msg').innerText=`删 ${c}?`;document.getElementById('delete-modal').style.display='flex';};
-        window.confirmDeleteAction=function(){if(pendingDeleteCode){if(pendingLogIndex!==null){const s=stocks.find(i=>i.code===pendingDeleteCode);if(s&&s.logs){s.logs.splice(pendingLogIndex,1);saveStorage();showLogs(pendingDeleteCode);updateTable();}pendingLogIndex=null;}else{stocks=stocks.filter(s=>s.code!==pendingDeleteCode);selectedCodes.delete(pendingDeleteCode);saveStorage();updateTable();}}closeDeleteModal();};
+        
+        window.confirmDeleteAction=function(){
+            if(pendingDeleteCode){
+                if(pendingLogIndex!==null){
+                    const s=stocks.find(i=>i.code===pendingDeleteCode);
+                    if(s&&s.logs){
+                        s.logs.splice(pendingLogIndex,1);
+                        saveStorage();
+                        setLocalChanges(true); // ★★★ 修改：删除日志标记dirty
+                        showLogs(pendingDeleteCode);
+                        updateTable();
+                    }
+                    pendingLogIndex=null;
+                }else{
+                    stocks=stocks.filter(s=>s.code!==pendingDeleteCode);
+                    selectedCodes.delete(pendingDeleteCode);
+                    saveStorage();
+                    setLocalChanges(true); // ★★★ 修改：删除股票标记dirty
+                    updateTable();
+                }
+            }
+            closeDeleteModal();
+        };
+        
         window.closeDeleteModal=function(){document.getElementById('delete-modal').style.display='none';}; function closeLogModal(){document.getElementById('log-modal').style.display='none';}
         function startRealtime() { if(!intervalId) { updateTable(); intervalId=setInterval(updateTable, 5000); } }
         function stopRealtime() { clearInterval(intervalId); intervalId=null; document.getElementById('status-msg').innerText="⏸ 暂停"; }
@@ -778,7 +803,17 @@
         function getSortIcon(k) { return sortState.key!==k?'':(sortState.dir==='desc'?'⬇':'⬆'); }
         function saveStorage() { localStorage.setItem('valuationStocks', JSON.stringify(stocks)); }
         window.onclick=function(e){if(e.target.className==='modal')e.target.style.display='none';}
+        
+        // ★★★ 新增：防止意外关闭
+        window.addEventListener('beforeunload', (e) => {
+            if (localStorage.getItem('hasUnsavedChanges') === 'true') {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        });
 
+        // 初始化
+        checkUnsavedStatus();
         updateTable();
     </script>
 </body>
