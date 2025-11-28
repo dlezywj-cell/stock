@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>股票估值系统 (多市场修复版)</title>
+    <title>股票估值系统 (自动同步版)</title>
     <style>
         /* === 全局重置 === */
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft YaHei', sans-serif; padding: 20px; max-width: 1700px; margin: 0 auto; background-color: #f4f6f9; font-size: 13px; color: #333; height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; }
@@ -815,6 +815,39 @@
         // 初始化
         checkUnsavedStatus();
         updateTable();
+        
+        // ★★★ 自动同步逻辑 ★★★
+        (async function autoSyncFromGithub() {
+            const token = localStorage.getItem("github_token");
+            if (!token) return; // 无 Token 不自动同步
+            
+            document.getElementById('status-msg').innerText = "☁️ 同步中...";
+            try {
+                const url = `https://api.github.com/repos/${GITHUB_CONFIG.username}/${GITHUB_CONFIG.repo}/contents/${GITHUB_CONFIG.path}`;
+                const headers = { "Accept": "application/vnd.github.v3+json", "Authorization": `token ${token}` };
+                let res = await fetch(url, { headers, cache: "no-store" });
+                
+                let data;
+                if (res.ok) data = JSON.parse(b64_to_utf8((await res.json()).content));
+                else {
+                    const raw = await fetch(`https://raw.githubusercontent.com/${GITHUB_CONFIG.username}/${GITHUB_CONFIG.repo}/${GITHUB_CONFIG.branch}/${GITHUB_CONFIG.path}?t=${Date.now()}`); 
+                    if(!raw.ok) throw new Error("Fetch failed"); 
+                    data = await raw.json();
+                }
+
+                if (Array.isArray(data)) {
+                    stocks = data;
+                    saveStorage();
+                    setLocalChanges(false); // 同步成功，视为已保存
+                    updateTable(); // 刷新表格
+                    document.getElementById('status-msg').innerText = "✅ 已同步";
+                    setTimeout(() => document.getElementById('status-msg').innerText = "", 3000);
+                }
+            } catch (e) {
+                console.log("Auto sync failed:", e);
+                document.getElementById('status-msg').innerText = "⚠️ 同步失败";
+            }
+        })();
     </script>
 </body>
 </html>
