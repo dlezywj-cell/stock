@@ -120,8 +120,13 @@
     "highPE": 70,
     "revenue": 460,
     "lowPS": 14,
-    "highPS": 27,
+    "highPS": 28,
     "logs": [
+      {
+        "date": "2025/11/28 12:36:39",
+        "content": "PS上:27→28",
+        "note": ""
+      },
       {
         "date": "2025/11/22 15:41:05",
         "content": "无参数变更",
