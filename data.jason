@@ -2114,12 +2114,17 @@
     "name": "工业富联",
     "tags": "果链 AI",
     "profit": 335,
-    "lowPE": 15,
-    "highPE": 25,
+    "lowPE": 35,
+    "highPE": 70,
     "revenue": 9200,
     "lowPS": 0.6,
     "highPS": 1,
     "logs": [
+      {
+        "date": "2025/12/02 16:51:50",
+        "content": "PE下:15→35; PE上:25→70",
+        "note": "工业富联估值对标光模块"
+      },
       {
         "date": "2025/11/20 21:10:41",
         "content": "属性:→果链 AI",
