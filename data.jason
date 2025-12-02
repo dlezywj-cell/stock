@@ -383,13 +383,19 @@
   {
     "code": "301029.SZ",
     "name": "怡合达",
-    "profit": 5.6,
+    "tags": "",
+    "profit": 5.3,
     "lowPE": 28,
     "highPE": 40,
     "revenue": 30,
     "lowPS": 5,
     "highPS": 7,
     "logs": [
+      {
+        "date": "2025/12/02 10:59:50",
+        "content": "净利:5.6→5.3",
+        "note": ""
+      },
       {
         "date": "2025/11/20 11:31:28",
         "content": "首次创建",
