@@ -1305,10 +1305,15 @@
     "profit": 33,
     "lowPE": 13,
     "highPE": 25,
-    "revenue": 0,
-    "lowPS": 0,
-    "highPS": 0,
+    "revenue": 130,
+    "lowPS": 4,
+    "highPS": 6,
     "logs": [
+      {
+        "date": "2025/12/03 09:41:00",
+        "content": "营收:0→130; PS下:0→4; PS上:0→6",
+        "note": ""
+      },
       {
         "date": "2025/12/03 09:38:11",
         "content": "净利:43→33",
