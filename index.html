@@ -3,346 +3,282 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>智能实时表格</title>
+    <title>实时表格</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; background-color: #f9f9f9; }
-        
-        /* 表格样式 */
-        table { border-collapse: collapse; width: 100%; margin-top: 10px; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        th, td { border: 1px solid #ddd; padding: 10px; text-align: center; font-size: 14px; }
-        th { background-color: #f2f2f2; color: #333; }
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: center; font-size: 14px; }
+        th { background-color: #f2f2f2; }
         td.hide, th.hide { display: none; }
-        td.stock-name { white-space: nowrap; font-weight: 600; }
-        
-        /* 按钮和控件区域 */
-        #controls { margin-bottom: 20px; padding: 10px; background: white; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        button { cursor: pointer; padding: 6px 12px; margin-right: 5px; background-color: #007bff; color: white; border: none; border-radius: 4px; }
-        button:hover { background-color: #0056b3; }
-        button.secondary { background-color: #6c757d; }
-        
-        /* 新增股票区域样式 */
-        #add-panel { margin-bottom: 20px; padding: 15px; background: #eef2f7; border: 1px solid #cbd5e0; border-radius: 5px; }
-        .input-group { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
-        .input-wrapper { position: relative; display: flex; flex-direction: column; }
-        .input-wrapper label { font-size: 12px; margin-bottom: 4px; color: #555; }
-        input { padding: 6px; border: 1px solid #ccc; border-radius: 4px; }
-        
-        /* 搜索建议下拉框 */
-        #search-results {
-            position: absolute; top: 100%; left: 0; right: 0;
-            background: white; border: 1px solid #ccc; max-height: 200px; overflow-y: auto;
-            z-index: 1000; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: none;
-        }
-        .search-item { padding: 8px; cursor: pointer; border-bottom: 1px solid #eee; font-size: 13px; display: flex; justify-content: space-between; }
-        .search-item:hover { background-color: #f0f8ff; }
-        .search-item .code { color: #888; font-size: 12px; }
-        .search-item .market { background: #eee; padding: 1px 4px; border-radius: 3px; font-size: 11px; margin-left: 5px; }
-
-        /* 预览信息 */
-        #preview-info { font-size: 12px; color: #007bff; margin-top: 5px; height: 1.2em; }
-        .red { color: #ff3333; }
-        .green { color: #00aa00; }
+        td.stock-name { white-space: nowrap; }
+        #controls { margin-top: 10px; }
+        #result { margin-top: 20px; }
+        .error { color: red; font-weight: bold; }
     </style>
 </head>
 <body>
-    <h2>🚀 智能股票实时监控</h2>
-    
-    <!-- 新增股票面板 -->
-    <div id="add-panel">
-        <h3 style="margin-top:0; font-size: 16px;">➕ 添加新股票 (支持模糊搜索)</h3>
-        <div class="input-group">
-            <div class="input-wrapper" style="width: 250px;">
-                <label>股票名称/代码 (如: 台积电 / baba)</label>
-                <input type="text" id="stock-search" placeholder="输入名称搜索..." autocomplete="off">
-                <div id="search-results"></div>
-            </div>
-            
-            <div class="input-wrapper" style="width: 100px;">
-                <label>下限市值(亿)</label>
-                <input type="number" id="new-low" placeholder="下限">
-            </div>
-            
-            <div class="input-wrapper" style="width: 100px;">
-                <label>上限市值(亿)</label>
-                <input type="number" id="new-up" placeholder="上限">
-            </div>
-            
-            <button onclick="confirmAddStock()" style="height: 30px; align-self: flex-end;">添加至列表</button>
-        </div>
-        <div id="preview-info"></div>
-    </div>
-
-    <!-- 现有控制区 -->
+    <h2>实时表格:20251104</h2>
     <div id="controls">
-        <button onclick="startRealtime()">▶ 开始更新</button>
-        <button class="secondary" onclick="stopRealtime()">⏹ 停止</button>
-        <button class="secondary" onclick="toggleCodeColumn()">显示/隐藏代码</button>
-        <button class="secondary" onclick="filterStocks()">筛选 (潜力股)</button>
-        <button class="secondary" onclick="sortByChange()">按涨跌排序</button>
+        <button onclick="startRealtime()">开始实时更新</button>
+        <button onclick="stopRealtime()">停止</button>
+        <button onclick="toggleCodeColumn()">显示/隐藏 股票代码</button>
+        <button onclick="filterStocks()">筛选股票</button>
+        <button onclick="sortByChange()">按涨跌幅排序</button>
     </div>
+    <div id="result"></div>
+code
+Code
+<script>
+    let intervalId = null;
+    let showCode = false;
+    let isFiltered = false;
+    let sortByChangePercent = false;
 
-    <div id="result">表格初始化中...</div>
+    const stocks = [
+      { code: "9896.HK", name: "名创优品", lowLimit: 460, upLimit: 920 },
+      { code: "1810.HK", name: "小米集团-W", lowLimit: 13800, upLimit: 20700 },
+      { code: "601933.SH", name: "永辉超市", lowLimit: 350, upLimit: 700 },
+      { code: "2020.HK", name: "安踏体育", lowLimit: 2794, upLimit: 3775 },
+      { code: "002602.SZ", name: "st华通", lowLimit: 1100, upLimit: 2200 },
+      { code: "002384.SZ", name: "东山精密", lowLimit: 936, upLimit: 1872 },
+      { code: "300502.SZ", name: "新易盛", lowLimit: 3000, upLimit: 5000 },
+      { code: "301061.SZ", name: "匠心家居", lowLimit: 190, upLimit: 285 },
+      { code: "002222.SZ", name: "福晶科技", lowLimit: 165, upLimit: 297 },
+      { code: "002484.SZ", name: "江海股份", lowLimit: 200, upLimit: 342 },
+      { code: "9985.HK", name: "卫龙美味", lowLimit: 263.5, upLimit: 387.5 },
+      { code: "002558.SZ", name: "巨人网络", lowLimit: 480, upLimit: 960 },
+      { code: "002648.SZ", name: "卫星化学", lowLimit: 410, upLimit: 819 },
+      { code: "688169.SH", name: "石头科技", lowLimit: 396, upLimit: 540 },
+      { code: "600563.SH", name: "法拉电子", lowLimit: 232, upLimit: 348 },
+      { code: "300777.SZ", name: "中简科技", lowLimit: 120, upLimit: 180 },
+      { code: "0388.HK", name: "香港交易所", lowLimit: 4900, upLimit: 7000 },
+      { code: "688200.SH", name: "华峰测控", lowLimit: 208, upLimit: 325 },
+      { code: "000858.SZ", name: "五粮液", lowLimit: 4550, upLimit: 5915 },
+      { code: "300627.SZ", name: "华测导航", lowLimit: 228, upLimit: 319.2 },
+      { code: "300783.SZ", name: "三只松鼠", lowLimit: 84, upLimit: 120 },
+      { code: "300866.SZ", name: "安克创新", lowLimit: 630, upLimit: 787.5 },
+      { code: "000333.SZ", name: "美的集团", lowLimit: 5500, upLimit: 7350 },
+      { code: "689009.SH", name: "九号公司-WD", lowLimit: 440, upLimit: 540 },
+      { code: "301029.SZ", name: "怡合达", lowLimit: 156.8, upLimit: 224 },
+      { code: "600438.SH", name: "通威股份", lowLimit: 850, upLimit: 1400 },
+      { code: "688362.SH", name: "甬矽电子", lowLimit: 122, upLimit: 162 },
+      { code: "603596.SH", name: "伯特利", lowLimit: 269.8, upLimit: 383.4 },
+      { code: "300124.SZ", name: "汇川技术", lowLimit: 1600, upLimit: 2500 },
+      { code: "002472.SZ", name: "双环传动", lowLimit: 304.8, upLimit: 444.5 },
+      { code: "601233.SH", name: "桐昆股份", lowLimit: 126, upLimit: 420 },
+      { code: "002920.SZ", name: "德赛西威", lowLimit: 560, upLimit: 840 },
+      { code: "688052.SH", name: "纳芯微", lowLimit: 255.00, upLimit: 285.00 },
+      { code: "603486.SH", name: "科沃斯", lowLimit: 360, upLimit: 607.5 },
+      { code: "000425.SZ", name: "徐工机械", lowLimit: 930, upLimit: 1500 },
+      { code: "603129.SH", name: "春风动力", lowLimit: 353.4, upLimit: 465 },
+      { code: "688208.SH", name: "道通科技", lowLimit: 238.5, upLimit: 300 },
+      { code: "688037.SH", name: "芯源微", lowLimit: 160, upLimit: 280 },
+      { code: "002138.SZ", name: "顺络电子", lowLimit: 255.5, upLimit: 365 },
+      { code: "000651.SZ", name: "格力电器", lowLimit: 2000, upLimit: 2600 },
+      { code: "605499.SH", name: "东鹏饮料", lowLimit: 1449, upLimit: 1656 },
+      { code: "603501.SH", name: "豪威集团", lowLimit: 1525, upLimit: 1830 },
+      { code: "002202.SZ", name: "金风科技", lowLimit: 480, upLimit: 800 },
+      { code: "601799.SH", name: "星宇股份", lowLimit: 320, upLimit: 432 },
+      { code: "002475.SZ", name: "立讯精密", lowLimit: 3663, upLimit: 5328 },
+      { code: "600519.SH", name: "贵州茅台", lowLimit: 17860, upLimit: 20680 },
+      { code: "603766.SH", name: "隆鑫通用", lowLimit: 246.05, upLimit: 333 },
+      { code: "002444.SZ", name: "巨星科技", lowLimit: 324, upLimit: 432 },
+      { code: "300433.SZ", name: "蓝思科技", lowLimit: 1360, upLimit: 1785 },
+      { code: "600031.SH", name: "三一重工", lowLimit: 1625, upLimit: 2258 },
+      { code: "600276.SH", name: "恒瑞医药", lowLimit: 3400, upLimit: 4760 },
+      { code: "MPWR", name: "MPWR", lowLimit: 270, upLimit: 540 },
+      { code: "603005.SH", name: "晶方科技", lowLimit: 165, upLimit: 210 },
+      { code: "300442.SZ", name: "润泽科技", lowLimit: 650, upLimit: 950 },
+      { code: "002847.SZ", name: "盐津铺子", lowLimit: 127, upLimit: 222.25 },
+      { code: "002126.SZ", name: "银轮股份", lowLimit: 231, upLimit: 346.5 },
+      { code: "000400.SZ", name: "许继电气", lowLimit: 187, upLimit: 297.5 },
+      { code: "601689.SH", name: "拓普集团", lowLimit: 1050.00, upLimit: 1400 },
+      { code: "002938.SZ", name: "鹏鼎控股", lowLimit: 660, upLimit: 1320 },
+      { code: "002594.SZ", name: "比亚迪", lowLimit: 8200, upLimit: 9840 },
+      { code: "688111.SH", name: "金山办公", lowLimit: 1200, upLimit: 1800 },
+      { code: "688411.SH", name: "海博思创", lowLimit: 360, upLimit: 540 },
+      { code: "601127.SH", name: "赛力斯", lowLimit: 2160, upLimit: 2700 },
+      { code: "688981.SH", name: "中芯国际", lowLimit: 6800, upLimit: 10200 },
+      { code: "688361.SH", name: "中科飞测", lowLimit: 262.5, upLimit: 420 },
+      { code: "603228.SH", name: "景旺电子", lowLimit: 400, upLimit: 800 },
+      { code: "002595.SZ", name: "豪迈科技", lowLimit: 440, upLimit: 550 },
+      { code: "688518.SH", name: "联赢激光", lowLimit: 44.2, upLimit: 88.4 },
+      { code: "600584.SH", name: "长电科技", lowLimit: 504, upLimit: 720 },
+      { code: "600114.SH", name: "东睦股份", lowLimit: 122, upLimit: 186 },
+      { code: "002371.SZ", name: "北方华创", lowLimit: 2145, upLimit: 2925 },
+      { code: "DDOG", name: "datadog", lowLimit: 459, upLimit: 578 },
+      { code: "0700.HK", name: "腾讯控股", lowLimit: 45100, upLimit: 57400 },
+      { code: "300308.SZ", name: "中际旭创", lowLimit: 3150, upLimit: 5250 },
+      { code: "603997.SH", name: "继峰股份", lowLimit: 135, upLimit: 176 },
+      { code: "600426.SH", name: "华鲁恒升", lowLimit: 342, upLimit: 540 },
+      { code: "300750.SZ", name: "宁德时代", lowLimit: 12240, upLimit: 17000 },
+      { code: "002050.SZ", name: "三花智控", lowLimit: 990, upLimit: 1980 },
+      { code: "301656.SZ", name: "联合动力", lowLimit: 323, upLimit: 645 },
+      { code: "300476.SZ", name: "胜宏科技", lowLimit: 1200, upLimit: 2400 },
+      { code: "301345.SZ", name: "涛涛车业", lowLimit: 135, upLimit: 225 },
+      { code: "688305.SH", name: "科德数控", lowLimit: 50.4, upLimit: 77 },
+      { code: "688019.SH", name: "安集科技", lowLimit: 200, upLimit: 300 },
+      { code: "605117.SH", name: "德业股份", lowLimit: 442.00, upLimit: 612 },
+      { code: "688072.SH", name: "拓荆科技", lowLimit: 430, upLimit: 700 },
+      { code: "002600.SZ", name: "领益智造", lowLimit: 625, upLimit: 925 },
+      { code: "300693.SZ", name: "盛弘股份", lowLimit: 74, upLimit: 111 },
+      { code: "300274.SZ", name: "阳光电源", lowLimit: 1885, upLimit: 3190 },
+      { code: "002028.SZ", name: "思源电气", lowLimit: 604.5, upLimit: 780 },
+      { code: "603179.SH", name: "新泉股份", lowLimit: 211.2, upLimit: 290.4 },
+      { code: "601336.SH", name: "新华保险", lowLimit: 1100, upLimit: 1500 },
+      { code: "002518.SZ", name: "科士达", lowLimit: 110, upLimit: 180 },
+      { code: "603986.SH", name: "兆易创新", lowLimit: 760, upLimit: 1045 },
+      { code: "002837.SZ", name: "英维克", lowLimit: 260, upLimit: 455 },
+      { code: "688698.SH", name: "伟创电气", lowLimit: 80, upLimit: 120 },
+      { code: "601138.SH", name: "工业富联", lowLimit: 5025, upLimit: 8375 },
+      { code: "001309.SZ", name: "德明利", lowLimit: 216, upLimit: 272 }
+    ];
 
-    <script>
-        let intervalId = null;
-        let showCode = true;
-        let isFiltered = false;
-        let sortByChangePercent = false;
-
-        // 初始列表 (示例)
-        const stocks = [
-          { code: "9896.HK", name: "名创优品", lowLimit: 460, upLimit: 920 },
-          { code: "BABA.N", name: "阿里巴巴", lowLimit: 1500, upLimit: 3000 }, // 测试美股
-          { code: "600519.SH", name: "贵州茅台", lowLimit: 17860, upLimit: 20680 }
-        ];
-
-        // 1. 核心: Secid 生成逻辑 (包含美股区分)
-        function getSecid(stockCode) {
-            let prefix, scode;
-            // A股
-            if (stockCode.endsWith('.SH')) { prefix = '1'; scode = stockCode.replace('.SH', ''); }
-            else if (stockCode.endsWith('.SZ')) { prefix = '0'; scode = stockCode.replace('.SZ', ''); }
-            else if (stockCode.endsWith('.BJ')) { prefix = '0'; scode = stockCode.replace('.BJ', ''); }
-            // 港股
-            else if (stockCode.endsWith('.HK')) { prefix = '116'; scode = stockCode.replace('.HK', '').padStart(5, '0'); }
-            // 美股 (核心区分逻辑)
-            else if (stockCode.endsWith('.N')) { prefix = '106'; scode = stockCode.replace('.N', ''); } // 纽交所
-            else if (stockCode.endsWith('.O')) { prefix = '105'; scode = stockCode.replace('.O', ''); } // 纳斯达克
-            else if (stockCode.endsWith('.A')) { prefix = '107'; scode = stockCode.replace('.A', ''); } // 美交所
-            else { 
-                // 默认兜底
-                prefix = '105'; scode = stockCode; 
-            }
-            return `${prefix}.${scode}`;
+    // 获取 secid
+    function getSecid(stockCode) {
+        let prefix, scode;
+        if (stockCode.endsWith('.SH')) {
+            prefix = '1';
+            scode = stockCode.replace('.SH', '');
+        } else if (stockCode.endsWith('.SZ')) {
+            prefix = '0';
+            scode = stockCode.replace('.SZ', '');
+        } else if (stockCode.endsWith('.HK')) {
+            prefix = '116';
+            scode = stockCode.replace('.HK', '').padStart(5, '0');
+        } else {
+            // 假设美股 NASDAQ
+            prefix = '105';
+            scode = stockCode;
         }
+        return `${prefix}.${scode}`;
+    }
 
-        // 2. 数据获取 (保持不变)
-        async function fetchStockData(stockCode) {
-            const secid = getSecid(stockCode);
-            const url = `https://push2.eastmoney.com/api/qt/stock/get?secid=${secid}&fields=f43,f60,f116,f58`; 
-            // f116=总市值, f58=名称(用于校验)
-            try {
-                const response = await fetch(url);
-                const data = await response.json();
-                if (!data || !data.data) return null;
-                
-                // 提取市值 (自动处理不同市场单位)
-                // 东方财富接口返回的美股 f116 是美元原值，A股是人民币原值。这里统一除以 1亿
-                const currentMarketCap = parseFloat(data.data.f116) / 100000000; 
-                
-                let changePercent = 0;
-                let currentPrice = 0;
-                
-                if (data.data.f43 && data.data.f60) {
-                    currentPrice = parseFloat(data.data.f43) / (stockCode.includes('.HK') || stockCode.includes('.SH') || stockCode.includes('.SZ') ? 100 : 100); 
-                    // 注意：东方财富 A股/港股 价格通常是放大100倍返回的，美股通常也是，但有时有差异，这里暂按100处理通用情况
-                    // 更严谨的做法是看 f59 (小数点位数)，但简单版先这样
-                    currentPrice = parseFloat(data.data.f43) / Math.pow(10, data.data.f59 || 2);
-                    
-                    const yesterdayClose = parseFloat(data.data.f60) / Math.pow(10, data.data.f59 || 2);
-                    changePercent = ((currentPrice - yesterdayClose) / yesterdayClose * 100).toFixed(2);
-                }
-                return { currentMarketCap, changePercent, currentPrice, realName: data.data.f58 };
-            } catch (err) {
-                console.error("Data Fetch Error:", err);
-                return null;
+    // 获取单只股票数据（统一使用东方财富 API）
+    async function fetchStockData(stockCode) {
+        const secid = getSecid(stockCode);
+        if (!secid) return null;
+        const url = `https://push2.eastmoney.com/api/qt/stock/get?secid=${secid}`;
+        try {
+            const response = await fetch(url);
+            const data = await response.json();
+            if (!data || !data.data || typeof data.data.f116 === "undefined") return null;
+            const currentMarketCap = parseFloat(data.data.f116) / 1e8; // 亿元（保持原单位）
+            let changePercent = null;
+            if (data.data.f43 && data.data.f60) {
+                const currentPrice = parseFloat(data.data.f43) / 100;
+                const yesterdayClose = parseFloat(data.data.f60) / 100;
+                changePercent = ((currentPrice - yesterdayClose) / yesterdayClose * 100).toFixed(2);
             }
+            return { currentMarketCap, changePercent };
+        } catch (err) {
+            console.error(`东方财富请求错误 (${stockCode}):`, err);
+            return null;
         }
+    }
 
-        // 3. 搜索功能 (新功能)
-        const searchInput = document.getElementById('stock-search');
-        const resultsBox = document.getElementById('search-results');
-        let selectedStock = null; // 暂存用户选中的股票
+    // 更新表格
+    async function updateTable() {
+        const resultDiv = document.getElementById('result');
+        const stockData = await Promise.all(stocks.map(async stock => {
+            const marketData = await fetchStockData(stock.code);
+            if (!marketData) return null;
+            const { currentMarketCap, changePercent } = marketData;
+            const upSpace = ((stock.upLimit - currentMarketCap) / currentMarketCap * 100).toFixed(2);
+            const downSpace = ((stock.lowLimit / currentMarketCap - 1) * 100).toFixed(2);
+            return { ...stock, currentMarketCap, upSpace, downSpace, changePercent };
+        }));
 
-        searchInput.addEventListener('input', debounce(async (e) => {
-            const val = e.target.value.trim();
-            if (val.length < 1) { resultsBox.style.display = 'none'; return; }
-            
-            // 调用东方财富搜索接口
-            const url = `https://searchapi.eastmoney.com/api/suggest/get?input=${encodeURIComponent(val)}&type=14&token=D43BF722C8E33BD5D065963F9441232D&count=6`;
-            
-            try {
-                const res = await fetch(url);
-                const json = await res.json();
-                if(json.QuotationCodeTable && json.QuotationCodeTable.Data) {
-                    renderSearchResults(json.QuotationCodeTable.Data);
-                }
-            } catch(err) { console.error(err); }
-        }, 300));
+        let validData = stockData.filter(item => item !== null);
 
-        function renderSearchResults(data) {
-            resultsBox.innerHTML = '';
-            if(!data || data.length === 0) { resultsBox.style.display = 'none'; return; }
-            
-            data.forEach(item => {
-                // 识别市场并生成后缀
-                const marketType = item.MarketType; // 1=SH, 2=SZ, 116=HK, 105=NASDAQ, 106=NYSE
-                let suffix = '';
-                let marketName = '';
-                
-                if(marketType == '1') { suffix = '.SH'; marketName = '沪A'; }
-                else if(marketType == '2') { suffix = '.SZ'; marketName = '深A'; }
-                else if(marketType == '116') { suffix = '.HK'; marketName = '港股'; }
-                else if(marketType == '105') { suffix = '.O'; marketName = '美股(Nas)'; }
-                else if(marketType == '106') { suffix = '.N'; marketName = '美股(NYSE)'; }
-                else if(marketType == '107') { suffix = '.A'; marketName = '美股(Amex)'; }
-                else { return; } // 不支持的市场跳过
-
-                const cleanCode = item.Code;
-                const finalCode = cleanCode + suffix;
-                
-                const div = document.createElement('div');
-                div.className = 'search-item';
-                div.innerHTML = `
-                    <span>${item.Name} <span class="code">${cleanCode}</span></span>
-                    <span class="market">${marketName}</span>
-                `;
-                div.onclick = () => selectSearchResult(finalCode, item.Name);
-                resultsBox.appendChild(div);
+        if (isFiltered) {
+            validData = validData.filter(stock => {
+                const downSpaceValue = parseFloat(stock.downSpace);
+                const upSpaceValue = parseFloat(stock.upSpace);
+                const ratio = Math.abs(upSpaceValue / downSpaceValue);
+                return downSpaceValue > -20 && ratio > 2;
             });
-            resultsBox.style.display = 'block';
         }
 
-        async function selectSearchResult(code, name) {
-            searchInput.value = `${name} (${code})`;
-            resultsBox.style.display = 'none';
-            selectedStock = { code, name };
-            
-            // 选中后，立即获取一次数据以预览市值
-            document.getElementById('preview-info').innerHTML = '正在获取当前数据...';
-            const data = await fetchStockData(code);
-            if(data) {
-                const currency = code.includes('.HK') ? '港币' : (code.includes('.SH')||code.includes('.SZ') ? '人民币' : '美元');
-                document.getElementById('preview-info').innerHTML = 
-                    `当前市值: <b>${data.currentMarketCap.toFixed(2)}</b> 亿${currency} | 现价: ${data.currentPrice}`;
-                // 自动填入当前市值作为参考
-                // document.getElementById('new-low').value = Math.floor(data.currentMarketCap * 0.8);
-                // document.getElementById('new-up').value = Math.floor(data.currentMarketCap * 1.2);
-            } else {
-                document.getElementById('preview-info').innerHTML = '获取数据失败，请检查代码';
-            }
-        }
-
-        function confirmAddStock() {
-            if(!selectedStock) { alert('请先搜索并选择一支股票'); return; }
-            const low = parseFloat(document.getElementById('new-low').value);
-            const up = parseFloat(document.getElementById('new-up').value);
-            
-            if(isNaN(low) || isNaN(up)) { alert('请输入有效的市值上下限'); return; }
-
-            // 添加到列表
-            stocks.push({
-                code: selectedStock.code,
-                name: selectedStock.name,
-                lowLimit: low,
-                upLimit: up
+        if (sortByChangePercent) {
+            validData.sort((a, b) => {
+                const aChange = a.changePercent === null ? -Infinity : parseFloat(a.changePercent);
+                const bChange = b.changePercent === null ? -Infinity : parseFloat(b.changePercent);
+                return bChange - aChange;
             });
-            
-            // 清空输入
-            searchInput.value = '';
-            document.getElementById('new-low').value = '';
-            document.getElementById('new-up').value = '';
-            document.getElementById('preview-info').innerHTML = '';
-            selectedStock = null;
-            
-            // 刷新表格
-            updateTable();
-            alert('添加成功！');
+        } else {
+            validData.sort((a, b) => parseFloat(b.upSpace) - parseFloat(a.upSpace));
         }
 
-        // 防抖函数
-        function debounce(func, wait) {
-            let timeout;
-            return function(...args) {
-                clearTimeout(timeout);
-                timeout = setTimeout(() => func.apply(this, args), wait);
-            };
-        }
+        let tableHTML = `
+            <table>
+                <tr>
+                    <th class="${showCode ? '' : 'hide'}">股票代码</th>
+                    <th>股票名称</th>
+                    <th>涨跌幅 (%)</th>
+                    <th>当前市值 (亿元)</th>
+                    <th>向上空间 (%)</th>
+                    <th>向下空间 (%)</th>
+                </tr>`;
 
-        // 4. 表格渲染 (逻辑保持大体不变)
-        async function updateTable() {
-            const resultDiv = document.getElementById('result');
-            // 如果正在添加股票，不要清空整个内容，只更新表格部分（优化体验可选，这里简单重绘）
-            
-            const stockData = await Promise.all(stocks.map(async stock => {
-                const marketData = await fetchStockData(stock.code);
-                if (!marketData) return null;
-                const { currentMarketCap, changePercent } = marketData;
-                const upSpace = ((stock.upLimit - currentMarketCap) / currentMarketCap * 100).toFixed(2);
-                const downSpace = ((stock.lowLimit / currentMarketCap - 1) * 100).toFixed(2);
-                return { ...stock, currentMarketCap, upSpace, downSpace, changePercent };
-            }));
-
-            let validData = stockData.filter(item => item !== null);
-
-            // 筛选逻辑
-            if (isFiltered) {
-                validData = validData.filter(stock => {
-                    const downSpaceValue = parseFloat(stock.downSpace);
-                    const upSpaceValue = parseFloat(stock.upSpace);
-                    // 逻辑：下跌空间小(大于-20%) 且 盈亏比高(向上空间是向下空间的2倍以上)
-                    // 注意：downSpace通常是负数，所以用绝对值比较
-                    return downSpaceValue > -20 && upSpaceValue > Math.abs(downSpaceValue * 2);
-                });
-            }
-
-            // 排序逻辑
-            if (sortByChangePercent) {
-                validData.sort((a, b) => parseFloat(b.changePercent) - parseFloat(a.changePercent));
-            } else {
-                // 默认按向上空间排序
-                validData.sort((a, b) => parseFloat(b.upSpace) - parseFloat(a.upSpace));
-            }
-
-            let tableHTML = `
-                <table>
-                    <thead>
-                        <tr>
-                            <th class="${showCode ? '' : 'hide'}">代码</th>
-                            <th>名称</th>
-                            <th>涨跌幅</th>
-                            <th>市值 (亿)</th>
-                            <th>向上空间</th>
-                            <th>向下空间</th>
-                        </tr>
-                    </thead>
-                    <tbody>`;
-
+        if (validData.length === 0) {
+            tableHTML += '<tr><td colspan="6">没有符合条件的股票</td></tr>';
+        } else {
             validData.forEach(stock => {
-                const chg = parseFloat(stock.changePercent);
-                const color = chg > 0 ? '#ff3333' : (chg < 0 ? '#00aa00' : '#333');
-                const weight = Math.abs(chg) > 3 ? 'bold' : 'normal';
-                
+                let color = 'black';
+                let fontWeight = 'normal';
+                let changeDisplay = '-';
+                if (stock.changePercent !== null) {
+                    changeDisplay = stock.changePercent;
+                    color = parseFloat(stock.changePercent) >= 0 ? 'red' : 'green';
+                    if (Math.abs(parseFloat(stock.changePercent)) >= 5) fontWeight = 'bold';
+                }
                 tableHTML += `
                     <tr>
-                        <td class="${showCode ? '' : 'hide'}" style="color:#666; font-size:12px;">${stock.code}</td>
+                        <td class="${showCode ? '' : 'hide'}">${stock.code}</td>
                         <td class="stock-name">${stock.name}</td>
-                        <td style="color:${color}; font-weight:${weight};">${stock.changePercent}%</td>
+                        <td style="color:${color}; font-weight:${fontWeight};">${changeDisplay}</td>
                         <td>${stock.currentMarketCap.toFixed(2)}</td>
-                        <td style="color:${parseFloat(stock.upSpace)>0?'#d20':'#333'}">${stock.upSpace}%</td>
-                        <td style="color:#666">${stock.downSpace}%</td>
+                        <td>${stock.upSpace}</td>
+                        <td>${stock.downSpace}</td>
                     </tr>`;
             });
-            tableHTML += '</tbody></table>';
-            
-            resultDiv.innerHTML = tableHTML;
         }
 
-        function toggleCodeColumn() { showCode = !showCode; updateTable(); }
-        function filterStocks() { isFiltered = !isFiltered; updateTable(); }
-        function sortByChange() { sortByChangePercent = !sortByChangePercent; updateTable(); }
-        function startRealtime() { if(!intervalId) { updateTable(); intervalId = setInterval(updateTable, 3000); } }
-        function stopRealtime() { if(intervalId) { clearInterval(intervalId); intervalId = null; } }
+        tableHTML += '</table>';
+        resultDiv.innerHTML = tableHTML;
+    }
 
-        // 点击页面其他地方关闭搜索框
-        document.addEventListener('click', (e) => {
-            if (!document.getElementById('add-panel').contains(e.target)) {
-                resultsBox.style.display = 'none';
-            }
-        });
-
-        // 启动时刷新一次
+    function toggleCodeColumn() {
+        showCode = !showCode;
         updateTable();
-    </script>
+    }
+
+    function filterStocks() {
+        isFiltered = !isFiltered;
+        updateTable();
+        document.getElementById('result').innerHTML += `<br><strong>${isFiltered ? '已应用筛选条件' : '已取消筛选'}</strong>`;
+    }
+
+    function sortByChange() {
+        sortByChangePercent = !sortByChangePercent;
+        updateTable();
+        document.getElementById('result').innerHTML += `<br><strong>${sortByChangePercent ? '已按涨跌幅排序' : '已恢复默认排序'}</strong>`;
+    }
+
+    function startRealtime() {
+        if (intervalId) return;
+        updateTable();
+        intervalId = setInterval(updateTable, 2000);
+    }
+
+    function stopRealtime() {
+        if (intervalId) {
+            clearInterval(intervalId);
+            intervalId = null;
+            document.getElementById('result').innerHTML += '<br><strong>已停止实时更新</strong>';
+        }
+    }
+</script>
 </body>
 </html>
