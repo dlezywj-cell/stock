@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>股票估值系统 (自动同步版)</title>
+    <title>股票估值系统 (全能搜索版)</title>
     <style>
         /* === 全局重置 === */
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft YaHei', sans-serif; padding: 20px; max-width: 1700px; margin: 0 auto; background-color: #f4f6f9; font-size: 13px; color: #333; height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; }
@@ -434,18 +434,19 @@
         function confirmSyncAction() { if(pendingSyncData){stocks=pendingSyncData;saveStorage();setLocalChanges(false);updateTable();closeSyncModal();} } 
         function closeSyncModal() { document.getElementById('sync-modal').style.display='none';pendingSyncData=null; }
 
-        // ★★★ 修改：支持识别自带市场前缀的代码 (如 106.TSM)
+        // ★★★ 核心修改：支持识别自带市场前缀的代码 (如 106.TSM)，确保API请求正确
         function getSecid(c) { 
             if (c.endsWith('.SH')) return `1.${c.slice(0,-3)}`;
             if (c.endsWith('.SZ')) return `0.${c.slice(0,-3)}`;
             if (c.endsWith('.HK')) return `116.${c.slice(0,-3)}`;
             // 如果代码本身包含 . 且前面是数字(市场ID)，则直接返回
+            // 例如：106.TSM -> 106.TSM (对应纽交所)
             if (c.includes('.') && !isNaN(parseInt(c.split('.')[0]))) return c;
-            // 默认回退
+            // 默认回退 (如果没有前缀，默认105纳斯达克)
             return `105.${c}`; 
         }
         
-        // ★★★ 修改：支持转换美股市场ID (105/106/107) 以适配 Yahoo
+        // ★★★ 核心修改：Yahoo不需要106.前缀，只认TSM
         function toYahooSymbol(emCode) {
             const parts = emCode.split('.');
             const mkt = parts[0], code = parts[1];
@@ -539,8 +540,17 @@
             
             let missingHistory = 0;
             const data = stocks.map(s => {
-                // 处理代码，支持带点的情况(106.TSM -> TSM)
-                const rawCode = s.code.includes('.') && !s.code.endsWith('SH') && !s.code.endsWith('SZ') && !s.code.endsWith('HK') ? s.code.split('.')[1] : s.code.split('.')[0];
+                // ★★★ 核心修改：数据匹配逻辑
+                // 如果是 106.TSM，API返回的数据key是 "TSM"，所以我们要提取小数点后的部分
+                let rawCode;
+                if (s.code.includes('.') && !s.code.endsWith('.SH') && !s.code.endsWith('.SZ') && !s.code.endsWith('.HK')) {
+                     // 针对美股 (106.TSM -> TSM)
+                     rawCode = s.code.split('.')[1];
+                } else {
+                     // 针对A股/港股 (600519.SH -> 600519)
+                     rawCode = s.code.split('.')[0];
+                }
+
                 const m = cachedMarketData[rawCode] || {};
                 
                 let cap=0, chg="0.00", valid=false, currentPrice=0;
@@ -748,11 +758,12 @@
             const n=document.getElementById('inName').value.trim(); if(!n)return; 
             const sc=document.createElement('script'); 
             
-            // ★★★ 修改：美股搜索回调处理，兼容105/106/107
+            // ★★★ 核心修改：智能识别美股交易所 (105=NASDAQ, 106=NYSE, 107=AMEX)
             window.handleSearch=function(d){ 
                 if(d?.QuotationCodeTable?.Data?.length){ 
                     const r=d.QuotationCodeTable.Data[0];
                     let finalCode = r.Code;
+                    
                     // A股
                     if (r.MarketType == "1" || (r.Code.length===6 && r.Code.startsWith('6'))) {
                         finalCode += ".SH";
@@ -764,7 +775,8 @@
                     else if (/^\d{5}$/.test(r.Code)) {
                         finalCode += ".HK";
                     }
-                    // 美股：如果是105, 106, 107，直接加上市场前缀
+                    // ★★★ 美股核心逻辑：如果接口返回 105/106/107，直接加到代码前面
+                    // 例如台积电 (106)，变成 106.TSM
                     else if (r.MarketType == "105" || r.MarketType == "106" || r.MarketType == "107") {
                         finalCode = r.MarketType + "." + r.Code;
                     }
