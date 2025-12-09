@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>股票估值系统 (全能搜索版)</title>
+    <title>股票估值系统 (完美修复版)</title>
     <style>
         /* === 全局重置 === */
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft YaHei', sans-serif; padding: 20px; max-width: 1700px; margin: 0 auto; background-color: #f4f6f9; font-size: 13px; color: #333; height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; }
@@ -434,7 +434,7 @@
         function confirmSyncAction() { if(pendingSyncData){stocks=pendingSyncData;saveStorage();setLocalChanges(false);updateTable();closeSyncModal();} } 
         function closeSyncModal() { document.getElementById('sync-modal').style.display='none';pendingSyncData=null; }
 
-        // ★★★ 核心修改：支持识别自带市场前缀的代码 (如 106.TSM)，确保API请求正确
+        // ★★★ 核心修复：支持识别自带市场前缀的代码 (如 106.TSM)，确保API请求正确
         function getSecid(c) { 
             if (c.endsWith('.SH')) return `1.${c.slice(0,-3)}`;
             if (c.endsWith('.SZ')) return `0.${c.slice(0,-3)}`;
@@ -446,7 +446,7 @@
             return `105.${c}`; 
         }
         
-        // ★★★ 核心修改：Yahoo不需要106.前缀，只认TSM
+        // ★★★ 核心修复：Yahoo不需要106.前缀，只认TSM
         function toYahooSymbol(emCode) {
             const parts = emCode.split('.');
             const mkt = parts[0], code = parts[1];
@@ -540,7 +540,7 @@
             
             let missingHistory = 0;
             const data = stocks.map(s => {
-                // ★★★ 核心修改：数据匹配逻辑
+                // ★★★ 核心修复：数据匹配逻辑
                 // 如果是 106.TSM，API返回的数据key是 "TSM"，所以我们要提取小数点后的部分
                 let rawCode;
                 if (s.code.includes('.') && !s.code.endsWith('.SH') && !s.code.endsWith('.SZ') && !s.code.endsWith('.HK')) {
@@ -758,7 +758,7 @@
             const n=document.getElementById('inName').value.trim(); if(!n)return; 
             const sc=document.createElement('script'); 
             
-            // ★★★ 核心修改：智能识别美股交易所 (105=NASDAQ, 106=NYSE, 107=AMEX)
+            // ★★★ 核心修复：智能识别美股交易所 (105=NASDAQ, 106=NYSE, 107=AMEX)
             window.handleSearch=function(d){ 
                 if(d?.QuotationCodeTable?.Data?.length){ 
                     const r=d.QuotationCodeTable.Data[0];
