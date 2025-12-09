@@ -49,10 +49,8 @@
         .btn-log { background-color: #6f42c1; color: white; }
         .btn-delete { background-color: #dc3545; color: white; }
         .btn-cloud-pull { background-color: #6610f2; color: white; } 
-        /* 修改：基础样式，未保存样式在下方定义 */
-        .btn-cloud-push { background-color: #fd7e14; color: white; transition: all 0.3s ease; }
         
-        /* ★★★ 新增：未保存时的提醒样式 ★★★ */
+        .btn-cloud-push { background-color: #fd7e14; color: white; transition: all 0.3s ease; }
         .btn-cloud-push.unsaved { 
             background-color: #dc3545 !important; 
             font-weight: 800;
@@ -169,7 +167,7 @@
         .sync-info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f1f1; }
         .sync-val.new { color: #28a745; } .sync-val.old { color: #dc3545; }
 
-        /* ★★★ 移动端深度优化 ★★★ */
+        /* === 移动端深度优化 === */
         @media (max-width: 768px) {
             body { padding: 10px; }
             #mobile-nav { display: flex; }
@@ -382,7 +380,6 @@
         function utf8_to_b64(str) { return window.btoa(unescape(encodeURIComponent(str))); }
         function b64_to_utf8(str) { return decodeURIComponent(escape(window.atob(str))); }
 
-        // ★★★ 新增：管理未保存状态 ★★★
         function checkUnsavedStatus() {
             const dirty = localStorage.getItem('hasUnsavedChanges') === 'true';
             const btn = document.querySelector('.btn-cloud-push');
@@ -410,7 +407,7 @@
                 const put = await fetch(url, { method: "PUT", headers: { "Authorization": `token ${token}` }, body: JSON.stringify({ message: "Update", content: utf8_to_b64(JSON.stringify(stocks,null,2)), sha }) });
                 if (put.ok) {
                     alert("✅ 成功"); 
-                    setLocalChanges(false); // ★★★ 修改：上传成功，清除脏标记
+                    setLocalChanges(false); 
                 } else throw new Error((await put.json()).message);
             } catch (e) { if(e.message.includes("401")){alert("Token失效");localStorage.removeItem("github_token");}else alert("❌ "+e.message); } finally { btn.innerText = origin; btn.disabled = false; checkUnsavedStatus(); }
         }
@@ -434,18 +431,28 @@
                 }
             } catch (e) { alert("❌ "+e.message); } finally { btn.innerText = origin; btn.disabled = false; }
         }
-        function confirmSyncAction() { if(pendingSyncData){stocks=pendingSyncData;saveStorage();setLocalChanges(false);updateTable();closeSyncModal();} } // ★★★ 修改：同步后清除脏标记
+        function confirmSyncAction() { if(pendingSyncData){stocks=pendingSyncData;saveStorage();setLocalChanges(false);updateTable();closeSyncModal();} } 
         function closeSyncModal() { document.getElementById('sync-modal').style.display='none';pendingSyncData=null; }
 
-        function getSecid(c) { return (c.endsWith('.SH')?`1.${c.slice(0,-3)}`:c.endsWith('.SZ')?`0.${c.slice(0,-3)}`:c.endsWith('.HK')?`116.${c.slice(0,-3)}`:`105.${c}`); }
+        // ★★★ 修改：支持识别自带市场前缀的代码 (如 106.TSM)
+        function getSecid(c) { 
+            if (c.endsWith('.SH')) return `1.${c.slice(0,-3)}`;
+            if (c.endsWith('.SZ')) return `0.${c.slice(0,-3)}`;
+            if (c.endsWith('.HK')) return `116.${c.slice(0,-3)}`;
+            // 如果代码本身包含 . 且前面是数字(市场ID)，则直接返回
+            if (c.includes('.') && !isNaN(parseInt(c.split('.')[0]))) return c;
+            // 默认回退
+            return `105.${c}`; 
+        }
         
+        // ★★★ 修改：支持转换美股市场ID (105/106/107) 以适配 Yahoo
         function toYahooSymbol(emCode) {
             const parts = emCode.split('.');
             const mkt = parts[0], code = parts[1];
             if (mkt === '0') return code + '.SZ';
             if (mkt === '1') return code + '.SS';
             if (mkt === '116') { let n = parseInt(code,10); return n.toString().padStart(4,'0') + '.HK'; }
-            if (mkt === '105') return code;
+            if (mkt === '105' || mkt === '106' || mkt === '107') return code;
             return code;
         }
 
@@ -532,7 +539,10 @@
             
             let missingHistory = 0;
             const data = stocks.map(s => {
-                const m = cachedMarketData[s.code.split('.')[0]] || {};
+                // 处理代码，支持带点的情况(106.TSM -> TSM)
+                const rawCode = s.code.includes('.') && !s.code.endsWith('SH') && !s.code.endsWith('SZ') && !s.code.endsWith('HK') ? s.code.split('.')[1] : s.code.split('.')[0];
+                const m = cachedMarketData[rawCode] || {};
+                
                 let cap=0, chg="0.00", valid=false, currentPrice=0;
                 if (m.f12) { 
                     let p=parseFloat(m.f2)||parseFloat(m.f18), mc=parseFloat(m.f20); 
@@ -729,7 +739,7 @@
             else stocks.push(s);
             
             saveStorage(); 
-            setLocalChanges(true); // ★★★ 修改：本地保存后，标记为dirty
+            setLocalChanges(true); 
             clearInput(); 
             updateTable();
         }
@@ -737,22 +747,34 @@
         function searchStockCode() { 
             const n=document.getElementById('inName').value.trim(); if(!n)return; 
             const sc=document.createElement('script'); 
+            
+            // ★★★ 修改：美股搜索回调处理，兼容105/106/107
             window.handleSearch=function(d){ 
                 if(d?.QuotationCodeTable?.Data?.length){ 
                     const r=d.QuotationCodeTable.Data[0];
                     let finalCode = r.Code;
-                    if (/^\d{6}$/.test(r.Code)) {
-                        if (r.MarketType == "1" || r.Code.startsWith('6')) finalCode += ".SH";
-                        else finalCode += ".SZ";
+                    // A股
+                    if (r.MarketType == "1" || (r.Code.length===6 && r.Code.startsWith('6'))) {
+                        finalCode += ".SH";
+                    } 
+                    else if (r.MarketType == "2" || (r.Code.length===6 && (r.Code.startsWith('0') || r.Code.startsWith('3')))) {
+                        finalCode += ".SZ";
                     }
+                    // 港股
                     else if (/^\d{5}$/.test(r.Code)) {
                         finalCode += ".HK";
                     }
+                    // 美股：如果是105, 106, 107，直接加上市场前缀
+                    else if (r.MarketType == "105" || r.MarketType == "106" || r.MarketType == "107") {
+                        finalCode = r.MarketType + "." + r.Code;
+                    }
+                    
                     document.getElementById('inCode').value = finalCode; 
                     document.getElementById('inName').value = r.Name; 
                 } else alert("未找到"); 
                 sc.remove(); 
             };
+            
             sc.src=`https://searchapi.eastmoney.com/api/suggest/get?input=${encodeURIComponent(n)}&type=14&token=D43BF722C8E33BD5D50F639205545E43&cb=handleSearch`; document.body.appendChild(sc);
         }
 
@@ -780,7 +802,7 @@
                     if(s&&s.logs){
                         s.logs.splice(pendingLogIndex,1);
                         saveStorage();
-                        setLocalChanges(true); // ★★★ 修改：删除日志标记dirty
+                        setLocalChanges(true); 
                         showLogs(pendingDeleteCode);
                         updateTable();
                     }
@@ -789,7 +811,7 @@
                     stocks=stocks.filter(s=>s.code!==pendingDeleteCode);
                     selectedCodes.delete(pendingDeleteCode);
                     saveStorage();
-                    setLocalChanges(true); // ★★★ 修改：删除股票标记dirty
+                    setLocalChanges(true); 
                     updateTable();
                 }
             }
@@ -804,7 +826,6 @@
         function saveStorage() { localStorage.setItem('valuationStocks', JSON.stringify(stocks)); }
         window.onclick=function(e){if(e.target.className==='modal')e.target.style.display='none';}
         
-        // ★★★ 新增：防止意外关闭
         window.addEventListener('beforeunload', (e) => {
             if (localStorage.getItem('hasUnsavedChanges') === 'true') {
                 e.preventDefault();
@@ -812,14 +833,12 @@
             }
         });
 
-        // 初始化
         checkUnsavedStatus();
         updateTable();
         
-        // ★★★ 自动同步逻辑 ★★★
         (async function autoSyncFromGithub() {
             const token = localStorage.getItem("github_token");
-            if (!token) return; // 无 Token 不自动同步
+            if (!token) return; 
             
             document.getElementById('status-msg').innerText = "☁️ 同步中...";
             try {
@@ -838,8 +857,8 @@
                 if (Array.isArray(data)) {
                     stocks = data;
                     saveStorage();
-                    setLocalChanges(false); // 同步成功，视为已保存
-                    updateTable(); // 刷新表格
+                    setLocalChanges(false); 
+                    updateTable(); 
                     document.getElementById('status-msg').innerText = "✅ 已同步";
                     setTimeout(() => document.getElementById('status-msg').innerText = "", 3000);
                 }
