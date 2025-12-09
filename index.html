@@ -758,27 +758,33 @@
             const n=document.getElementById('inName').value.trim(); if(!n)return; 
             const sc=document.createElement('script'); 
             
-            // ★★★ 核心修复：智能识别美股交易所 (105=NASDAQ, 106=NYSE, 107=AMEX)
-            window.handleSearch=function(d){ 
-                if(d?.QuotationCodeTable?.Data?.length){ 
-                    const r=d.QuotationCodeTable.Data[0];
+            window.handleSearch = function(d) { 
+                if (d?.QuotationCodeTable?.Data?.length) { 
+                    const r = d.QuotationCodeTable.Data[0];
                     let finalCode = r.Code;
-                    
-                    // A股
-                    if (r.MarketType == "1" || (r.Code.length===6 && r.Code.startsWith('6'))) {
-                        finalCode += ".SH";
-                    } 
-                    else if (r.MarketType == "2" || (r.Code.length===6 && (r.Code.startsWith('0') || r.Code.startsWith('3')))) {
-                        finalCode += ".SZ";
+                    // 强制转为字符串，防止类型不匹配
+                    const mt = String(r.MarketType);
+
+                    // ★★★ 优先判断美股 (105=纳斯达克, 106=纽交所, 107=美交所)
+                    // 必须放在最前面，防止被后续逻辑误判
+                    if (mt === "105" || mt === "106" || mt === "107") {
+                        finalCode = mt + "." + r.Code;
                     }
-                    // 港股
-                    else if (/^\d{5}$/.test(r.Code)) {
+                    // 港股 (MarketType 116 或 5位数字)
+                    else if (mt === "116" || (r.Code.length === 5 && /^\d+$/.test(r.Code))) {
                         finalCode += ".HK";
                     }
-                    // ★★★ 美股核心逻辑：如果接口返回 105/106/107，直接加到代码前面
-                    // 例如台积电 (106)，变成 106.TSM
-                    else if (r.MarketType == "105" || r.MarketType == "106" || r.MarketType == "107") {
-                        finalCode = r.MarketType + "." + r.Code;
+                    // A股 - 上海 (MarketType 1 或 6开头6位数字)
+                    else if (mt === "1" || (r.Code.length === 6 && r.Code.startsWith('6'))) {
+                        finalCode += ".SH";
+                    } 
+                    // A股 - 深圳 (MarketType 2 或 0/3开头6位数字)
+                    else if (mt === "2" || (r.Code.length === 6 && (r.Code.startsWith('0') || r.Code.startsWith('3')))) {
+                        finalCode += ".SZ";
+                    }
+                    // 北交所 (MarketType 0 且 8/4开头)
+                    else if (mt === "0" && r.Code.length === 6 && (r.Code.startsWith('8') || r.Code.startsWith('4'))) {
+                        finalCode += ".BJ";
                     }
                     
                     document.getElementById('inCode').value = finalCode; 
