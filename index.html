@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>股票估值系统 (完美修复版)</title>
+    <title>股票估值系统 (强力搜索修复版)</title>
     <style>
         /* === 全局重置 === */
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft YaHei', sans-serif; padding: 20px; max-width: 1700px; margin: 0 auto; background-color: #f4f6f9; font-size: 13px; color: #333; height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; }
@@ -762,29 +762,40 @@
                 if (d?.QuotationCodeTable?.Data?.length) { 
                     const r = d.QuotationCodeTable.Data[0];
                     let finalCode = r.Code;
-                    // 强制转为字符串，防止类型不匹配
-                    const mt = String(r.MarketType);
-
-                    // ★★★ 优先判断美股 (105=纳斯达克, 106=纽交所, 107=美交所)
-                    // 必须放在最前面，防止被后续逻辑误判
-                    if (mt === "105" || mt === "106" || mt === "107") {
-                        finalCode = mt + "." + r.Code;
-                    }
-                    // 港股 (MarketType 116 或 5位数字)
-                    else if (mt === "116" || (r.Code.length === 5 && /^\d+$/.test(r.Code))) {
-                        finalCode += ".HK";
-                    }
-                    // A股 - 上海 (MarketType 1 或 6开头6位数字)
-                    else if (mt === "1" || (r.Code.length === 6 && r.Code.startsWith('6'))) {
-                        finalCode += ".SH";
+                    
+                    // 核心修复逻辑：优先查找带前缀的 ID 或 UnifiedCode 字段
+                    // 东方财富 API 在某些返回中会直接提供 "106.TSM" 这样的 ID
+                    if (r.QuoteID && r.QuoteID.includes('.') && r.QuoteID.endsWith(r.Code)) {
+                        finalCode = r.QuoteID;
                     } 
-                    // A股 - 深圳 (MarketType 2 或 0/3开头6位数字)
-                    else if (mt === "2" || (r.Code.length === 6 && (r.Code.startsWith('0') || r.Code.startsWith('3')))) {
-                        finalCode += ".SZ";
+                    else if (r.ID && r.ID.includes('.') && r.ID.endsWith(r.Code)) {
+                        finalCode = r.ID;
                     }
-                    // 北交所 (MarketType 0 且 8/4开头)
-                    else if (mt === "0" && r.Code.length === 6 && (r.Code.startsWith('8') || r.Code.startsWith('4'))) {
-                        finalCode += ".BJ";
+                    else if (r.UnifiedCode && r.UnifiedCode.includes('.') && r.UnifiedCode.endsWith(r.Code)) {
+                        finalCode = r.UnifiedCode;
+                    }
+                    else {
+                        // 降级逻辑：手动匹配 MarketType
+                        const mt = String(r.MarketType);
+                        if (mt === "105" || mt === "106" || mt === "107") {
+                            finalCode = mt + "." + r.Code;
+                        }
+                        // 港股
+                        else if (mt === "116" || (r.Code.length === 5 && /^\d+$/.test(r.Code))) {
+                            finalCode += ".HK";
+                        }
+                        // A股上海
+                        else if (mt === "1" || (r.Code.length === 6 && r.Code.startsWith('6'))) {
+                            finalCode += ".SH";
+                        } 
+                        // A股深圳
+                        else if (mt === "2" || (r.Code.length === 6 && (r.Code.startsWith('0') || r.Code.startsWith('3')))) {
+                            finalCode += ".SZ";
+                        }
+                        // 北交所
+                        else if (mt === "0" && r.Code.length === 6 && (r.Code.startsWith('8') || r.Code.startsWith('4'))) {
+                            finalCode += ".BJ";
+                        }
                     }
                     
                     document.getElementById('inCode').value = finalCode; 
