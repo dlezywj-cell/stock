@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>股票估值系统 (强力搜索修复版)</title>
+    <title>股票估值系统 (可配置版)</title>
     <style>
         /* === 全局重置 === */
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft YaHei', sans-serif; padding: 20px; max-width: 1700px; margin: 0 auto; background-color: #f4f6f9; font-size: 13px; color: #333; height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; }
@@ -64,6 +64,7 @@
         }
 
         .btn-control { background-color: #6c757d; color: white; }
+        .btn-settings { background-color: #343a40; color: white; } /* 新增设置按钮样式 */
         .btn-toggle { background-color: #f8f9fa; border: 1px solid #ccc; color: #333; margin-right: 10px; }
         .btn-find { background-color: #fd7e14; color: white; }
         .btn-view { background-color: #e9ecef; color: #adb5bd; border: 1px solid transparent; }
@@ -141,7 +142,7 @@
 
         /* 弹窗 */
         .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(2px); justify-content: center; align-items: center; }
-        #delete-modal { z-index: 2200; } #sync-modal { z-index: 2100; } #log-modal { z-index: 2000; }
+        #delete-modal { z-index: 2200; } #sync-modal { z-index: 2100; } #log-modal { z-index: 2000; } #settings-modal { z-index: 2300; }
         #filter-menu { display: none; position: absolute; background: white; border: 1px solid #ccc; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border-radius: 6px; padding: 12px; z-index: 3000; min-width: 200px; }
         
         /* 弹窗内容 */
@@ -166,6 +167,12 @@
         .log-del-btn:hover { opacity: 1; transform: scale(1.1); }
         .sync-info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f1f1; }
         .sync-val.new { color: #28a745; } .sync-val.old { color: #dc3545; }
+
+        /* 设置弹窗表单样式 */
+        .settings-form .form-group { margin-bottom: 15px; }
+        .settings-form label { display: block; margin-bottom: 5px; font-weight: bold; color: #555; }
+        .settings-form input { width: 100%; box-sizing: border-box; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
+        .settings-tip { font-size: 12px; color: #888; margin-top: 3px; }
 
         /* === 移动端深度优化 === */
         @media (max-width: 768px) {
@@ -239,6 +246,8 @@
                 <div class="divider"></div>
                 <button class="btn-control" onclick="startRealtime()">▶ 开启</button>
                 <button class="btn-control" onclick="stopRealtime()">⏹ 暂停</button>
+                <div class="divider"></div>
+                <button class="btn-settings" onclick="openSettingsModal()">⚙️ 设置</button> <!-- 新增设置按钮 -->
             </div>
         </div>
 
@@ -347,6 +356,43 @@
     <div id="delete-modal" class="modal"><div class="modal-content" style="text-align: center; padding-top: 30px;"><h3>⚠️ 确认删除？</h3><p id="delete-msg" style="color:#555; margin-bottom:30px;">...</p><div><button class="btn-confirm-del" onclick="confirmDeleteAction()">删除</button><button class="btn-cancel" onclick="closeDeleteModal()">取消</button></div></div></div>
     <div id="sync-modal" class="modal"><div class="modal-content"><span class="close-btn" onclick="closeSyncModal()">&times;</span><h3 style="margin-top:0; border-bottom:2px solid #eee; padding-bottom:15px;">☁️ 同步确认</h3><div style="padding: 10px 0;"><div class="sync-info-row"><span class="sync-label">云端:</span><span class="sync-val" id="sync-cloud-date">...</span></div><div class="sync-info-row"><span class="sync-label">本地:</span><span class="sync-val" id="sync-local-date">...</span></div><div class="sync-info-row"><span class="sync-label">数量:</span><span class="sync-val" id="sync-count">...</span></div></div><div style="text-align:right; margin-top:20px;"><button class="btn-cloud-pull" onclick="confirmSyncAction()" style="padding:8px 20px;">✅ 覆盖</button><button class="btn-cancel" onclick="closeSyncModal()" style="padding:8px 20px;">取消</button></div></div></div>
 
+    <!-- 新增：设置弹窗 -->
+    <div id="settings-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeSettingsModal()">&times;</span>
+            <h3 style="margin-top:0; border-bottom:2px solid #eee; padding-bottom:15px;">⚙️ GitHub 设置</h3>
+            <div class="settings-form">
+                <div class="form-group">
+                    <label>用户名 (Username)</label>
+                    <input type="text" id="cfg-username" placeholder="你的 GitHub 账号名">
+                    <div class="settings-tip">例如: zhangsan</div>
+                </div>
+                <div class="form-group">
+                    <label>仓库名 (Repository)</label>
+                    <input type="text" id="cfg-repo" placeholder="存放数据的仓库名">
+                    <div class="settings-tip">例如: stock</div>
+                </div>
+                <div class="form-group">
+                    <label>文件路径 (Path)</label>
+                    <input type="text" id="cfg-path" placeholder="仓库中的文件名" value="data.json">
+                    <div class="settings-tip">例如: data.json</div>
+                </div>
+                <div class="form-group">
+                    <label>分支 (Branch)</label>
+                    <input type="text" id="cfg-branch" placeholder="分支名" value="main">
+                </div>
+                <div class="form-group">
+                    <label>Token (密钥)</label>
+                    <input type="password" id="cfg-token" placeholder="ghp_xxxxxxxxxxxx...">
+                    <div class="settings-tip">请确保 Token 拥有 repo 权限</div>
+                </div>
+                <div style="text-align:center; margin-top:20px;">
+                    <button class="btn-add" onclick="saveSettings()" style="width:100%; padding:10px;">💾 保存配置</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         function getNowStr() { const d = new Date(); const pad = (n) => n.toString().padStart(2, '0'); return `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`; }
         function toggleMobileMenu(force) { const area = document.getElementById('top-area'), btn = document.getElementById('mobile-menu-btn'), isHidden = area.style.display === 'none' || getComputedStyle(area).display === 'none', show = force !== undefined ? force : isHidden; if (show) { area.style.display = 'block'; area.classList.add('show'); btn.innerText = '🔼 收起'; } else { area.style.display = 'none'; area.classList.remove('show'); btn.innerText = '⚙️ 菜单'; } }
@@ -376,7 +422,57 @@
         }
 
         updateViewButtons();
-        const GITHUB_CONFIG = { username: "dlezywj-cell", repo: "stock", path: "data.jason", branch: "main" };
+        
+        // ★★★ 新增：获取动态配置函数 ★★★
+        function getGbConfig() {
+            return {
+                username: localStorage.getItem('gh_username') || "",
+                repo: localStorage.getItem('gh_repo') || "",
+                path: localStorage.getItem('gh_path') || "data.json",
+                branch: localStorage.getItem('gh_branch') || "main",
+                token: localStorage.getItem('github_token') || ""
+            };
+        }
+
+        // ★★★ 新增：设置面板相关函数 ★★★
+        function openSettingsModal() {
+            const cfg = getGbConfig();
+            document.getElementById('cfg-username').value = cfg.username;
+            document.getElementById('cfg-repo').value = cfg.repo;
+            document.getElementById('cfg-path').value = cfg.path;
+            document.getElementById('cfg-branch').value = cfg.branch;
+            document.getElementById('cfg-token').value = cfg.token;
+            document.getElementById('settings-modal').style.display = 'flex';
+        }
+
+        function closeSettingsModal() {
+            document.getElementById('settings-modal').style.display = 'none';
+        }
+
+        function saveSettings() {
+            const user = document.getElementById('cfg-username').value.trim();
+            const repo = document.getElementById('cfg-repo').value.trim();
+            const path = document.getElementById('cfg-path').value.trim();
+            const branch = document.getElementById('cfg-branch').value.trim();
+            const token = document.getElementById('cfg-token').value.trim();
+
+            if(!user || !repo || !path || !token) {
+                alert("请填写完整信息");
+                return;
+            }
+
+            localStorage.setItem('gh_username', user);
+            localStorage.setItem('gh_repo', repo);
+            localStorage.setItem('gh_path', path);
+            localStorage.setItem('gh_branch', branch);
+            localStorage.setItem('github_token', token); // 保持token键名兼容
+
+            alert("✅ 配置已保存");
+            closeSettingsModal();
+            // 尝试自动同步一次
+            syncFromGithub();
+        }
+
         function utf8_to_b64(str) { return window.btoa(unescape(encodeURIComponent(str))); }
         function b64_to_utf8(str) { return decodeURIComponent(escape(window.atob(str))); }
 
@@ -398,29 +494,59 @@
         }
 
         async function uploadToGithub() {
-            let token = localStorage.getItem("github_token"); if (!token) { token = prompt("🔑 请输入 GitHub Token:"); if (!token) return; localStorage.setItem("github_token", token); }
+            // ★ 改动：使用动态配置
+            const cfg = getGbConfig();
+            if (!cfg.token || !cfg.username || !cfg.repo) { 
+                alert("请先点击右上角 ⚙️ 设置，配置 GitHub 信息"); 
+                openSettingsModal();
+                return; 
+            }
+            
             const btn = document.querySelector('.btn-cloud-push'); const origin = btn.innerText; btn.innerText = "⏳..."; btn.disabled = true;
             try {
-                const url = `https://api.github.com/repos/${GITHUB_CONFIG.username}/${GITHUB_CONFIG.repo}/contents/${GITHUB_CONFIG.path}`;
-                const get = await fetch(url, { headers: { "Authorization": `token ${token}` }, cache: "no-store" });
+                const url = `https://api.github.com/repos/${cfg.username}/${cfg.repo}/contents/${cfg.path}`;
+                const get = await fetch(url, { headers: { "Authorization": `token ${cfg.token}` }, cache: "no-store" });
                 let sha = null; if (get.ok) sha = (await get.json()).sha;
-                const put = await fetch(url, { method: "PUT", headers: { "Authorization": `token ${token}` }, body: JSON.stringify({ message: "Update", content: utf8_to_b64(JSON.stringify(stocks,null,2)), sha }) });
+                const put = await fetch(url, { method: "PUT", headers: { "Authorization": `token ${cfg.token}` }, body: JSON.stringify({ message: "Update", content: utf8_to_b64(JSON.stringify(stocks,null,2)), sha, branch: cfg.branch }) });
                 if (put.ok) {
                     alert("✅ 成功"); 
                     setLocalChanges(false); 
                 } else throw new Error((await put.json()).message);
-            } catch (e) { if(e.message.includes("401")){alert("Token失效");localStorage.removeItem("github_token");}else alert("❌ "+e.message); } finally { btn.innerText = origin; btn.disabled = false; checkUnsavedStatus(); }
+            } catch (e) { if(e.message.includes("401")){alert("Token无效，请检查设置");openSettingsModal();}else alert("❌ "+e.message); } finally { btn.innerText = origin; btn.disabled = false; checkUnsavedStatus(); }
         }
 
         async function syncFromGithub() {
-            let token = localStorage.getItem("github_token");
-            const btn = document.querySelector('.btn-cloud-pull'); const origin = btn.innerText; btn.innerText = "⌛..."; btn.disabled = true;
+            // ★ 改动：使用动态配置
+            const cfg = getGbConfig();
+            if(!cfg.username || !cfg.repo) {
+                // 如果没有配置，静默失败或不做操作，或者如果是手动点击则提示
+                if(event) { // 简单判断是用户点击触发的
+                     alert("请先配置 GitHub 信息");
+                     openSettingsModal();
+                }
+                return;
+            }
+
+            const btn = document.querySelector('.btn-cloud-pull'); 
+            const origin = btn ? btn.innerText : ""; 
+            if(btn) { btn.innerText = "⌛..."; btn.disabled = true; }
+            
             try {
-                const url = `https://api.github.com/repos/${GITHUB_CONFIG.username}/${GITHUB_CONFIG.repo}/contents/${GITHUB_CONFIG.path}`;
-                const headers = { "Accept": "application/vnd.github.v3+json" }; if(token) headers["Authorization"] = `token ${token}`;
+                const url = `https://api.github.com/repos/${cfg.username}/${cfg.repo}/contents/${cfg.path}`;
+                const headers = { "Accept": "application/vnd.github.v3+json" }; 
+                if(cfg.token) headers["Authorization"] = `token ${cfg.token}`;
+                
                 let res = await fetch(url, { headers, cache: "no-store" }), data;
-                if (res.ok) data = JSON.parse(b64_to_utf8((await res.json()).content));
-                else { const raw = await fetch(`https://raw.githubusercontent.com/${GITHUB_CONFIG.username}/${GITHUB_CONFIG.repo}/${GITHUB_CONFIG.branch}/${GITHUB_CONFIG.path}?t=${Date.now()}`); if(!raw.ok) throw new Error("无法访问"); data = await raw.json(); }
+                if (res.ok) {
+                    data = JSON.parse(b64_to_utf8((await res.json()).content));
+                } else { 
+                    // 降级尝试 raw
+                    const rawUrl = `https://raw.githubusercontent.com/${cfg.username}/${cfg.repo}/${cfg.branch}/${cfg.path}?t=${Date.now()}`;
+                    const raw = await fetch(rawUrl); 
+                    if(!raw.ok) throw new Error("无法访问仓库，请检查用户名/仓库名/Token"); 
+                    data = await raw.json(); 
+                }
+                
                 if (Array.isArray(data)) {
                     pendingSyncData = data;
                     const cDate = data[0]?.logs?.[0]?.date || "无", lDate = stocks[0]?.logs?.[0]?.date || "无";
@@ -429,24 +555,24 @@
                     if(cDate>lDate){el.className="sync-val new";el.innerText+=" (新)";} else if(cDate<lDate){el.className="sync-val old";el.innerText+=" (旧)";} else el.className="sync-val";
                     document.getElementById('sync-modal').style.display = 'flex';
                 }
-            } catch (e) { alert("❌ "+e.message); } finally { btn.innerText = origin; btn.disabled = false; }
+            } catch (e) { 
+                console.error(e);
+                if(btn) alert("❌ " + e.message); 
+            } finally { 
+                if(btn) { btn.innerText = origin; btn.disabled = false; }
+            }
         }
         function confirmSyncAction() { if(pendingSyncData){stocks=pendingSyncData;saveStorage();setLocalChanges(false);updateTable();closeSyncModal();} } 
         function closeSyncModal() { document.getElementById('sync-modal').style.display='none';pendingSyncData=null; }
 
-        // ★★★ 核心修复：支持识别自带市场前缀的代码 (如 106.TSM)，确保API请求正确
         function getSecid(c) { 
             if (c.endsWith('.SH')) return `1.${c.slice(0,-3)}`;
             if (c.endsWith('.SZ')) return `0.${c.slice(0,-3)}`;
             if (c.endsWith('.HK')) return `116.${c.slice(0,-3)}`;
-            // 如果代码本身包含 . 且前面是数字(市场ID)，则直接返回
-            // 例如：106.TSM -> 106.TSM (对应纽交所)
             if (c.includes('.') && !isNaN(parseInt(c.split('.')[0]))) return c;
-            // 默认回退 (如果没有前缀，默认105纳斯达克)
             return `105.${c}`; 
         }
         
-        // ★★★ 核心修复：Yahoo不需要106.前缀，只认TSM
         function toYahooSymbol(emCode) {
             const parts = emCode.split('.');
             const mkt = parts[0], code = parts[1];
@@ -540,14 +666,10 @@
             
             let missingHistory = 0;
             const data = stocks.map(s => {
-                // ★★★ 核心修复：数据匹配逻辑
-                // 如果是 106.TSM，API返回的数据key是 "TSM"，所以我们要提取小数点后的部分
                 let rawCode;
                 if (s.code.includes('.') && !s.code.endsWith('.SH') && !s.code.endsWith('.SZ') && !s.code.endsWith('.HK')) {
-                     // 针对美股 (106.TSM -> TSM)
                      rawCode = s.code.split('.')[1];
                 } else {
-                     // 针对A股/港股 (600519.SH -> 600519)
                      rawCode = s.code.split('.')[0];
                 }
 
@@ -763,8 +885,6 @@
                     const r = d.QuotationCodeTable.Data[0];
                     let finalCode = r.Code;
                     
-                    // 核心修复逻辑：优先查找带前缀的 ID 或 UnifiedCode 字段
-                    // 东方财富 API 在某些返回中会直接提供 "106.TSM" 这样的 ID
                     if (r.QuoteID && r.QuoteID.includes('.') && r.QuoteID.endsWith(r.Code)) {
                         finalCode = r.QuoteID;
                     } 
@@ -775,24 +895,19 @@
                         finalCode = r.UnifiedCode;
                     }
                     else {
-                        // 降级逻辑：手动匹配 MarketType
                         const mt = String(r.MarketType);
                         if (mt === "105" || mt === "106" || mt === "107") {
                             finalCode = mt + "." + r.Code;
                         }
-                        // 港股
                         else if (mt === "116" || (r.Code.length === 5 && /^\d+$/.test(r.Code))) {
                             finalCode += ".HK";
                         }
-                        // A股上海
                         else if (mt === "1" || (r.Code.length === 6 && r.Code.startsWith('6'))) {
                             finalCode += ".SH";
                         } 
-                        // A股深圳
                         else if (mt === "2" || (r.Code.length === 6 && (r.Code.startsWith('0') || r.Code.startsWith('3')))) {
                             finalCode += ".SZ";
                         }
-                        // 北交所
                         else if (mt === "0" && r.Code.length === 6 && (r.Code.startsWith('8') || r.Code.startsWith('4'))) {
                             finalCode += ".BJ";
                         }
@@ -866,19 +981,23 @@
         updateTable();
         
         (async function autoSyncFromGithub() {
-            const token = localStorage.getItem("github_token");
-            if (!token) return; 
+            // ★ 改动：使用动态配置
+            const cfg = getGbConfig();
+            if (!cfg.username || !cfg.repo) return; // 如果没有配置，就不自动同步，也不报错
             
             document.getElementById('status-msg').innerText = "☁️ 同步中...";
             try {
-                const url = `https://api.github.com/repos/${GITHUB_CONFIG.username}/${GITHUB_CONFIG.repo}/contents/${GITHUB_CONFIG.path}`;
-                const headers = { "Accept": "application/vnd.github.v3+json", "Authorization": `token ${token}` };
+                const url = `https://api.github.com/repos/${cfg.username}/${cfg.repo}/contents/${cfg.path}`;
+                const headers = { "Accept": "application/vnd.github.v3+json" };
+                if (cfg.token) headers["Authorization"] = `token ${cfg.token}`;
+
                 let res = await fetch(url, { headers, cache: "no-store" });
                 
                 let data;
                 if (res.ok) data = JSON.parse(b64_to_utf8((await res.json()).content));
                 else {
-                    const raw = await fetch(`https://raw.githubusercontent.com/${GITHUB_CONFIG.username}/${GITHUB_CONFIG.repo}/${GITHUB_CONFIG.branch}/${GITHUB_CONFIG.path}?t=${Date.now()}`); 
+                    const rawUrl = `https://raw.githubusercontent.com/${cfg.username}/${cfg.repo}/${cfg.branch}/${cfg.path}?t=${Date.now()}`;
+                    const raw = await fetch(rawUrl); 
                     if(!raw.ok) throw new Error("Fetch failed"); 
                     data = await raw.json();
                 }
