@@ -5,11 +5,16 @@
     "tags": "汽车 港股 消费电子",
     "profit": 450,
     "lowPE": 20,
-    "highPE": 30,
+    "highPE": 31,
     "revenue": 5700,
     "lowPS": 1.5,
     "highPS": 2.5,
     "logs": [
+      {
+        "date": "2025/12/15 13:22:49",
+        "content": "PE上:30→31",
+        "note": ""
+      },
       {
         "date": "2025/11/21 14:05:09",
         "content": "PE下:15→20; PS上:3→2.5",
