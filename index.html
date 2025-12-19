@@ -3,68 +3,45 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>股票估值系统 (可配置版)</title>
+    <title>股票估值系统 (专用版)</title>
+    <!-- 样式保持不变，为了节省篇幅，这里折叠样式，直接保留你原本的 CSS 即可 -->
     <style>
-        /* === 全局重置 === */
+        /* === 请保留你原有的所有 CSS 样式，此处省略以保持整洁 === */
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft YaHei', sans-serif; padding: 20px; max-width: 1700px; margin: 0 auto; background-color: #f4f6f9; font-size: 13px; color: #333; height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; }
-        
-        /* === 移动端专属导航 === */
         #mobile-nav { display: none; justify-content: space-between; align-items: center; background: #fff; padding: 10px 15px; border-radius: 8px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); flex-shrink: 0; }
         #mobile-nav h3 { margin: 0; color: #2c3e50; font-size: 16px; display: flex; align-items: center; gap: 8px; }
         #mobile-status { font-size: 11px; color: #007bff; font-family: monospace; }
         .btn-menu { background: #f8f9fa; border: 1px solid #ddd; color: #333; padding: 6px 12px; border-radius: 4px; font-size: 14px; }
-
-        /* === 顶部区域 === */
         #top-area { flex-shrink: 0; }
         .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; background: #fff; padding: 10px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .tool-group { display: flex; align-items: center; gap: 10px; }
-
-        /* === 进度条 === */
         #progress-bar-container { flex-grow:1; margin: 0 15px; display:none; align-items:center; gap:10px; }
         #progress-bg { flex-grow:1; height:8px; background:#eee; border-radius:4px; overflow:hidden; }
         #progress-fill { height:100%; width:0%; background:linear-gradient(90deg, #007bff, #00c6ff); transition: width 0.2s; }
         #progress-text { font-size:11px; color:#666; font-family:monospace; white-space:nowrap; }
-
-        /* === 控制栏 === */
         .control-bar { margin-bottom: 10px; display: flex; gap: 10px; align-items: center; background: #fff; padding: 10px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); flex-wrap: wrap; }
         .divider { border-left: 1px solid #eee; height: 20px; margin: 0 5px; }
         .spacer { flex-grow: 1; } 
-
-        /* === 录入面板 === */
         #input-container { background: #fff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); overflow: hidden; transition: all 0.3s ease; margin-bottom: 15px; display: none; }
         #input-panel { padding: 20px; border-top: 3px solid #007bff; }
         .input-row { display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-end; margin-bottom: 15px; }
         .group-box { border: 1px solid #e9ecef; padding: 15px; border-radius: 6px; background: #f8f9fa; display: flex; gap: 10px; }
-        
         label { font-size: 12px; color: #666; display: block; margin-bottom: 4px; font-weight: 500; }
         input { padding: 6px 8px; border: 1px solid #ced4da; border-radius: 4px; width: 100px; transition: border-color 0.2s; }
         input:focus { border-color: #007bff; outline: none; }
-        
         button { padding: 6px 12px; cursor: pointer; border: none; border-radius: 4px; font-weight: 600; transition: all 0.2s; font-size: 12px; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
         button:hover { opacity: 0.85; transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        
         .btn-search { background-color: #17a2b8; color: white; }
         .btn-add { background-color: #28a745; color: white; }
         .btn-edit { background-color: #ffc107; color: #333; }
         .btn-log { background-color: #6f42c1; color: white; }
         .btn-delete { background-color: #dc3545; color: white; }
         .btn-cloud-pull { background-color: #6610f2; color: white; } 
-        
         .btn-cloud-push { background-color: #fd7e14; color: white; transition: all 0.3s ease; }
-        .btn-cloud-push.unsaved { 
-            background-color: #dc3545 !important; 
-            font-weight: 800;
-            box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
-            animation: pulse-red 2s infinite;
-        }
-        @keyframes pulse-red {
-            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); }
-            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(220, 53, 69, 0); }
-            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
-        }
-
+        .btn-cloud-push.unsaved { background-color: #dc3545 !important; font-weight: 800; box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); animation: pulse-red 2s infinite; }
+        @keyframes pulse-red { 0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); } 70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(220, 53, 69, 0); } 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); } }
         .btn-control { background-color: #6c757d; color: white; }
-        .btn-settings { background-color: #343a40; color: white; } /* 新增设置按钮样式 */
+        .btn-settings { background-color: #343a40; color: white; }
         .btn-toggle { background-color: #f8f9fa; border: 1px solid #ccc; color: #333; margin-right: 10px; }
         .btn-find { background-color: #fd7e14; color: white; }
         .btn-view { background-color: #e9ecef; color: #adb5bd; border: 1px solid transparent; }
@@ -75,62 +52,32 @@
         .btn-confirm-del { background-color: #dc3545; color: white; font-size: 14px; padding: 8px 25px; }
         .btn-cancel { background-color: #6c757d; color: white; font-size: 14px; padding: 8px 25px; }
         .btn-refresh-trend { background-color: #007bff; color: white; border: 1px solid #0056b3; }
-
-        /* === 表格区域 === */
         #result { background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #e9ecef; flex-grow: 1; overflow: auto; position: relative; }
         table { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 1350px; }
         th, td { padding: 10px 12px; text-align: center; border-bottom: 1px solid #ebebeb; border-right: 1px solid #ebebeb; white-space: nowrap; }
-        
-        /* 锁定列表头 */
         th { background-color: #f1f3f5; color: #495057; font-weight: 700; user-select: none; position: sticky; z-index: 20; }
         thead tr:nth-child(1) th { top: 0; border-bottom: 1px solid #ccc; height: 22px; }
         thead tr:nth-child(2) th { top: 43px; box-shadow: 0 2px 2px rgba(0,0,0,0.05); }
-
-        /* 锁定列 */
         tbody td:nth-child(1) { position: sticky; left: 0; z-index: 15; background-color: #fff; border-right: 1px solid #eee; width: 30px; max-width: 30px; padding: 0 5px; }
-        tbody td:nth-child(2) { 
-            position: sticky; left: 41px; z-index: 15; 
-            background-color: #fff; border-right: 2px solid #d1d1d1; 
-            max-width: 80px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; 
-        }
-        
+        tbody td:nth-child(2) { position: sticky; left: 41px; z-index: 15; background-color: #fff; border-right: 2px solid #d1d1d1; max-width: 80px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         thead tr:nth-child(1) th:first-child { position: sticky; top: 0; z-index: 20; }
         thead tr:nth-child(2) th:nth-child(1) { position: sticky; left: 0; top: 43px; z-index: 30; border-right: 1px solid #eee; width: 30px; }
-        thead tr:nth-child(2) th:nth-child(2) { 
-            position: sticky; left: 41px; top: 43px; z-index: 30; 
-            border-right: 2px solid #d1d1d1;
-            max-width: 80px;
-        }
-
-        tbody td:nth-child(2), thead tr:nth-child(2) th:nth-child(2) {
-            box-shadow: 4px 0 8px -4px rgba(0,0,0,0.15); 
-            clip-path: inset(0px -15px 0px 0px);
-        }
-
+        thead tr:nth-child(2) th:nth-child(2) { position: sticky; left: 41px; top: 43px; z-index: 30; border-right: 2px solid #d1d1d1; max-width: 80px; }
+        tbody td:nth-child(2), thead tr:nth-child(2) th:nth-child(2) { box-shadow: 4px 0 8px -4px rgba(0,0,0,0.15); clip-path: inset(0px -15px 0px 0px); }
         tbody tr:nth-child(even) { background-color: #f8f9fa; }
-        tbody tr:nth-child(even) td:nth-child(1), 
-        tbody tr:nth-child(even) td:nth-child(2) { background-color: #f8f9fa; }
-
+        tbody tr:nth-child(even) td:nth-child(1), tbody tr:nth-child(even) td:nth-child(2) { background-color: #f8f9fa; }
         tbody tr:hover td { background-color: #e9ecef; }
-        tbody tr:hover td:nth-child(1), 
-        tbody tr:hover td:nth-child(2) { background-color: #e9ecef; }
-
-        .row-selected td,
-        .row-selected td:nth-child(1),
-        .row-selected td:nth-child(2) { background-color: #e8f0fe !important; }
-        
+        tbody tr:hover td:nth-child(1), tbody tr:hover td:nth-child(2) { background-color: #e9ecef; }
+        .row-selected td, .row-selected td:nth-child(1), .row-selected td:nth-child(2) { background-color: #e8f0fe !important; }
         th.th-sorted { color: #007bff !important; background-color: #e2e6ea !important; }
-
         .col-hidden { display: none !important; }
         .tag-badge { display: inline-block; background: #e7f5ff; color: #007bff; padding: 2px 6px; border-radius: 4px; font-size: 11px; margin: 1px; border: 1px solid #d0ebff; }
         .th-basic { border-top: 3px solid #6c757d; }
         .th-pe { border-top: 3px solid #28a745; background-color: #f3fdf6; }
         .th-ps { border-top: 3px solid #fd7e14; background-color: #fff8f3; }
-        
         .th-select, .td-select { width: 40px !important; padding: 0 !important; cursor: pointer; }
         .th-select { border-top: 3px solid #adb5bd; border-left: 2px solid #dee2e6 !important; background-color: #e9ecef; z-index: 25; }
         .td-select { border-left: 2px solid #dee2e6 !important; background-color: #f8f9fa; }
-        
         .row-checkbox { cursor: pointer; accent-color: #007bff; width: 15px; height: 15px; margin: 0 auto; display: block; }
         .filter-icon { font-size: 12px; color: #adb5bd; cursor: pointer; padding: 2px 4px; }
         .filter-active { color: #dc3545 !important; font-weight: bold; background-color: #f8d7da; }
@@ -139,26 +86,10 @@
         .sort-icon { font-size: 10px; margin-left: 4px; color: #adb5bd; }
         .sort-active { color: #007bff; }
         th.sortable:hover { background-color: #e2e6ea; cursor: pointer; color: #007bff; }
-
-        /* 弹窗 */
         .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(2px); justify-content: center; align-items: center; }
         #delete-modal { z-index: 2200; } #sync-modal { z-index: 2100; } #log-modal { z-index: 2000; } #settings-modal { z-index: 2300; }
         #filter-menu { display: none; position: absolute; background: white; border: 1px solid #ccc; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border-radius: 6px; padding: 12px; z-index: 3000; min-width: 200px; }
-        
-        /* 弹窗内容 */
-        .modal-content { 
-            background-color: white; 
-            padding: 25px; 
-            border-radius: 12px; 
-            width: 500px; 
-            box-shadow: 0 15px 40px rgba(0,0,0,0.3); 
-            position: relative; 
-            animation: slideDown 0.2s ease-out; 
-            max-height: 80vh; 
-            overflow-y: auto; 
-            -webkit-overflow-scrolling: touch; 
-            overscroll-behavior: contain;
-        }
+        .modal-content { background-color: white; padding: 25px; border-radius: 12px; width: 500px; box-shadow: 0 15px 40px rgba(0,0,0,0.3); position: relative; animation: slideDown 0.2s ease-out; max-height: 80vh; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
         .close-btn { position: absolute; top: 15px; right: 20px; font-size: 24px; cursor: pointer; color: #aaa; z-index: 10; }
         .log-entry { border-bottom: 1px solid #eee; padding: 12px 0; font-size: 13px; color: #444; }
         .log-time { color: #999; font-size: 12px; margin-bottom: 4px; }
@@ -167,14 +98,10 @@
         .log-del-btn:hover { opacity: 1; transform: scale(1.1); }
         .sync-info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f1f1; }
         .sync-val.new { color: #28a745; } .sync-val.old { color: #dc3545; }
-
-        /* 设置弹窗表单样式 */
         .settings-form .form-group { margin-bottom: 15px; }
         .settings-form label { display: block; margin-bottom: 5px; font-weight: bold; color: #555; }
         .settings-form input { width: 100%; box-sizing: border-box; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
         .settings-tip { font-size: 12px; color: #888; margin-top: 3px; }
-
-        /* === 移动端深度优化 === */
         @media (max-width: 768px) {
             body { padding: 10px; }
             #mobile-nav { display: flex; }
@@ -195,28 +122,11 @@
             .group-box { width: 100%; box-sizing: border-box; }
             input { width: 100% !important; box-sizing: border-box; }
             .modal-content { width: 90%; padding: 20px; max-height: 85vh; } 
-
             th, td { padding: 8px 3px; font-size: 12px; } 
-
-            /* 1. 趋势列 (Trend) */
-            tbody td:nth-child(1) { 
-                width: 25px !important; min-width: 25px !important; max-width: 25px !important; 
-                left: 0 !important; padding: 0 !important; text-align: center; 
-            }
-            thead tr:nth-child(2) th:nth-child(1) { 
-                width: 25px !important; min-width: 25px !important; max-width: 25px !important;
-                left: 0 !important; padding: 0 !important;
-            }
-
-            /* 2. 名称列 (Name) */
-            tbody td:nth-child(2) { 
-                left: 25px !important; width: 65px !important; min-width: 65px !important; max-width: 65px !important; 
-                font-size: 11px; padding: 8px 2px !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-            }
-            thead tr:nth-child(2) th:nth-child(2) { 
-                left: 25px !important; width: 65px !important; min-width: 65px !important; max-width: 65px !important;
-                padding: 8px 2px !important; font-size: 11px;
-            }
+            tbody td:nth-child(1) { width: 25px !important; min-width: 25px !important; max-width: 25px !important; left: 0 !important; padding: 0 !important; text-align: center; }
+            thead tr:nth-child(2) th:nth-child(1) { width: 25px !important; min-width: 25px !important; max-width: 25px !important; left: 0 !important; padding: 0 !important; }
+            tbody td:nth-child(2) { left: 25px !important; width: 65px !important; min-width: 65px !important; max-width: 65px !important; font-size: 11px; padding: 8px 2px !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+            thead tr:nth-child(2) th:nth-child(2) { left: 25px !important; width: 65px !important; min-width: 65px !important; max-width: 65px !important; padding: 8px 2px !important; font-size: 11px; }
         }
         .search-row { display: flex; align-items: center; gap: 5px; }
         .action-row { display: flex; align-items: center; gap: 5px; }
@@ -235,7 +145,6 @@
                 <button class="btn-cloud-pull" onclick="syncFromGithub()">☁️ 拉取数据</button>
                 <button class="btn-cloud-push" onclick="uploadToGithub()">🚀 保存到 GitHub</button>
             </div>
-            <!-- 进度条 -->
             <div id="progress-bar-container">
                 <div id="progress-bg"><div id="progress-fill"></div></div>
                 <div id="progress-text">准备中...</div>
@@ -247,7 +156,7 @@
                 <button class="btn-control" onclick="startRealtime()">▶ 开启</button>
                 <button class="btn-control" onclick="stopRealtime()">⏹ 暂停</button>
                 <div class="divider"></div>
-                <button class="btn-settings" onclick="openSettingsModal()">⚙️ 设置</button> <!-- 新增设置按钮 -->
+                <button class="btn-settings" onclick="openSettingsModal()">⚙️ 设置</button>
             </div>
         </div>
 
@@ -356,7 +265,7 @@
     <div id="delete-modal" class="modal"><div class="modal-content" style="text-align: center; padding-top: 30px;"><h3>⚠️ 确认删除？</h3><p id="delete-msg" style="color:#555; margin-bottom:30px;">...</p><div><button class="btn-confirm-del" onclick="confirmDeleteAction()">删除</button><button class="btn-cancel" onclick="closeDeleteModal()">取消</button></div></div></div>
     <div id="sync-modal" class="modal"><div class="modal-content"><span class="close-btn" onclick="closeSyncModal()">&times;</span><h3 style="margin-top:0; border-bottom:2px solid #eee; padding-bottom:15px;">☁️ 同步确认</h3><div style="padding: 10px 0;"><div class="sync-info-row"><span class="sync-label">云端:</span><span class="sync-val" id="sync-cloud-date">...</span></div><div class="sync-info-row"><span class="sync-label">本地:</span><span class="sync-val" id="sync-local-date">...</span></div><div class="sync-info-row"><span class="sync-label">数量:</span><span class="sync-val" id="sync-count">...</span></div></div><div style="text-align:right; margin-top:20px;"><button class="btn-cloud-pull" onclick="confirmSyncAction()" style="padding:8px 20px;">✅ 覆盖</button><button class="btn-cancel" onclick="closeSyncModal()" style="padding:8px 20px;">取消</button></div></div></div>
 
-    <!-- 新增：设置弹窗 -->
+    <!-- 设置弹窗 (已移除文件路径输入框，纯净版) -->
     <div id="settings-modal" class="modal">
         <div class="modal-content">
             <span class="close-btn" onclick="closeSettingsModal()">&times;</span>
@@ -365,17 +274,11 @@
                 <div class="form-group">
                     <label>用户名 (Username)</label>
                     <input type="text" id="cfg-username" placeholder="你的 GitHub 账号名">
-                    <div class="settings-tip">例如: zhangsan</div>
                 </div>
                 <div class="form-group">
                     <label>仓库名 (Repository)</label>
                     <input type="text" id="cfg-repo" placeholder="存放数据的仓库名">
-                    <div class="settings-tip">例如: stock</div>
-                </div>
-                <div class="form-group">
-                    <label>文件路径 (Path)</label>
-                    <input type="text" id="cfg-path" placeholder="仓库中的文件名" value="data.json">
-                    <div class="settings-tip">例如: data.json</div>
+                    <div class="settings-tip">数据将自动保存为: data.json</div>
                 </div>
                 <div class="form-group">
                     <label>分支 (Branch)</label>
@@ -384,7 +287,7 @@
                 <div class="form-group">
                     <label>Token (密钥)</label>
                     <input type="password" id="cfg-token" placeholder="ghp_xxxxxxxxxxxx...">
-                    <div class="settings-tip">请确保 Token 拥有 repo 权限</div>
+                    <div class="settings-tip">私人仓库必需，需勾选 repo 权限</div>
                 </div>
                 <div style="text-align:center; margin-top:20px;">
                     <button class="btn-add" onclick="saveSettings()" style="width:100%; padding:10px;">💾 保存配置</button>
@@ -394,82 +297,78 @@
     </div>
 
     <script>
+        /* 
+           ================================================================
+           最终修正版：
+           1. 变量全部加 'stock_sys_' 前缀，彻底防止和 Life Manager 串台。
+           2. 路径强制写死为 "data.json"。
+           3. 使用 sessionStorage。
+           ================================================================
+        */
+        const APP_STORAGE = sessionStorage; 
+
         function getNowStr() { const d = new Date(); const pad = (n) => n.toString().padStart(2, '0'); return `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`; }
         function toggleMobileMenu(force) { const area = document.getElementById('top-area'), btn = document.getElementById('mobile-menu-btn'), isHidden = area.style.display === 'none' || getComputedStyle(area).display === 'none', show = force !== undefined ? force : isHidden; if (show) { area.style.display = 'block'; area.classList.add('show'); btn.innerText = '🔼 收起'; } else { area.style.display = 'none'; area.classList.remove('show'); btn.innerText = '⚙️ 菜单'; } }
         if (window.innerWidth <= 768) document.getElementById('top-area').style.display = 'none';
 
-        let stocks = JSON.parse(localStorage.getItem('valuationStocks')) || [];
-        let viewSettings = { showCode: true, showTags: true, showUpdate: true, showAction: true, showCap: false, ...JSON.parse(localStorage.getItem('viewSettings')) };
+        // 使用 stock_sys_ 前缀读取数据
+        let stocks = JSON.parse(APP_STORAGE.getItem('stock_sys_data')) || [];
+        let viewSettings = { showCode: true, showTags: true, showUpdate: true, showAction: true, showCap: false, ...JSON.parse(APP_STORAGE.getItem('stock_sys_view')) };
+        
         let intervalId = null, sortState = { key: 'pe_up', dir: 'desc' }, isPanelOpen = false, pendingDeleteCode = null, pendingLogIndex = null, pendingSyncData = null, cachedMarketData = {}, selectedCodes = new Set(), columnFilters = {}, onlySelectedMode = false;
         
-        let historyCache = {}; 
-        let fetchQueue = [];
-        let activeRequests = 0;
-        const MAX_CONCURRENT = 8; 
-        let fetchingSet = new Set();
+        let historyCache = {}; let fetchQueue = []; let activeRequests = 0; const MAX_CONCURRENT = 8; let fetchingSet = new Set();
         
         function updateProgress(done, total) {
-            const bar = document.getElementById('progress-bar-container');
-            if (!bar) return;
-            if (done >= total && total > 0) {
-                setTimeout(() => bar.style.display = 'none', 1000);
-            } else if (total > 0) {
-                bar.style.display = 'flex';
-                const pct = Math.round((done / total) * 100) + '%';
-                document.getElementById('progress-fill').style.width = pct;
-                document.getElementById('progress-text').innerText = `📈 ${done}/${total}`;
-            }
+            const bar = document.getElementById('progress-bar-container'); if (!bar) return;
+            if (done >= total && total > 0) { setTimeout(() => bar.style.display = 'none', 1000); } 
+            else if (total > 0) { bar.style.display = 'flex'; const pct = Math.round((done / total) * 100) + '%'; document.getElementById('progress-fill').style.width = pct; document.getElementById('progress-text').innerText = `📈 ${done}/${total}`; }
         }
 
         updateViewButtons();
         
-        // ★★★ 新增：获取动态配置函数 ★★★
+        // ★★★ 核心配置：使用 stock_sys_ 前缀 ★★★
         function getGbConfig() {
             return {
-                username: localStorage.getItem('gh_username') || "",
-                repo: localStorage.getItem('gh_repo') || "",
-                path: localStorage.getItem('gh_path') || "data.json",
-                branch: localStorage.getItem('gh_branch') || "main",
-                token: localStorage.getItem('github_token') || ""
+                username: APP_STORAGE.getItem('stock_sys_username') || "dlezywj-cell",
+                repo: APP_STORAGE.getItem('stock_sys_repo') || "stockdata",
+                
+                // ★ 强制写死文件名，和 Life Manager 的 data.json 名字一样
+                // 但因为我们用了独立的 stock_sys_repo 变量，所以不会连错仓库
+                path: "data.json", 
+                
+                branch: APP_STORAGE.getItem('stock_sys_branch') || "main",
+                token: APP_STORAGE.getItem('stock_sys_token') || "" 
             };
         }
 
-        // ★★★ 新增：设置面板相关函数 ★★★
         function openSettingsModal() {
             const cfg = getGbConfig();
             document.getElementById('cfg-username').value = cfg.username;
             document.getElementById('cfg-repo').value = cfg.repo;
-            document.getElementById('cfg-path').value = cfg.path;
             document.getElementById('cfg-branch').value = cfg.branch;
             document.getElementById('cfg-token').value = cfg.token;
             document.getElementById('settings-modal').style.display = 'flex';
         }
 
-        function closeSettingsModal() {
-            document.getElementById('settings-modal').style.display = 'none';
-        }
+        function closeSettingsModal() { document.getElementById('settings-modal').style.display = 'none'; }
 
         function saveSettings() {
             const user = document.getElementById('cfg-username').value.trim();
             const repo = document.getElementById('cfg-repo').value.trim();
-            const path = document.getElementById('cfg-path').value.trim();
             const branch = document.getElementById('cfg-branch').value.trim();
             const token = document.getElementById('cfg-token').value.trim();
 
-            if(!user || !repo || !path || !token) {
-                alert("请填写完整信息");
-                return;
-            }
+            if(!user || !repo || !token) { alert("请填写完整信息"); return; }
 
-            localStorage.setItem('gh_username', user);
-            localStorage.setItem('gh_repo', repo);
-            localStorage.setItem('gh_path', path);
-            localStorage.setItem('gh_branch', branch);
-            localStorage.setItem('github_token', token); // 保持token键名兼容
+            // ★ 保存时使用 stock_sys_ 前缀
+            APP_STORAGE.setItem('stock_sys_username', user);
+            APP_STORAGE.setItem('stock_sys_repo', repo);
+            APP_STORAGE.setItem('stock_sys_branch', branch);
+            APP_STORAGE.setItem('stock_sys_token', token);
 
             alert("✅ 配置已保存");
             closeSettingsModal();
-            // 尝试自动同步一次
             syncFromGithub();
         }
 
@@ -477,30 +376,20 @@
         function b64_to_utf8(str) { return decodeURIComponent(escape(window.atob(str))); }
 
         function checkUnsavedStatus() {
-            const dirty = localStorage.getItem('hasUnsavedChanges') === 'true';
+            const dirty = APP_STORAGE.getItem('stock_sys_unsaved') === 'true'; // 前缀
             const btn = document.querySelector('.btn-cloud-push');
-            if (dirty) {
-                btn.classList.add('unsaved');
-                btn.innerHTML = "🔴 待同步 GitHub";
-            } else {
-                btn.classList.remove('unsaved');
-                btn.innerHTML = "🚀 保存到 GitHub";
-            }
+            if (dirty) { btn.classList.add('unsaved'); btn.innerHTML = "🔴 待同步 GitHub"; } 
+            else { btn.classList.remove('unsaved'); btn.innerHTML = "🚀 保存到 GitHub"; }
         }
 
         function setLocalChanges(isDirty) {
-            localStorage.setItem('hasUnsavedChanges', isDirty);
+            APP_STORAGE.setItem('stock_sys_unsaved', isDirty); // 前缀
             checkUnsavedStatus();
         }
 
         async function uploadToGithub() {
-            // ★ 改动：使用动态配置
             const cfg = getGbConfig();
-            if (!cfg.token || !cfg.username || !cfg.repo) { 
-                alert("请先点击右上角 ⚙️ 设置，配置 GitHub 信息"); 
-                openSettingsModal();
-                return; 
-            }
+            if (!cfg.token || !cfg.username || !cfg.repo) { alert("请先设置 GitHub Token"); openSettingsModal(); return; }
             
             const btn = document.querySelector('.btn-cloud-push'); const origin = btn.innerText; btn.innerText = "⏳..."; btn.disabled = true;
             try {
@@ -508,45 +397,21 @@
                 const get = await fetch(url, { headers: { "Authorization": `token ${cfg.token}` }, cache: "no-store" });
                 let sha = null; if (get.ok) sha = (await get.json()).sha;
                 const put = await fetch(url, { method: "PUT", headers: { "Authorization": `token ${cfg.token}` }, body: JSON.stringify({ message: "Update", content: utf8_to_b64(JSON.stringify(stocks,null,2)), sha, branch: cfg.branch }) });
-                if (put.ok) {
-                    alert("✅ 成功"); 
-                    setLocalChanges(false); 
-                } else throw new Error((await put.json()).message);
-            } catch (e) { if(e.message.includes("401")){alert("Token无效，请检查设置");openSettingsModal();}else alert("❌ "+e.message); } finally { btn.innerText = origin; btn.disabled = false; checkUnsavedStatus(); }
+                if (put.ok) { alert("✅ 成功"); setLocalChanges(false); } else throw new Error((await put.json()).message);
+            } catch (e) { if(e.message.includes("401") || e.message.includes("Not Found")){ alert("❌ 失败：请检查 Token 权限"); openSettingsModal(); } else alert("❌ "+e.message); } finally { btn.innerText = origin; btn.disabled = false; checkUnsavedStatus(); }
         }
 
         async function syncFromGithub() {
-            // ★ 改动：使用动态配置
             const cfg = getGbConfig();
-            if(!cfg.username || !cfg.repo) {
-                // 如果没有配置，静默失败或不做操作，或者如果是手动点击则提示
-                if(event) { // 简单判断是用户点击触发的
-                     alert("请先配置 GitHub 信息");
-                     openSettingsModal();
-                }
-                return;
-            }
-
-            const btn = document.querySelector('.btn-cloud-pull'); 
-            const origin = btn ? btn.innerText : ""; 
-            if(btn) { btn.innerText = "⌛..."; btn.disabled = true; }
-            
+            if(!cfg.username || !cfg.repo) { if(event) { alert("请先配置 GitHub 信息"); openSettingsModal(); } return; }
+            const btn = document.querySelector('.btn-cloud-pull'); const origin = btn ? btn.innerText : ""; if(btn) { btn.innerText = "⌛..."; btn.disabled = true; }
             try {
                 const url = `https://api.github.com/repos/${cfg.username}/${cfg.repo}/contents/${cfg.path}`;
                 const headers = { "Accept": "application/vnd.github.v3+json" }; 
                 if(cfg.token) headers["Authorization"] = `token ${cfg.token}`;
-                
                 let res = await fetch(url, { headers, cache: "no-store" }), data;
-                if (res.ok) {
-                    data = JSON.parse(b64_to_utf8((await res.json()).content));
-                } else { 
-                    // 降级尝试 raw
-                    const rawUrl = `https://raw.githubusercontent.com/${cfg.username}/${cfg.repo}/${cfg.branch}/${cfg.path}?t=${Date.now()}`;
-                    const raw = await fetch(rawUrl); 
-                    if(!raw.ok) throw new Error("无法访问仓库，请检查用户名/仓库名/Token"); 
-                    data = await raw.json(); 
-                }
-                
+                if (res.ok) { data = JSON.parse(b64_to_utf8((await res.json()).content)); } 
+                else { throw new Error("拉取失败，请检查配置或Token"); }
                 if (Array.isArray(data)) {
                     pendingSyncData = data;
                     const cDate = data[0]?.logs?.[0]?.date || "无", lDate = stocks[0]?.logs?.[0]?.date || "无";
@@ -555,241 +420,91 @@
                     if(cDate>lDate){el.className="sync-val new";el.innerText+=" (新)";} else if(cDate<lDate){el.className="sync-val old";el.innerText+=" (旧)";} else el.className="sync-val";
                     document.getElementById('sync-modal').style.display = 'flex';
                 }
-            } catch (e) { 
-                console.error(e);
-                if(btn) alert("❌ " + e.message); 
-            } finally { 
-                if(btn) { btn.innerText = origin; btn.disabled = false; }
-            }
+            } catch (e) { console.error(e); if(btn) alert("❌ " + e.message); } finally { if(btn) { btn.innerText = origin; btn.disabled = false; } }
         }
         function confirmSyncAction() { if(pendingSyncData){stocks=pendingSyncData;saveStorage();setLocalChanges(false);updateTable();closeSyncModal();} } 
         function closeSyncModal() { document.getElementById('sync-modal').style.display='none';pendingSyncData=null; }
 
         function getSecid(c) { 
-            if (c.endsWith('.SH')) return `1.${c.slice(0,-3)}`;
-            if (c.endsWith('.SZ')) return `0.${c.slice(0,-3)}`;
-            if (c.endsWith('.HK')) return `116.${c.slice(0,-3)}`;
-            if (c.includes('.') && !isNaN(parseInt(c.split('.')[0]))) return c;
-            return `105.${c}`; 
+            if (c.endsWith('.SH')) return `1.${c.slice(0,-3)}`; if (c.endsWith('.SZ')) return `0.${c.slice(0,-3)}`; if (c.endsWith('.HK')) return `116.${c.slice(0,-3)}`;
+            if (c.includes('.') && !isNaN(parseInt(c.split('.')[0]))) return c; return `105.${c}`; 
         }
-        
-        function toYahooSymbol(emCode) {
-            const parts = emCode.split('.');
-            const mkt = parts[0], code = parts[1];
-            if (mkt === '0') return code + '.SZ';
-            if (mkt === '1') return code + '.SS';
-            if (mkt === '116') { let n = parseInt(code,10); return n.toString().padStart(4,'0') + '.HK'; }
-            if (mkt === '105' || mkt === '106' || mkt === '107') return code;
-            return code;
-        }
+        function toYahooSymbol(emCode) { const parts = emCode.split('.'); const mkt = parts[0], code = parts[1]; if (mkt === '0') return code + '.SZ'; if (mkt === '1') return code + '.SS'; if (mkt === '116') { let n = parseInt(code,10); return n.toString().padStart(4,'0') + '.HK'; } return code; }
 
         async function runFetcher() {
             while (fetchQueue.length > 0 && activeRequests < MAX_CONCURRENT) {
-                const { secid, code, resolve } = fetchQueue.shift();
-                activeRequests++;
-                fetchHistoryImpl(secid, code).then(res => { resolve(res); }).finally(() => {
-                    activeRequests--;
-                    updateProgress(Object.keys(historyCache).length, stocks.length);
-                    runFetcher();
-                });
+                const { secid, code, resolve } = fetchQueue.shift(); activeRequests++;
+                fetchHistoryImpl(secid, code).then(res => { resolve(res); }).finally(() => { activeRequests--; updateProgress(Object.keys(historyCache).length, stocks.length); runFetcher(); });
             }
             if (fetchQueue.length === 0 && activeRequests === 0) { updateTable(true); }
         }
-
-        function queueFetchHistory(secid, code) {
-            return new Promise((resolve) => {
-                if (historyCache[code] !== undefined) { resolve(historyCache[code]); return; }
-                if (fetchingSet.has(code)) return;
-                fetchingSet.add(code);
-                fetchQueue.push({ secid, code, resolve });
-                runFetcher();
-            });
-        }
-
+        function queueFetchHistory(secid, code) { return new Promise((resolve) => { if (historyCache[code] !== undefined) { resolve(historyCache[code]); return; } if (fetchingSet.has(code)) return; fetchingSet.add(code); fetchQueue.push({ secid, code, resolve }); runFetcher(); }); }
         async function fetchHistoryImpl(secid, code) {
-            const yahooSymbol = toYahooSymbol(secid);
-            const targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${yahooSymbol}?range=1mo&interval=1d`;
-            const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
-            try {
-                const res = await fetch(proxyUrl);
-                if (!res.ok) { historyCache[code] = null; fetchingSet.delete(code); return null; }
-                const json = await res.json();
-                const result = json?.chart?.result?.[0];
-                if (result?.indicators?.quote?.[0]?.close) {
-                    const closes = result.indicators.quote[0].close.filter(p => p !== null);
-                    historyCache[code] = closes;
-                    fetchingSet.delete(code);
-                    return closes;
-                }
-            } catch(e) { }
-            historyCache[code] = null; fetchingSet.delete(code); return null;
+            const yahooSymbol = toYahooSymbol(secid); const targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${yahooSymbol}?range=1mo&interval=1d`; const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
+            try { const res = await fetch(proxyUrl); if (!res.ok) { historyCache[code] = null; fetchingSet.delete(code); return null; } const json = await res.json(); const result = json?.chart?.result?.[0]; if (result?.indicators?.quote?.[0]?.close) { const closes = result.indicators.quote[0].close.filter(p => p !== null); historyCache[code] = closes; fetchingSet.delete(code); return closes; } } catch(e) { } historyCache[code] = null; fetchingSet.delete(code); return null;
         }
 
         function getTrendIcon(history, currentPrice, code) {
             if (!history || history.length < 19) return "";
             const data = [...history.slice(-19), currentPrice];
             const avg = (arr) => arr.reduce((a,b)=>a+b,0) / arr.length;
-            const ma5 = avg(data.slice(-5));
-            const ma10 = avg(data.slice(-10));
-            const ma20 = avg(data.slice(-20));
-            
+            const ma5 = avg(data.slice(-5)); const ma10 = avg(data.slice(-10)); const ma20 = avg(data.slice(-20));
             if (ma5 > ma10 && ma10 > ma20) return '<span style="color:#e53935 !important;font-weight:900 !important;font-size:18px;">↑</span>';
             if (ma5 < ma10 && ma10 < ma20) return '<span style="color:#43a047 !important;font-weight:900 !important;font-size:18px;">↓</span>';
-            
             return ""; 
         }
-        
-        function forceRefreshTrends() {
-            historyCache = {};
-            fetchingSet = new Set();
-            fetchQueue = [];
-            activeRequests = 0;
-            updateTable();
-            alert("已重置，正在重新拉取所有趋势数据...");
-        }
+        function forceRefreshTrends() { historyCache = {}; fetchingSet = new Set(); fetchQueue = []; activeRequests = 0; updateTable(); alert("已重置，正在重新拉取所有趋势数据..."); }
 
         async function updateTable(skipFetch = false) {
             const el = document.getElementById('result'), stat = document.getElementById('status-msg');
             if (stocks.length === 0) { el.innerHTML = '<div style="padding:40px;text-align:center;color:#999;">📭 列表为空</div>'; return; }
-            
             if (!skipFetch) {
                 const secids = stocks.map(s=>getSecid(s.code)).join(',');
                 const url = `https://push2.eastmoney.com/api/qt/ulist.np/get?secids=${secids}&fields=f12,f14,f2,f3,f18,f20&invt=2&fltt=2&_=${Date.now()}`;
-                try {
-                    const res = await fetch(url), json = await res.json();
-                    if (json?.data?.diff) {
-                        (Array.isArray(json.data.diff)?json.data.diff:Object.values(json.data.diff)).forEach(i => cachedMarketData[i.f12] = i);
-                        const t = new Date().toLocaleTimeString(); stat.innerText = `● 更新 ${t}`;
-                    }
-                } catch { if(stat) stat.innerText = "⚠️"; }
+                try { const res = await fetch(url), json = await res.json(); if (json?.data?.diff) { (Array.isArray(json.data.diff)?json.data.diff:Object.values(json.data.diff)).forEach(i => cachedMarketData[i.f12] = i); const t = new Date().toLocaleTimeString(); stat.innerText = `● 更新 ${t}`; } } catch { if(stat) stat.innerText = "⚠️"; }
             }
-            
             let missingHistory = 0;
             const data = stocks.map(s => {
-                let rawCode;
-                if (s.code.includes('.') && !s.code.endsWith('.SH') && !s.code.endsWith('.SZ') && !s.code.endsWith('.HK')) {
-                     rawCode = s.code.split('.')[1];
-                } else {
-                     rawCode = s.code.split('.')[0];
-                }
-
+                let rawCode; if (s.code.includes('.') && !s.code.endsWith('.SH') && !s.code.endsWith('.SZ') && !s.code.endsWith('.HK')) { rawCode = s.code.split('.')[1]; } else { rawCode = s.code.split('.')[0]; }
                 const m = cachedMarketData[rawCode] || {};
-                
                 let cap=0, chg="0.00", valid=false, currentPrice=0;
-                if (m.f12) { 
-                    let p=parseFloat(m.f2)||parseFloat(m.f18), mc=parseFloat(m.f20); 
-                    if(p>0 && mc>0){ cap=mc/100000000; chg=parseFloat(m.f3).toFixed(2); valid=true; currentPrice=p; }
-                }
+                if (m.f12) { let p=parseFloat(m.f2)||parseFloat(m.f18), mc=parseFloat(m.f20); if(p>0 && mc>0){ cap=mc/100000000; chg=parseFloat(m.f3).toFixed(2); valid=true; currentPrice=p; } }
                 let pe = { down: '-', up: '-' }, ps = { down: '-', up: '-' };
                 if (valid) {
                     if (s.profit && s.lowPE) { pe.down=((s.profit*s.lowPE/cap-1)*100).toFixed(2); pe.up=((s.profit*s.highPE-cap)/cap*100).toFixed(2); }
                     if (s.revenue && s.lowPS) { ps.down=((s.revenue*s.lowPS/cap-1)*100).toFixed(2); ps.up=((s.revenue*s.highPS-cap)/cap*100).toFixed(2); }
                 }
-                
-                if (historyCache[s.code] === undefined && valid) {
-                    queueFetchHistory(getSecid(s.code), s.code);
-                    missingHistory++;
-                }
-                
+                if (historyCache[s.code] === undefined && valid) { queueFetchHistory(getSecid(s.code), s.code); missingHistory++; }
                 const trend = getTrendIcon(historyCache[s.code], currentPrice, s.code);
                 return { ...s, cap, chg, valid, peRes:pe, psRes:ps, trend };
             });
-            
             if(missingHistory > 0) updateProgress(stocks.length - missingHistory, stocks.length);
             renderTable(data); updateCompareBtn();
         }
 
         let currentVisibleStocks = [];
-
         function renderTable(data) {
             let rows = data.filter(i => {
                 if (onlySelectedMode && !selectedCodes.has(i.code)) return false;
-                const k = document.getElementById('findInput').value.toUpperCase();
-                if (k && !i.code.includes(k) && !i.name.includes(k)) return false;
-
+                const k = document.getElementById('findInput').value.toUpperCase(); if (k && !i.code.includes(k) && !i.name.includes(k)) return false;
                 const tagInput = document.getElementById('findTags').value.trim().toLowerCase();
-                if (tagInput) {
-                    const stockTagsArr = (i.tags || "").toLowerCase().split(/\s+/);
-                    const searchTagsArr = tagInput.split(/\s+/);
-                    const match = searchTagsArr.every(searchTag => stockTagsArr.includes(searchTag));
-                    if (!match) return false;
-                }
-
-                for (let c in columnFilters) {
-                    const r = columnFilters[c]; if (!r) continue;
-                    if (r.type === 'text') { if (!(i[c]||"").toLowerCase().includes(r.val)) return false; }
-                    else {
-                        let v = -999999;
-                        if (c.includes('pe')) v = parseFloat(i.peRes[c.split('_')[1]]); else if (c.includes('ps')) v = parseFloat(i.psRes[c.split('_')[1]]);
-                        if (isNaN(v)) return false;
-                        if (r.op==='>'&&!(v>r.val) || r.op==='<'&&!(v<r.val) || r.op==='>='&&!(v>=r.val) || r.op==='<='&&!(v<=r.val) || r.op==='='&&Math.abs(v-r.val)>0.1) return false;
-                    }
-                }
+                if (tagInput) { const stockTagsArr = (i.tags || "").toLowerCase().split(/\s+/); const searchTagsArr = tagInput.split(/\s+/); if (!searchTagsArr.every(searchTag => stockTagsArr.includes(searchTag))) return false; }
+                for (let c in columnFilters) { const r = columnFilters[c]; if (!r) continue; if (r.type === 'text') { if (!(i[c]||"").toLowerCase().includes(r.val)) return false; } else { let v = -999999; if (c.includes('pe')) v = parseFloat(i.peRes[c.split('_')[1]]); else if (c.includes('ps')) v = parseFloat(i.psRes[c.split('_')[1]]); if (isNaN(v)) return false; if (r.op==='>'&&!(v>r.val) || r.op==='<'&&!(v<r.val) || r.op==='>='&&!(v>=r.val) || r.op==='<='&&!(v<=r.val) || r.op==='='&&Math.abs(v-r.val)>0.1) return false; } }
                 return true;
             });
             currentVisibleStocks = rows;
-            
-            if (sortState.key) {
-                rows.sort((a, b) => {
-                    if (sortState.key === 'last_update') {
-                        const dA = a.logs?.[0]?.date || "";
-                        const dB = b.logs?.[0]?.date || "";
-                        return sortState.dir === 'desc' ? dB.localeCompare(dA) : dA.localeCompare(dB);
-                    }
-                    if (sortState.key === 'trend') {
-                        const getScore = (o) => {
-                            if (o.trend.includes('↑')) return 2; 
-                            if (o.trend.includes('↓')) return 0; 
-                            return 1; 
-                        };
-                        return sortState.dir === 'desc' ? getScore(b) - getScore(a) : getScore(a) - getScore(b);
-                    }
-                    const val = (o) => {
-                        if(sortState.key=='chg') return parseFloat(o.chg);
-                        if(sortState.key.includes('pe')) return parseFloat(o.peRes[sortState.key.split('_')[1]])||-9999;
-                        if(sortState.key.includes('ps')) return parseFloat(o.psRes[sortState.key.split('_')[1]])||-9999;
-                        return 0;
-                    };
-                    return sortState.dir==='desc' ? val(b)-val(a) : val(a)-val(b);
-                });
-            }
-            
+            if (sortState.key) { rows.sort((a, b) => { if (sortState.key === 'last_update') { const dA = a.logs?.[0]?.date || ""; const dB = b.logs?.[0]?.date || ""; return sortState.dir === 'desc' ? dB.localeCompare(dA) : dA.localeCompare(dB); } if (sortState.key === 'trend') { const getScore = (o) => { if (o.trend.includes('↑')) return 2; if (o.trend.includes('↓')) return 0; return 1; }; return sortState.dir === 'desc' ? getScore(b) - getScore(a) : getScore(a) - getScore(b); } const val = (o) => { if(sortState.key=='chg') return parseFloat(o.chg); if(sortState.key.includes('pe')) return parseFloat(o.peRes[sortState.key.split('_')[1]])||-9999; if(sortState.key.includes('ps')) return parseFloat(o.psRes[sortState.key.split('_')[1]])||-9999; return 0; }; return sortState.dir==='desc' ? val(b)-val(a) : val(a)-val(b); }); }
             const icon = (k) => `<span class="${columnFilters[k]?'filter-active':''}" onclick="event.stopPropagation();openFilterMenu('${k}',event)" style="cursor:pointer">${columnFilters[k]?'▼':'▽'}</span>`;
             const show = (k) => viewSettings['show'+k.charAt(0).toUpperCase()+k.slice(1)]?'':'col-hidden';
             const sk = (k) => sortState.key===k ? 'th-sorted' : ''; 
             const allSel = rows.length>0 && rows.every(i=>selectedCodes.has(i.code));
-
-            let html = `<table><thead><tr>
-                <th class="th-basic" colspan="${3 + (viewSettings.showCode?1:0) + (viewSettings.showTags?1:0) + (viewSettings.showCap?1:0)}">📊 基础行情</th>
-                <th class="th-pe" colspan="4">💰 PE (利润)</th><th class="th-ps" colspan="4">🚀 PS (营收)</th>
-                <th rowspan="2" class="sortable ${show('update')} ${sk('last_update')}" onclick="setSort('last_update')" style="width:70px">📅 ${getSortIcon('last_update')}</th>
-                <th class="th-basic ${show('action')}" rowspan="2">⚙️</th>
-                <th class="th-select" rowspan="2" onclick="toggleSelectAll()"><input type="checkbox" ${allSel?'checked':''}></th>
-            </tr><tr>
-                <th onclick="setSort('trend')" class="sortable ${sk('trend')}" style="width:30px">趋势 ${getSortIcon('trend')}</th>
-                <th>名称</th><th class="${show('code')}">代码</th><th class="${show('tags')}">属性 ${icon('tags')}</th>
-                <th onclick="setSort('chg')" class="sortable ${sk('chg')}">涨跌 ${getSortIcon('chg')}</th>
-                <th class="${show('cap')}">市值</th>
-                <th>净利</th><th>合理PE</th><th onclick="setSort('pe_down')" class="sortable ${sk('pe_down')}">下% ${icon('pe_down')}</th><th onclick="setSort('pe_up')" class="sortable ${sk('pe_up')}">上% ${icon('pe_up')}</th>
-                <th>营收</th><th>合理PS</th><th onclick="setSort('ps_down')" class="sortable ${sk('ps_down')}">下% ${icon('ps_down')}</th><th onclick="setSort('ps_up')" class="sortable ${sk('ps_up')}">上% ${icon('ps_up')}</th>
-            </tr></thead><tbody>`;
-
+            let html = `<table><thead><tr><th class="th-basic" colspan="${3 + (viewSettings.showCode?1:0) + (viewSettings.showTags?1:0) + (viewSettings.showCap?1:0)}">📊 基础行情</th><th class="th-pe" colspan="4">💰 PE (利润)</th><th class="th-ps" colspan="4">🚀 PS (营收)</th><th rowspan="2" class="sortable ${show('update')} ${sk('last_update')}" onclick="setSort('last_update')" style="width:70px">📅 ${getSortIcon('last_update')}</th><th class="th-basic ${show('action')}" rowspan="2">⚙️</th><th class="th-select" rowspan="2" onclick="toggleSelectAll()"><input type="checkbox" ${allSel?'checked':''}></th></tr><tr><th onclick="setSort('trend')" class="sortable ${sk('trend')}" style="width:30px">趋势 ${getSortIcon('trend')}</th><th>名称</th><th class="${show('code')}">代码</th><th class="${show('tags')}">属性 ${icon('tags')}</th><th onclick="setSort('chg')" class="sortable ${sk('chg')}">涨跌 ${getSortIcon('chg')}</th><th class="${show('cap')}">市值</th><th>净利</th><th>合理PE</th><th onclick="setSort('pe_down')" class="sortable ${sk('pe_down')}">下% ${icon('pe_down')}</th><th onclick="setSort('pe_up')" class="sortable ${sk('pe_up')}">上% ${icon('pe_up')}</th><th>营收</th><th>合理PS</th><th onclick="setSort('ps_down')" class="sortable ${sk('ps_down')}">下% ${icon('ps_down')}</th><th onclick="setSort('ps_up')" class="sortable ${sk('ps_up')}">上% ${icon('ps_up')}</th></tr></thead><tbody>`;
             if(rows.length===0) html+=`<tr><td colspan="20" style="text-align:center;padding:20px;color:#ccc">无数据</td></tr>`;
             else rows.forEach(i => {
                 const p = (v) => `<span style="color:${parseFloat(v)>=0?'#d32f2f':'#2e7d32'};font-weight:${Math.abs(v)>30?'800':'bold'}">${v==='-'?'-':v+'%'}</span>`;
                 const u = i.logs?.[0]?.date ? `<span style="font-size:11px;color:#666;display:block;line-height:1.2">${i.logs[0].date.split(' ')[0]}<br><span style="color:#999;font-size:10px">${i.logs[0].date.split(' ')[1]}</span></span>` : '-';
-                
                 html += `<tr class="${selectedCodes.has(i.code)?'row-selected':''}">
-                    <td style="text-align:center;">${i.trend}</td>
-                    <td style="font-weight:600">${i.name}</td><td class="${show('code')}" style="color:#888;font-size:12px">${i.code}</td>
-                    <td class="${show('tags')}" style="text-align:left">${(i.tags||"").split(' ').map(t=>t?`<span class="tag-badge">${t}</span>`:'').join('')}</td>
-                    <td style="font-weight:bold;color:${parseFloat(i.chg)>=0?'#d32f2f':'#2e7d32'}">${i.chg}%</td>
-                    <td class="${show('cap')}" style="font-family:monospace">${i.cap?i.cap.toFixed(2):'-'}</td>
-                    <td>${i.profit||'-'}</td><td style="font-size:12px">${i.lowPE||'-'}~${i.highPE||'-'}</td><td>${p(i.peRes.down)}</td><td>${p(i.peRes.up)}</td>
-                    <td>${i.revenue||'-'}</td><td style="font-size:12px">${i.lowPS||'-'}~${i.highPS||'-'}</td><td>${p(i.psRes.down)}</td><td>${p(i.psRes.up)}</td>
-                    <td class="${show('update')}">${u}</td>
-                    <td class="${show('action')}"><button class="btn-log" onclick="showLogs('${i.code}')">📝</button><button class="btn-edit" onclick="editStock('${i.code}')">✏️</button><button class="btn-delete" onclick="openDeleteModal('${i.code}')">✕</button></td>
-                    <td class="td-select" onclick="toggleSelectRow('${i.code}')"><input type="checkbox" class="row-checkbox" ${selectedCodes.has(i.code)?'checked':''}></td>
+                    <td style="text-align:center;">${i.trend}</td><td style="font-weight:600">${i.name}</td><td class="${show('code')}" style="color:#888;font-size:12px">${i.code}</td><td class="${show('tags')}" style="text-align:left">${(i.tags||"").split(' ').map(t=>t?`<span class="tag-badge">${t}</span>`:'').join('')}</td><td style="font-weight:bold;color:${parseFloat(i.chg)>=0?'#d32f2f':'#2e7d32'}">${i.chg}%</td><td class="${show('cap')}" style="font-family:monospace">${i.cap?i.cap.toFixed(2):'-'}</td><td>${i.profit||'-'}</td><td style="font-size:12px">${i.lowPE||'-'}~${i.highPE||'-'}</td><td>${p(i.peRes.down)}</td><td>${p(i.peRes.up)}</td><td>${i.revenue||'-'}</td><td style="font-size:12px">${i.lowPS||'-'}~${i.highPS||'-'}</td><td>${p(i.psRes.down)}</td><td>${p(i.psRes.up)}</td><td class="${show('update')}">${u}</td><td class="${show('action')}"><button class="btn-log" onclick="showLogs('${i.code}')">📝</button><button class="btn-edit" onclick="editStock('${i.code}')">✏️</button><button class="btn-delete" onclick="openDeleteModal('${i.code}')">✕</button></td><td class="td-select" onclick="toggleSelectRow('${i.code}')"><input type="checkbox" class="row-checkbox" ${selectedCodes.has(i.code)?'checked':''}></td>
                 </tr>`;
             });
             document.getElementById('result').innerHTML = html + '</tbody></table>';
@@ -800,132 +515,50 @@
         function clearAllFilters() { columnFilters={}; document.getElementById('findInput').value=''; document.getElementById('findTags').value=''; if(onlySelectedMode)toggleShowSelected(); updateTable(); }
         function toggleShowSelected() { onlySelectedMode=!onlySelectedMode; const b=document.getElementById('btn-compare'); if(onlySelectedMode){b.classList.add('active');b.innerText="🔙 全部";}else{b.classList.remove('active');updateCompareBtn();} updateTable(); }
         function updateCompareBtn() { if(!onlySelectedMode)document.getElementById('btn-compare').innerText=`📊 选中 (${selectedCodes.size})`; }
-        function toggleColumn(c) { const k='show'+c.charAt(0).toUpperCase()+c.slice(1); viewSettings[k]=!viewSettings[k]; localStorage.setItem('viewSettings',JSON.stringify(viewSettings)); updateViewButtons(); updateTable(); }
+        function toggleColumn(c) { const k='show'+c.charAt(0).toUpperCase()+c.slice(1); viewSettings[k]=!viewSettings[k]; APP_STORAGE.setItem('stock_sys_view',JSON.stringify(viewSettings)); updateViewButtons(); updateTable(); }
         function updateViewButtons() { ['code','tags','update','action','cap'].forEach(c => { const b=document.getElementById('btn-toggle-'+c); if(viewSettings['show'+c.charAt(0).toUpperCase()+c.slice(1)])b.classList.add('active');else b.classList.remove('active'); }); }
-
         function openFilterMenu(k,e) { const m=document.getElementById('filter-menu'); m.style.display='block'; const r=e.target.getBoundingClientRect(); m.style.top=(window.scrollY+r.bottom+5)+'px'; m.style.left=Math.min(window.innerWidth-220, r.left-100)+'px'; document.getElementById('filter-col-key').value=k; const t=k==='tags'; document.getElementById('filter-row-numeric').style.display=t?'none':'flex'; document.getElementById('filter-row-text').style.display=t?'flex':'none'; setTimeout(()=>document.addEventListener('click',closeFilterMenuOutside),0); }
         function closeFilterMenuOutside(e) { const m=document.getElementById('filter-menu'); if(!m.contains(e.target)){m.style.display='none';document.removeEventListener('click',closeFilterMenuOutside);} }
         function confirmFilter() { const k=document.getElementById('filter-col-key').value, t=k==='tags'; if(t){const v=document.getElementById('filter-text-val').value.trim();if(v)columnFilters[k]={type:'text',val:v};else delete columnFilters[k];}else{const o=document.getElementById('filter-op').value,v=document.getElementById('filter-val').value;if(v)columnFilters[k]={type:'num',op:o,val:parseFloat(v)};else delete columnFilters[k];} document.getElementById('filter-menu').style.display='none'; updateTable(); }
         function clearCurrentFilter() { delete columnFilters[document.getElementById('filter-col-key').value]; document.getElementById('filter-menu').style.display='none'; updateTable(); }
 
         function saveStock() {
-            const code=document.getElementById('inCode').value.trim();
-            const name=document.getElementById('inName').value.trim();
-            if(!code) { alert("请先搜索或输入代码"); return; }
-            
-            const profit = parseFloat(document.getElementById('inProfit').value)||0;
-            const lowPE = parseFloat(document.getElementById('inLowPE').value)||0;
-            const highPE = parseFloat(document.getElementById('inHighPE').value)||0;
-            const revenue = parseFloat(document.getElementById('inRevenue').value)||0;
-            const lowPS = parseFloat(document.getElementById('inLowPS').value)||0;
-            const highPS = parseFloat(document.getElementById('inHighPS').value)||0;
-            const tags = document.getElementById('inTags').value.trim();
-            const note = document.getElementById('inNote').value.trim();
-
-            const idx = stocks.findIndex(i=>i.code===code);
-            const now = getNowStr();
-            let logContent = "";
-
+            const code=document.getElementById('inCode').value.trim(); const name=document.getElementById('inName').value.trim(); if(!code) { alert("请先搜索或输入代码"); return; }
+            const profit = parseFloat(document.getElementById('inProfit').value)||0; const lowPE = parseFloat(document.getElementById('inLowPE').value)||0; const highPE = parseFloat(document.getElementById('inHighPE').value)||0;
+            const revenue = parseFloat(document.getElementById('inRevenue').value)||0; const lowPS = parseFloat(document.getElementById('inLowPS').value)||0; const highPS = parseFloat(document.getElementById('inHighPS').value)||0;
+            const tags = document.getElementById('inTags').value.trim(); const note = document.getElementById('inNote').value.trim();
+            const idx = stocks.findIndex(i=>i.code===code); const now = getNowStr(); let logContent = "";
             if(idx >= 0) {
-                const old = stocks[idx];
-                let changes = [];
-                if(old.profit !== profit) changes.push(`净利:${old.profit}→${profit}`);
-                if(old.lowPE !== lowPE) changes.push(`PE下:${old.lowPE}→${lowPE}`);
-                if(old.highPE !== highPE) changes.push(`PE上:${old.highPE}→${highPE}`);
-                if(old.revenue !== revenue) changes.push(`营收:${old.revenue}→${revenue}`);
-                if(old.lowPS !== lowPS) changes.push(`PS下:${old.lowPS}→${lowPS}`);
-                if(old.highPS !== highPS) changes.push(`PS上:${old.highPS}→${highPS}`);
-                if((old.tags||"") !== tags) changes.push(`属性:${old.tags||""}→${tags}`);
-                if((old.name||"") !== name) changes.push(`名称:${old.name}→${name}`);
-
-                if(changes.length > 0) logContent = changes.join('; ');
-                else logContent = "无参数变更";
-            } else {
-                let details = ["首次创建"];
-                if(name) details.push(`名称:${name}`);
-                if(tags) details.push(`属性:${tags}`);
-                if(profit) details.push(`净利:${profit}`);
-                if(lowPE) details.push(`PE下:${lowPE}`);
-                if(highPE) details.push(`PE上:${highPE}`);
-                if(revenue) details.push(`营收:${revenue}`);
-                if(lowPS) details.push(`PS下:${lowPS}`);
-                if(highPS) details.push(`PS上:${highPS}`);
-
-                logContent = details.join('; ');
-            }
-
-            const s = { 
-                code, name, tags, profit, lowPE, highPE, revenue, lowPS, highPS, 
-                logs: (idx >= 0 ? stocks[idx].logs : []) 
-            };
-
-            if(logContent !== "无参数变更" || note) {
-                s.logs.unshift({
-                    date: now,
-                    content: logContent,
-                    note: note 
-                });
-            }
-
-            if(idx >= 0) stocks[idx] = s;
-            else stocks.push(s);
-            
-            saveStorage(); 
-            setLocalChanges(true); 
-            clearInput(); 
-            updateTable();
+                const old = stocks[idx]; let changes = [];
+                if(old.profit !== profit) changes.push(`净利:${old.profit}→${profit}`); if(old.lowPE !== lowPE) changes.push(`PE下:${old.lowPE}→${lowPE}`); if(old.highPE !== highPE) changes.push(`PE上:${old.highPE}→${highPE}`);
+                if(old.revenue !== revenue) changes.push(`营收:${old.revenue}→${revenue}`); if(old.lowPS !== lowPS) changes.push(`PS下:${old.lowPS}→${lowPS}`); if(old.highPS !== highPS) changes.push(`PS上:${old.highPS}→${highPS}`);
+                if((old.tags||"") !== tags) changes.push(`属性:${old.tags||""}→${tags}`); if((old.name||"") !== name) changes.push(`名称:${old.name}→${name}`);
+                if(changes.length > 0) logContent = changes.join('; '); else logContent = "无参数变更";
+            } else { logContent = `首次创建; 名称:${name}; 属性:${tags}`; }
+            const s = { code, name, tags, profit, lowPE, highPE, revenue, lowPS, highPS, logs: (idx >= 0 ? stocks[idx].logs : []) };
+            if(logContent !== "无参数变更" || note) { s.logs.unshift({ date: now, content: logContent, note: note }); }
+            if(idx >= 0) stocks[idx] = s; else stocks.push(s);
+            saveStorage(); setLocalChanges(true); clearInput(); updateTable();
         }
 
         function searchStockCode() { 
-            const n=document.getElementById('inName').value.trim(); if(!n)return; 
-            const sc=document.createElement('script'); 
-            
+            const n=document.getElementById('inName').value.trim(); if(!n)return; const sc=document.createElement('script'); 
             window.handleSearch = function(d) { 
                 if (d?.QuotationCodeTable?.Data?.length) { 
-                    const r = d.QuotationCodeTable.Data[0];
-                    let finalCode = r.Code;
-                    
-                    if (r.QuoteID && r.QuoteID.includes('.') && r.QuoteID.endsWith(r.Code)) {
-                        finalCode = r.QuoteID;
-                    } 
-                    else if (r.ID && r.ID.includes('.') && r.ID.endsWith(r.Code)) {
-                        finalCode = r.ID;
-                    }
-                    else if (r.UnifiedCode && r.UnifiedCode.includes('.') && r.UnifiedCode.endsWith(r.Code)) {
-                        finalCode = r.UnifiedCode;
-                    }
-                    else {
-                        const mt = String(r.MarketType);
-                        if (mt === "105" || mt === "106" || mt === "107") {
-                            finalCode = mt + "." + r.Code;
-                        }
-                        else if (mt === "116" || (r.Code.length === 5 && /^\d+$/.test(r.Code))) {
-                            finalCode += ".HK";
-                        }
-                        else if (mt === "1" || (r.Code.length === 6 && r.Code.startsWith('6'))) {
-                            finalCode += ".SH";
-                        } 
-                        else if (mt === "2" || (r.Code.length === 6 && (r.Code.startsWith('0') || r.Code.startsWith('3')))) {
-                            finalCode += ".SZ";
-                        }
-                        else if (mt === "0" && r.Code.length === 6 && (r.Code.startsWith('8') || r.Code.startsWith('4'))) {
-                            finalCode += ".BJ";
-                        }
-                    }
-                    
-                    document.getElementById('inCode').value = finalCode; 
-                    document.getElementById('inName').value = r.Name; 
-                } else alert("未找到"); 
-                sc.remove(); 
+                    const r = d.QuotationCodeTable.Data[0]; let finalCode = r.Code;
+                    if (r.QuoteID && r.QuoteID.includes('.') && r.QuoteID.endsWith(r.Code)) { finalCode = r.QuoteID; } 
+                    else if (r.ID && r.ID.includes('.') && r.ID.endsWith(r.Code)) { finalCode = r.ID; }
+                    else if (r.UnifiedCode && r.UnifiedCode.includes('.') && r.UnifiedCode.endsWith(r.Code)) { finalCode = r.UnifiedCode; }
+                    else { const mt = String(r.MarketType); if (mt === "105" || mt === "106" || mt === "107") { finalCode = mt + "." + r.Code; } else if (mt === "116" || (r.Code.length === 5 && /^\d+$/.test(r.Code))) { finalCode += ".HK"; } else if (mt === "1" || (r.Code.length === 6 && r.Code.startsWith('6'))) { finalCode += ".SH"; } else if (mt === "2" || (r.Code.length === 6 && (r.Code.startsWith('0') || r.Code.startsWith('3')))) { finalCode += ".SZ"; } else if (mt === "0" && r.Code.length === 6 && (r.Code.startsWith('8') || r.Code.startsWith('4'))) { finalCode += ".BJ"; } }
+                    document.getElementById('inCode').value = finalCode; document.getElementById('inName').value = r.Name; 
+                } else alert("未找到"); sc.remove(); 
             };
-            
             sc.src=`https://searchapi.eastmoney.com/api/suggest/get?input=${encodeURIComponent(n)}&type=14&token=D43BF722C8E33BD5D50F639205545E43&cb=handleSearch`; document.body.appendChild(sc);
         }
 
         function editStock(c) {
             if(window.innerWidth<=768) toggleMobileMenu(true); else if(!isPanelOpen) toggleInputPanel();
-            document.getElementById('input-container').scrollIntoView({ behavior: 'smooth', block: 'start' });
-            document.getElementById('input-container').style.display='block';
+            document.getElementById('input-container').scrollIntoView({ behavior: 'smooth', block: 'start' }); document.getElementById('input-container').style.display='block';
             const s=stocks.find(i=>i.code===c); if(!s)return;
             document.getElementById('inName').value=s.name; document.getElementById('inCode').value=s.code; document.getElementById('inTags').value=s.tags||''; 
             document.getElementById('inProfit').value=s.profit||''; document.getElementById('inLowPE').value=s.lowPE||''; document.getElementById('inHighPE').value=s.highPE||'';
@@ -941,79 +574,36 @@
         
         window.confirmDeleteAction=function(){
             if(pendingDeleteCode){
-                if(pendingLogIndex!==null){
-                    const s=stocks.find(i=>i.code===pendingDeleteCode);
-                    if(s&&s.logs){
-                        s.logs.splice(pendingLogIndex,1);
-                        saveStorage();
-                        setLocalChanges(true); 
-                        showLogs(pendingDeleteCode);
-                        updateTable();
-                    }
-                    pendingLogIndex=null;
-                }else{
-                    stocks=stocks.filter(s=>s.code!==pendingDeleteCode);
-                    selectedCodes.delete(pendingDeleteCode);
-                    saveStorage();
-                    setLocalChanges(true); 
-                    updateTable();
-                }
+                if(pendingLogIndex!==null){ const s=stocks.find(i=>i.code===pendingDeleteCode); if(s&&s.logs){ s.logs.splice(pendingLogIndex,1); saveStorage(); setLocalChanges(true); showLogs(pendingDeleteCode); updateTable(); } pendingLogIndex=null; }
+                else{ stocks=stocks.filter(s=>s.code!==pendingDeleteCode); selectedCodes.delete(pendingDeleteCode); saveStorage(); setLocalChanges(true); updateTable(); }
             }
             closeDeleteModal();
         };
-        
         window.closeDeleteModal=function(){document.getElementById('delete-modal').style.display='none';}; function closeLogModal(){document.getElementById('log-modal').style.display='none';}
         function startRealtime() { if(!intervalId) { updateTable(); intervalId=setInterval(updateTable, 5000); } }
         function stopRealtime() { clearInterval(intervalId); intervalId=null; document.getElementById('status-msg').innerText="⏸ 暂停"; }
         function setSort(k) { if(sortState.key===k) sortState.dir=sortState.dir==='desc'?'asc':'desc'; else {sortState.key=k; sortState.dir='desc';} updateTable(); }
         function getSortIcon(k) { return sortState.key!==k?'':(sortState.dir==='desc'?'⬇':'⬆'); }
-        function saveStorage() { localStorage.setItem('valuationStocks', JSON.stringify(stocks)); }
+        // ★ 保存时使用 stock_sys_data
+        function saveStorage() { APP_STORAGE.setItem('stock_sys_data', JSON.stringify(stocks)); }
         window.onclick=function(e){if(e.target.className==='modal')e.target.style.display='none';}
         
-        window.addEventListener('beforeunload', (e) => {
-            if (localStorage.getItem('hasUnsavedChanges') === 'true') {
-                e.preventDefault();
-                e.returnValue = '';
-            }
-        });
-
-        checkUnsavedStatus();
-        updateTable();
-        
+        window.addEventListener('beforeunload', (e) => { if (APP_STORAGE.getItem('stock_sys_unsaved') === 'true') { e.preventDefault(); e.returnValue = ''; } });
+        checkUnsavedStatus(); updateTable();
         (async function autoSyncFromGithub() {
-            // ★ 改动：使用动态配置
             const cfg = getGbConfig();
-            if (!cfg.username || !cfg.repo) return; // 如果没有配置，就不自动同步，也不报错
-            
+            if (!cfg.username || !cfg.repo) return; 
+            if (!cfg.token) { console.log("Private repo requires token for auto-sync."); return; }
             document.getElementById('status-msg').innerText = "☁️ 同步中...";
             try {
                 const url = `https://api.github.com/repos/${cfg.username}/${cfg.repo}/contents/${cfg.path}`;
                 const headers = { "Accept": "application/vnd.github.v3+json" };
                 if (cfg.token) headers["Authorization"] = `token ${cfg.token}`;
-
                 let res = await fetch(url, { headers, cache: "no-store" });
-                
                 let data;
-                if (res.ok) data = JSON.parse(b64_to_utf8((await res.json()).content));
-                else {
-                    const rawUrl = `https://raw.githubusercontent.com/${cfg.username}/${cfg.repo}/${cfg.branch}/${cfg.path}?t=${Date.now()}`;
-                    const raw = await fetch(rawUrl); 
-                    if(!raw.ok) throw new Error("Fetch failed"); 
-                    data = await raw.json();
-                }
-
-                if (Array.isArray(data)) {
-                    stocks = data;
-                    saveStorage();
-                    setLocalChanges(false); 
-                    updateTable(); 
-                    document.getElementById('status-msg').innerText = "✅ 已同步";
-                    setTimeout(() => document.getElementById('status-msg').innerText = "", 3000);
-                }
-            } catch (e) {
-                console.log("Auto sync failed:", e);
-                document.getElementById('status-msg').innerText = "⚠️ 同步失败";
-            }
+                if (res.ok) data = JSON.parse(b64_to_utf8((await res.json()).content)); else { throw new Error("Private repo fetch failed"); }
+                if (Array.isArray(data)) { stocks = data; saveStorage(); setLocalChanges(false); updateTable(); document.getElementById('status-msg').innerText = "✅ 已同步"; setTimeout(() => document.getElementById('status-msg').innerText = "", 3000); }
+            } catch (e) { console.log("Auto sync failed:", e); document.getElementById('status-msg').innerText = "⚠️ 同步失败"; }
         })();
     </script>
 </body>
