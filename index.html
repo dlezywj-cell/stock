@@ -13,7 +13,9 @@
         #mobile-nav h3 { margin: 0; color: #2c3e50; font-size: 16px; display: flex; align-items: center; gap: 8px; }
         
         /* 新增：手机端中间的状态栏样式 */
-        .mobile-status-group { display: flex; align-items: center; gap: 6px; background: #f8f9fa; padding: 5px 12px; border-radius: 20px; border: 1px solid #eee; font-size: 12px; color: #555; }
+        /* 【修改】增加了 cursor: pointer 让用户知道可以点击 */
+        .mobile-status-group { display: flex; align-items: center; gap: 6px; background: #f8f9fa; padding: 5px 12px; border-radius: 20px; border: 1px solid #eee; font-size: 12px; color: #555; cursor: pointer; user-select: none; }
+        .mobile-status-group:active { background-color: #e9ecef; } /* 点击时的反馈效果 */
         
         .btn-menu { background: #f8f9fa; border: 1px solid #ddd; color: #333; padding: 6px 12px; border-radius: 4px; font-size: 14px; }
 
@@ -206,8 +208,8 @@
 <body>
     <div id="mobile-nav">
         <h3>📈 估值系统</h3>
-        <!-- 新增：手机端中间的状态显示区 -->
-        <div class="mobile-status-group" onclick="syncFromGithub()">
+        <!-- 新增：手机端中间的状态显示区 (【修改】点击切换监控状态) -->
+        <div class="mobile-status-group" onclick="toggleRealtime()">
             <div id="mobileSyncDot" class="sync-dot paused"></div>
             <span id="mobileStatusTxt">准备就绪</span>
         </div>
@@ -1004,6 +1006,15 @@
                     startBtn.classList.remove('active');
                     stopBtn.classList.add('active'); // 暂停按钮高亮
                 }
+            }
+        }
+
+        // 新增：切换实时监控状态
+        function toggleRealtime() {
+            if (intervalId) {
+                stopRealtime();
+            } else {
+                startRealtime();
             }
         }
 
