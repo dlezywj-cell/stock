@@ -25,6 +25,9 @@
         .sync-dot.online { background: #34c759; box-shadow: 0 0 6px rgba(52, 199, 89, 0.4); }
         .sync-dot.syncing { background: #007bff; animation: pulse 1s infinite; }
         .sync-dot.error { background: #dc3545; }
+        /* 【修改】新增暂停状态颜色 (灰色) */
+        .sync-dot.paused { background: #adb5bd; box-shadow: none; }
+        
         .status-txt { color: #666; cursor: pointer; }
         .settings-icon { font-size: 16px; color: #555; cursor: pointer; opacity: 0.7; transition: opacity 0.2s; margin-left: 5px; }
         .settings-icon:hover { opacity: 1; transform: rotate(30deg); transition: transform 0.3s; }
@@ -75,6 +78,13 @@
         }
 
         .btn-control { background-color: #6c757d; color: white; }
+        /* 【修改】新增按钮激活状态样式 */
+        .btn-control.active { 
+            background-color: #343a40; 
+            box-shadow: inset 0 3px 5px rgba(0,0,0,0.3);
+            border: 1px solid #212529;
+        }
+
         /* 移除了旧的 btn-settings 样式，改为图标 */
         .btn-toggle { background-color: #f8f9fa; border: 1px solid #ccc; color: #333; margin-right: 10px; }
         .btn-find { background-color: #fd7e14; color: white; }
@@ -214,8 +224,9 @@
                 <!-- 移除了旧的 status-msg span -->
                 <button class="btn-refresh-trend desktop-only" onclick="forceRefreshTrends()" title="清空缓存并重新拉取所有趋势数据" style="padding:6px 12px; border-radius:4px; background:#17a2b8; color:white; border:none; cursor:pointer;">🔄 刷新趋势</button>
                 <div class="divider"></div>
-                <button class="btn-control" onclick="startRealtime()">▶ 开启</button>
-                <button class="btn-control" onclick="stopRealtime()">⏹ 暂停</button>
+                <!-- 【修改】添加 id 以便控制 -->
+                <button class="btn-control" id="btn-start" onclick="startRealtime()">▶ 开启</button>
+                <button class="btn-control" id="btn-stop" onclick="stopRealtime()">⏹ 暂停</button>
                 
                 <!-- 新增：右上角状态和设置 (仿 Life Manager) -->
                 <div class="sync-info">
@@ -967,8 +978,44 @@
         };
         
         window.closeDeleteModal=function(){document.getElementById('delete-modal').style.display='none';}; function closeLogModal(){document.getElementById('log-modal').style.display='none';}
-        function startRealtime() { if(!intervalId) { updateTable(); intervalId=setInterval(updateTable, 5000); } }
-        function stopRealtime() { clearInterval(intervalId); intervalId=null; updateStatus('online', '暂停中'); }
+        
+        // --- 【修改】重写后的开启/暂停控制逻辑 ---
+        
+        function updateControlBtns(isRunning) {
+            const startBtn = document.getElementById('btn-start');
+            const stopBtn = document.getElementById('btn-stop');
+            if (startBtn && stopBtn) {
+                if (isRunning) {
+                    startBtn.classList.add('active'); // 开启按钮高亮
+                    stopBtn.classList.remove('active');
+                } else {
+                    startBtn.classList.remove('active');
+                    stopBtn.classList.add('active'); // 暂停按钮高亮
+                }
+            }
+        }
+
+        function startRealtime() { 
+            // 更新UI为在线状态
+            updateStatus('online', '监控中'); 
+            updateControlBtns(true);
+
+            if(!intervalId) { 
+                updateTable(); 
+                intervalId = setInterval(updateTable, 5000); 
+            } 
+        }
+
+        function stopRealtime() { 
+            if(intervalId) {
+                clearInterval(intervalId); 
+                intervalId = null; 
+            }
+            // 这里的 'paused' 对应 CSS 中新增的 .sync-dot.paused (灰色)
+            updateStatus('paused', '暂停中'); 
+            updateControlBtns(false);
+        }
+
         function setSort(k) { if(sortState.key===k) sortState.dir=sortState.dir==='desc'?'asc':'desc'; else {sortState.key=k; sortState.dir='desc';} updateTable(); }
         function getSortIcon(k) { return sortState.key!==k?'':(sortState.dir==='desc'?'⬇':'⬆'); }
         // ★ 保存时使用 stock_sys_data
@@ -984,6 +1031,9 @@
 
         checkUnsavedStatus();
         updateTable();
+        // 初始化按钮为暂停状态
+        updateControlBtns(false);
+        updateStatus('paused', '准备就绪');
         
         (async function autoSyncFromGithub() {
             const cfg = getGbConfig();
@@ -1014,6 +1064,7 @@
                     saveStorage();
                     setLocalChanges(false); 
                     updateTable(); 
+                    // 这里不自动切换为在线，保持用户手动控制，或者恢复之前的状态
                     updateStatus('online', '已同步');
                 }
             } catch (e) {
