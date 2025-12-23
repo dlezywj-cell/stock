@@ -775,6 +775,9 @@
                     }
                     const val = (o) => {
                         if(sortState.key=='chg') return parseFloat(o.chg);
+                        if(sortState.key=='cap') return parseFloat(o.cap)||0;
+                        if(sortState.key=='profit') return parseFloat(o.profit)||0;
+                        if(sortState.key=='revenue') return parseFloat(o.revenue)||0;
                         if(sortState.key.includes('pe')) return parseFloat(o.peRes[sortState.key.split('_')[1]])||-9999;
                         if(sortState.key.includes('ps')) return parseFloat(o.psRes[sortState.key.split('_')[1]])||-9999;
                         return 0;
@@ -798,9 +801,9 @@
                 <th onclick="setSort('trend')" class="sortable ${sk('trend')}" style="width:30px">趋势 ${getSortIcon('trend')}</th>
                 <th>名称</th><th class="${show('code')}">代码</th><th class="${show('tags')}">属性 ${icon('tags')}</th>
                 <th onclick="setSort('chg')" class="sortable ${sk('chg')}">涨跌 ${getSortIcon('chg')}</th>
-                <th class="${show('cap')}">市值</th>
-                <th>净利</th><th>合理PE</th><th onclick="setSort('pe_down')" class="sortable ${sk('pe_down')}">下% ${icon('pe_down')}</th><th onclick="setSort('pe_up')" class="sortable ${sk('pe_up')}">上% ${icon('pe_up')}</th>
-                <th>营收</th><th>合理PS</th><th onclick="setSort('ps_down')" class="sortable ${sk('ps_down')}">下% ${icon('ps_down')}</th><th onclick="setSort('ps_up')" class="sortable ${sk('ps_up')}">上% ${icon('ps_up')}</th>
+                <th onclick="setSort('cap')" class="sortable ${show('cap')} ${sk('cap')}">市值 ${getSortIcon('cap')}</th>
+                <th onclick="setSort('profit')" class="sortable ${sk('profit')}">净利 ${getSortIcon('profit')}</th><th>合理PE</th><th onclick="setSort('pe_down')" class="sortable ${sk('pe_down')}">下% ${icon('pe_down')}</th><th onclick="setSort('pe_up')" class="sortable ${sk('pe_up')}">上% ${icon('pe_up')}</th>
+                <th onclick="setSort('revenue')" class="sortable ${sk('revenue')}">营收 ${getSortIcon('revenue')}</th><th>合理PS</th><th onclick="setSort('ps_down')" class="sortable ${sk('ps_down')}">下% ${icon('ps_down')}</th><th onclick="setSort('ps_up')" class="sortable ${sk('ps_up')}">上% ${icon('ps_up')}</th>
             </tr></thead><tbody>`;
 
             if(rows.length===0) html+=`<tr><td colspan="20" style="text-align:center;padding:20px;color:#ccc">无数据</td></tr>`;
