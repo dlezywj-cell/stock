@@ -8,14 +8,12 @@
         /* === 全局重置 === */
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft YaHei', sans-serif; padding: 20px; max-width: 1700px; margin: 0 auto; background-color: #f4f6f9; font-size: 13px; color: #333; height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; }
         
-        /* === 移动端专属导航 (修改版) === */
+        /* === 移动端专属导航 === */
         #mobile-nav { display: none; justify-content: space-between; align-items: center; background: #fff; padding: 10px 15px; border-radius: 8px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); flex-shrink: 0; }
         #mobile-nav h3 { margin: 0; color: #2c3e50; font-size: 16px; display: flex; align-items: center; gap: 8px; }
         
-        /* 新增：手机端中间的状态栏样式 */
-        /* 【修改】增加了 cursor: pointer 让用户知道可以点击 */
         .mobile-status-group { display: flex; align-items: center; gap: 6px; background: #f8f9fa; padding: 5px 12px; border-radius: 20px; border: 1px solid #eee; font-size: 12px; color: #555; cursor: pointer; user-select: none; }
-        .mobile-status-group:active { background-color: #e9ecef; } /* 点击时的反馈效果 */
+        .mobile-status-group:active { background-color: #e9ecef; }
         
         .btn-menu { background: #f8f9fa; border: 1px solid #ddd; color: #333; padding: 6px 12px; border-radius: 4px; font-size: 14px; }
 
@@ -24,7 +22,6 @@
         .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; background: #fff; padding: 10px 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .tool-group { display: flex; align-items: center; gap: 10px; }
 
-        /* 右上角状态栏样式 */
         .sync-info { display: flex; align-items: center; gap: 8px; font-size: 12px; margin-left: 10px; padding-left: 10px; border-left: 1px solid #eee; }
         .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: #ccc; transition: background 0.3s; }
         .sync-dot.online { background: #34c759; box-shadow: 0 0 6px rgba(52, 199, 89, 0.4); }
@@ -43,8 +40,12 @@
         #progress-fill { height:100%; width:0%; background:linear-gradient(90deg, #007bff, #00c6ff); transition: width 0.2s; }
         #progress-text { font-size:11px; color:#666; font-family:monospace; white-space:nowrap; }
 
-        /* === 控制栏 === */
-        .control-bar { margin-bottom: 10px; display: flex; gap: 10px; align-items: center; background: #fff; padding: 10px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); flex-wrap: wrap; }
+        /* === 控制栏 (第一层：搜索与视图) === */
+        .control-bar { margin-bottom: 5px; display: flex; gap: 10px; align-items: center; background: #fff; padding: 10px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); flex-wrap: wrap; }
+        
+        /* === 管理栏 (第二层：录入按钮单独一行) === */
+        .manage-bar { margin-bottom: 10px; display: flex; justify-content: center; align-items: center; padding: 5px; }
+
         .divider { border-left: 1px solid #eee; height: 20px; margin: 0 5px; }
         .spacer { flex-grow: 1; } 
 
@@ -82,13 +83,11 @@
         }
 
         .btn-control { background-color: #6c757d; color: white; }
-        .btn-control.active { 
-            background-color: #343a40; 
-            box-shadow: inset 0 3px 5px rgba(0,0,0,0.3);
-            border: 1px solid #212529;
-        }
+        .btn-control.active { background-color: #343a40; box-shadow: inset 0 3px 5px rgba(0,0,0,0.3); border: 1px solid #212529; }
 
-        .btn-toggle { background-color: #f8f9fa; border: 1px solid #ccc; color: #333; margin-right: 10px; }
+        /* 修改后的录入管理按钮样式 (绿色) */
+        .btn-toggle { background-color: #28a745; color: white; padding: 8px 40px; font-size: 13px; box-shadow: 0 2px 5px rgba(40, 167, 69, 0.3); }
+
         .btn-find { background-color: #fd7e14; color: white; }
         .btn-view { background-color: #e9ecef; color: #adb5bd; border: 1px solid transparent; }
         .btn-view.active { background-color: #007bff; color: white; border-color: #007bff; }
@@ -161,7 +160,6 @@
         .sync-info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f1f1; }
         .sync-val.new { color: #28a745; } .sync-val.old { color: #dc3545; }
 
-        /* 设置弹窗表单样式 */
         .settings-form .form-group { margin-bottom: 15px; }
         .settings-form label { display: block; margin-bottom: 5px; font-weight: bold; color: #555; }
         .settings-form input { width: 100%; box-sizing: border-box; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
@@ -188,16 +186,11 @@
             .group-box { width: 100%; box-sizing: border-box; }
             input { width: 100% !important; box-sizing: border-box; }
             .modal-content { width: 90%; padding: 20px; max-height: 85vh; } 
-
             th, td { padding: 8px 3px; font-size: 12px; } 
-
             tbody td:nth-child(1) { width: 25px !important; min-width: 25px !important; max-width: 25px !important; left: 0 !important; padding: 0 !important; text-align: center; }
             thead tr:nth-child(2) th:nth-child(1) { width: 25px !important; min-width: 25px !important; max-width: 25px !important; left: 0 !important; padding: 0 !important; }
-
             tbody td:nth-child(2) { left: 25px !important; width: 65px !important; min-width: 65px !important; max-width: 65px !important; font-size: 11px; padding: 8px 2px !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
             thead tr:nth-child(2) th:nth-child(2) { left: 25px !important; width: 65px !important; min-width: 65px !important; max-width: 65px !important; padding: 8px 2px !important; font-size: 11px; }
-            
-            /* 移动端调整右上角状态栏 */
             .sync-info { margin-left: auto; border: none; }
         }
         .search-row { display: flex; align-items: center; gap: 5px; }
@@ -208,7 +201,6 @@
 <body>
     <div id="mobile-nav">
         <h3>📈 估值系统</h3>
-        <!-- 新增：手机端中间的状态显示区 (【修改】点击切换监控状态) -->
         <div class="mobile-status-group" onclick="toggleRealtime()">
             <div id="mobileSyncDot" class="sync-dot paused"></div>
             <span id="mobileStatusTxt">准备就绪</span>
@@ -222,20 +214,16 @@
                 <button class="btn-cloud-pull" onclick="syncFromGithub()">☁️ 拉取数据</button>
                 <button class="btn-cloud-push" onclick="uploadToGithub()">🚀 保存到 GitHub</button>
             </div>
-            <!-- 进度条 -->
             <div id="progress-bar-container">
                 <div id="progress-bg"><div id="progress-fill"></div></div>
                 <div id="progress-text">准备中...</div>
             </div>
             <div class="tool-group">
-                <!-- 移除了旧的 status-msg span -->
                 <button class="btn-refresh-trend desktop-only" onclick="forceRefreshTrends()" title="清空缓存并重新拉取所有趋势数据" style="padding:6px 12px; border-radius:4px; background:#17a2b8; color:white; border:none; cursor:pointer;">🔄 刷新趋势</button>
                 <div class="divider"></div>
-                <!-- 【修改】添加 id 以便控制 -->
                 <button class="btn-control" id="btn-start" onclick="startRealtime()">▶ 开启</button>
                 <button class="btn-control" id="btn-stop" onclick="stopRealtime()">⏹ 暂停</button>
                 
-                <!-- 新增：右上角状态和设置 (仿 Life Manager) -->
                 <div class="sync-info">
                     <div id="syncDot" class="sync-dot"></div>
                     <span id="statusTxt" class="status-txt" onclick="syncFromGithub()">未连接</span>
@@ -244,14 +232,13 @@
             </div>
         </div>
 
+        <!-- 调整后的控制栏：仅包含搜索、视图和重置/选中 -->
         <div class="control-bar">
-            <button class="btn-toggle" onclick="toggleInputPanel()" id="toggle-btn">➕ 录入/管理</button>
-            <div class="divider"></div>
             <div class="search-row">
                 <span style="font-size:12px; color:#666;" class="desktop-only">🔍:</span>
-                <input type="text" id="findInput" placeholder="代码/名称" style="width: 100px;" onkeydown="if(event.keyCode==13) updateTable()">
-                <input type="text" id="findTags" placeholder="属性/赛道" style="width: 100px;" onkeydown="if(event.keyCode==13) updateTable()">
-                <button class="btn-find" onclick="updateTable()">Go</button>
+                <input type="text" id="findInput" placeholder="代码/名称" style="width: 100px;" onkeydown="if(event.keyCode==13) commitSearch()">
+                <input type="text" id="findTags" placeholder="属性/赛道" style="width: 100px;" onkeydown="if(event.keyCode==13) commitSearch()">
+                <button class="btn-find" onclick="commitSearch()">Go</button>
             </div>
             <div class="spacer"></div>
             <div class="action-row">
@@ -267,6 +254,11 @@
                 <button class="btn-reset-all" onclick="clearAllFilters()">🌪️ 重置</button>
                 <button class="btn-compare" id="btn-compare" onclick="toggleShowSelected()">📊 选中 (0)</button>
             </div>
+        </div>
+        
+        <!-- 新增：独立的管理栏，放置绿色的录入按钮 -->
+        <div class="manage-bar">
+            <button class="btn-toggle" onclick="toggleInputPanel()" id="toggle-btn">➕ 录入/管理</button>
         </div>
 
         <div id="input-container">
@@ -349,7 +341,6 @@
     <div id="delete-modal" class="modal"><div class="modal-content" style="text-align: center; padding-top: 30px;"><h3>⚠️ 确认删除？</h3><p id="delete-msg" style="color:#555; margin-bottom:30px;">...</p><div><button class="btn-confirm-del" onclick="confirmDeleteAction()">删除</button><button class="btn-cancel" onclick="closeDeleteModal()">取消</button></div></div></div>
     <div id="sync-modal" class="modal"><div class="modal-content"><span class="close-btn" onclick="closeSyncModal()">&times;</span><h3 style="margin-top:0; border-bottom:2px solid #eee; padding-bottom:15px;">☁️ 同步确认</h3><div style="padding: 10px 0;"><div class="sync-info-row"><span class="sync-label">云端:</span><span class="sync-val" id="sync-cloud-date">...</span></div><div class="sync-info-row"><span class="sync-label">本地:</span><span class="sync-val" id="sync-local-date">...</span></div><div class="sync-info-row"><span class="sync-label">数量:</span><span class="sync-val" id="sync-count">...</span></div></div><div style="text-align:right; margin-top:20px;"><button class="btn-cloud-pull" onclick="confirmSyncAction()" style="padding:8px 20px;">✅ 覆盖</button><button class="btn-cancel" onclick="closeSyncModal()" style="padding:8px 20px;">取消</button></div></div></div>
 
-    <!-- 设置弹窗 (纯净版，无文件路径输入) -->
     <div id="settings-modal" class="modal">
         <div class="modal-content">
             <span class="close-btn" onclick="closeSettingsModal()">&times;</span>
@@ -381,26 +372,21 @@
     </div>
 
     <script>
-        /* 
-           ================================================================
-           核心修改：
-           1. 改回 localStorage：解决 iPhone 杀后台导致 Token 丢失问题。
-           2. 右上角状态栏：增加 updateStatus 函数，并移除旧的 status-msg。
-           3. 变量隔离：保留 stock_sys_ 前缀，确保不与其他网页串台。
-           ================================================================
-        */
         const APP_STORAGE = localStorage; 
 
         function getNowStr() { const d = new Date(); const pad = (n) => n.toString().padStart(2, '0'); return `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`; }
         function toggleMobileMenu(force) { const area = document.getElementById('top-area'), btn = document.getElementById('mobile-menu-btn'), isHidden = area.style.display === 'none' || getComputedStyle(area).display === 'none', show = force !== undefined ? force : isHidden; if (show) { area.style.display = 'block'; area.classList.add('show'); btn.innerText = '🔼 收起'; } else { area.style.display = 'none'; area.classList.remove('show'); btn.innerText = '⚙️ 菜单'; } }
         if (window.innerWidth <= 768) document.getElementById('top-area').style.display = 'none';
 
-        // ★★★ 数据读取 ★★★
         let stocks = JSON.parse(APP_STORAGE.getItem('stock_sys_data')) || [];
         let viewSettings = { showCode: true, showTags: true, showUpdate: true, showAction: true, showCap: false, ...JSON.parse(APP_STORAGE.getItem('stock_sys_view')) };
         
         let intervalId = null, sortState = { key: 'pe_up', dir: 'desc' }, isPanelOpen = false, pendingDeleteCode = null, pendingLogIndex = null, pendingSyncData = null, cachedMarketData = {}, selectedCodes = new Set(), columnFilters = {}, onlySelectedMode = false;
         
+        // 搜索缓存变量
+        let stickySearchVal = "";
+        let stickyTagVal = "";
+
         let historyCache = {}; 
         let fetchQueue = [];
         let activeRequests = 0;
@@ -422,27 +408,22 @@
 
         updateViewButtons();
         
-        // ★★★ 核心：状态更新函数 (修改版：支持电脑端和手机端同步更新) ★★★
         function updateStatus(state, text) {
-            // 电脑端右上角
             const dot = document.getElementById('syncDot');
             const txt = document.getElementById('statusTxt');
             if(dot) dot.className = 'sync-dot ' + state;
             if(txt) txt.innerText = text || (state === 'syncing' ? '同步中' : '在线');
-
-            // 手机端中间栏
             const mDot = document.getElementById('mobileSyncDot');
             const mTxt = document.getElementById('mobileStatusTxt');
             if(mDot) mDot.className = 'sync-dot ' + state;
             if(mTxt) mTxt.innerText = text || (state === 'syncing' ? '同步中' : '在线');
         }
 
-        // ★★★ 配置读取 ★★★
         function getGbConfig() {
             return {
                 username: APP_STORAGE.getItem('stock_sys_username') || "dlezywj-cell",
                 repo: APP_STORAGE.getItem('stock_sys_repo') || "stockdata",
-                path: "data.json", // 强制写死
+                path: "data.json", 
                 branch: APP_STORAGE.getItem('stock_sys_branch') || "main",
                 token: APP_STORAGE.getItem('stock_sys_token') || "" 
             };
@@ -673,9 +654,31 @@
             alert("已重置，正在重新拉取所有趋势数据...");
         }
 
+        // 提交搜索：保存变量、清空输入框、更新PlaceHolder、刷新表格
+        function commitSearch() {
+            const iInput = document.getElementById('findInput');
+            const tInput = document.getElementById('findTags');
+            
+            const rawI = iInput.value.trim().toUpperCase();
+            const rawT = tInput.value.trim().toLowerCase();
+
+            // 如果输入框不为空，更新 sticky 值
+            if (rawI) stickySearchVal = rawI;
+            if (rawT) stickyTagVal = rawT;
+            
+            // 清空输入框
+            iInput.value = '';
+            tInput.value = '';
+            
+            // 更新占位符提示当前过滤状态
+            iInput.placeholder = stickySearchVal ? "🔍 过滤: " + stickySearchVal : "代码/名称";
+            tInput.placeholder = stickyTagVal ? "🔍 过滤: " + stickyTagVal : "属性/赛道";
+
+            updateTable();
+        }
+
         async function updateTable(skipFetch = false) {
             const el = document.getElementById('result');
-            // updateStatus('syncing', '更新中...'); // 可选：更新行情时显示状态
             
             if (stocks.length === 0) { el.innerHTML = '<div style="padding:40px;text-align:center;color:#999;">📭 列表为空</div>'; return; }
             
@@ -686,11 +689,8 @@
                     const res = await fetch(url), json = await res.json();
                     if (json?.data?.diff) {
                         (Array.isArray(json.data.diff)?json.data.diff:Object.values(json.data.diff)).forEach(i => cachedMarketData[i.f12] = i);
-                        // 成功获取行情
                     }
-                } catch { 
-                    // 失败不报错，继续渲染
-                }
+                } catch { }
             }
             
             let missingHistory = 0;
@@ -733,13 +733,19 @@
         function renderTable(data) {
             let rows = data.filter(i => {
                 if (onlySelectedMode && !selectedCodes.has(i.code)) return false;
-                const k = document.getElementById('findInput').value.toUpperCase();
+                
+                // 优先使用 sticky 值，如果输入框有临时内容则覆盖（虽然已清空，但保留逻辑兼容性）
+                const activeInput = document.getElementById('findInput').value.trim().toUpperCase();
+                const k = activeInput || stickySearchVal;
+                
                 if (k && !i.code.includes(k) && !i.name.includes(k)) return false;
 
-                const tagInput = document.getElementById('findTags').value.trim().toLowerCase();
-                if (tagInput) {
+                const activeTagInput = document.getElementById('findTags').value.trim().toLowerCase();
+                const tagK = activeTagInput || stickyTagVal;
+
+                if (tagK) {
                     const stockTagsArr = (i.tags || "").toLowerCase().split(/\s+/);
-                    const searchTagsArr = tagInput.split(/\s+/);
+                    const searchTagsArr = tagK.split(/\s+/);
                     const match = searchTagsArr.every(searchTag => stockTagsArr.includes(searchTag));
                     if (!match) return false;
                 }
@@ -829,7 +835,20 @@
 
         function toggleSelectRow(c) { if(selectedCodes.has(c))selectedCodes.delete(c);else selectedCodes.add(c); updateTable(); }
         function toggleSelectAll() { if(currentVisibleStocks.length===0)return; const all=currentVisibleStocks.every(i=>selectedCodes.has(i.code)); currentVisibleStocks.forEach(i=>all?selectedCodes.delete(i.code):selectedCodes.add(i.code)); updateTable(); }
-        function clearAllFilters() { columnFilters={}; document.getElementById('findInput').value=''; document.getElementById('findTags').value=''; if(onlySelectedMode)toggleShowSelected(); updateTable(); }
+        
+        function clearAllFilters() { 
+            columnFilters={}; 
+            stickySearchVal = ""; 
+            stickyTagVal = "";
+            document.getElementById('findInput').value=''; 
+            document.getElementById('findTags').value=''; 
+            document.getElementById('findInput').placeholder = "代码/名称";
+            document.getElementById('findTags').placeholder = "属性/赛道";
+
+            if(onlySelectedMode)toggleShowSelected(); 
+            updateTable(); 
+        }
+
         function toggleShowSelected() { onlySelectedMode=!onlySelectedMode; const b=document.getElementById('btn-compare'); if(onlySelectedMode){b.classList.add('active');b.innerText="🔙 全部";}else{b.classList.remove('active');updateCompareBtn();} updateTable(); }
         function updateCompareBtn() { if(!onlySelectedMode)document.getElementById('btn-compare').innerText=`📊 选中 (${selectedCodes.size})`; }
         function toggleColumn(c) { const k='show'+c.charAt(0).toUpperCase()+c.slice(1); viewSettings[k]=!viewSettings[k]; APP_STORAGE.setItem('stock_sys_view',JSON.stringify(viewSettings)); updateViewButtons(); updateTable(); }
@@ -916,35 +935,17 @@
                 if (d?.QuotationCodeTable?.Data?.length) { 
                     const r = d.QuotationCodeTable.Data[0];
                     let finalCode = r.Code;
-                    
-                    if (r.QuoteID && r.QuoteID.includes('.') && r.QuoteID.endsWith(r.Code)) {
-                        finalCode = r.QuoteID;
-                    } 
-                    else if (r.ID && r.ID.includes('.') && r.ID.endsWith(r.Code)) {
-                        finalCode = r.ID;
-                    }
-                    else if (r.UnifiedCode && r.UnifiedCode.includes('.') && r.UnifiedCode.endsWith(r.Code)) {
-                        finalCode = r.UnifiedCode;
-                    }
+                    if (r.QuoteID && r.QuoteID.includes('.') && r.QuoteID.endsWith(r.Code)) finalCode = r.QuoteID;
+                    else if (r.ID && r.ID.includes('.') && r.ID.endsWith(r.Code)) finalCode = r.ID;
+                    else if (r.UnifiedCode && r.UnifiedCode.includes('.') && r.UnifiedCode.endsWith(r.Code)) finalCode = r.UnifiedCode;
                     else {
                         const mt = String(r.MarketType);
-                        if (mt === "105" || mt === "106" || mt === "107") {
-                            finalCode = mt + "." + r.Code;
-                        }
-                        else if (mt === "116" || (r.Code.length === 5 && /^\d+$/.test(r.Code))) {
-                            finalCode += ".HK";
-                        }
-                        else if (mt === "1" || (r.Code.length === 6 && r.Code.startsWith('6'))) {
-                            finalCode += ".SH";
-                        } 
-                        else if (mt === "2" || (r.Code.length === 6 && (r.Code.startsWith('0') || r.Code.startsWith('3')))) {
-                            finalCode += ".SZ";
-                        }
-                        else if (mt === "0" && r.Code.length === 6 && (r.Code.startsWith('8') || r.Code.startsWith('4'))) {
-                            finalCode += ".BJ";
-                        }
+                        if (mt === "105" || mt === "106" || mt === "107") finalCode = mt + "." + r.Code;
+                        else if (mt === "116" || (r.Code.length === 5 && /^\d+$/.test(r.Code))) finalCode += ".HK";
+                        else if (mt === "1" || (r.Code.length === 6 && r.Code.startsWith('6'))) finalCode += ".SH";
+                        else if (mt === "2" || (r.Code.length === 6 && (r.Code.startsWith('0') || r.Code.startsWith('3')))) finalCode += ".SZ";
+                        else if (mt === "0" && r.Code.length === 6 && (r.Code.startsWith('8') || r.Code.startsWith('4'))) finalCode += ".BJ";
                     }
-                    
                     document.getElementById('inCode').value = finalCode; 
                     document.getElementById('inName').value = r.Name; 
                 } else alert("未找到"); 
@@ -996,23 +997,20 @@
         
         window.closeDeleteModal=function(){document.getElementById('delete-modal').style.display='none';}; function closeLogModal(){document.getElementById('log-modal').style.display='none';}
         
-        // --- 开启/暂停控制逻辑 ---
-        
         function updateControlBtns(isRunning) {
             const startBtn = document.getElementById('btn-start');
             const stopBtn = document.getElementById('btn-stop');
             if (startBtn && stopBtn) {
                 if (isRunning) {
-                    startBtn.classList.add('active'); // 开启按钮高亮
+                    startBtn.classList.add('active'); 
                     stopBtn.classList.remove('active');
                 } else {
                     startBtn.classList.remove('active');
-                    stopBtn.classList.add('active'); // 暂停按钮高亮
+                    stopBtn.classList.add('active'); 
                 }
             }
         }
 
-        // 新增：切换实时监控状态
         function toggleRealtime() {
             if (intervalId) {
                 stopRealtime();
@@ -1022,7 +1020,6 @@
         }
 
         function startRealtime() { 
-            // 更新UI为在线状态
             updateStatus('online', '监控中'); 
             updateControlBtns(true);
 
@@ -1037,14 +1034,12 @@
                 clearInterval(intervalId); 
                 intervalId = null; 
             }
-            // 这里的 'paused' 对应 CSS 中新增的 .sync-dot.paused (灰色)
             updateStatus('paused', '暂停中'); 
             updateControlBtns(false);
         }
 
         function setSort(k) { if(sortState.key===k) sortState.dir=sortState.dir==='desc'?'asc':'desc'; else {sortState.key=k; sortState.dir='desc';} updateTable(); }
         function getSortIcon(k) { return sortState.key!==k?'':(sortState.dir==='desc'?'⬇':'⬆'); }
-        // ★ 保存时使用 stock_sys_data
         function saveStorage() { APP_STORAGE.setItem('stock_sys_data', JSON.stringify(stocks)); }
         window.onclick=function(e){if(e.target.className==='modal')e.target.style.display='none';}
         
@@ -1057,7 +1052,6 @@
 
         checkUnsavedStatus();
         updateTable();
-        // 初始化按钮为暂停状态
         updateControlBtns(false);
         updateStatus('paused', '准备就绪');
         
@@ -1081,7 +1075,6 @@
                 let data;
                 if (res.ok) data = JSON.parse(b64_to_utf8((await res.json()).content));
                 else {
-                    // 对于 Private repo，如果 API 失败，Raw 也会失败，这里直接抛出错误
                     throw new Error("Private repo fetch failed"); 
                 }
 
@@ -1090,7 +1083,6 @@
                     saveStorage();
                     setLocalChanges(false); 
                     updateTable(); 
-                    // 这里不自动切换为在线，保持用户手动控制，或者恢复之前的状态
                     updateStatus('online', '已同步');
                 }
             } catch (e) {
