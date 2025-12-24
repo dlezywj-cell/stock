@@ -40,12 +40,9 @@
         #progress-fill { height:100%; width:0%; background:linear-gradient(90deg, #007bff, #00c6ff); transition: width 0.2s; }
         #progress-text { font-size:11px; color:#666; font-family:monospace; white-space:nowrap; }
 
-        /* === 控制栏 (第一层：搜索与视图) === */
-        .control-bar { margin-bottom: 5px; display: flex; gap: 10px; align-items: center; background: #fff; padding: 10px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); flex-wrap: wrap; }
+        /* === 控制栏 (已修改：整合录入按钮) === */
+        .control-bar { margin-bottom: 15px; display: flex; gap: 10px; align-items: center; background: #fff; padding: 10px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); flex-wrap: wrap; }
         
-        /* === 管理栏 (第二层：录入按钮单独一行) === */
-        .manage-bar { margin-bottom: 10px; display: flex; justify-content: center; align-items: center; padding: 5px; }
-
         .divider { border-left: 1px solid #eee; height: 20px; margin: 0 5px; }
         .spacer { flex-grow: 1; } 
 
@@ -85,8 +82,8 @@
         .btn-control { background-color: #6c757d; color: white; }
         .btn-control.active { background-color: #343a40; box-shadow: inset 0 3px 5px rgba(0,0,0,0.3); border: 1px solid #212529; }
 
-        /* 修改后的录入管理按钮样式 (绿色) */
-        .btn-toggle { background-color: #28a745; color: white; padding: 8px 40px; font-size: 13px; box-shadow: 0 2px 5px rgba(40, 167, 69, 0.3); }
+        /* 录入管理按钮样式 (绿色，加宽) */
+        .btn-toggle { background-color: #28a745; color: white; padding: 8px 30px; font-size: 13px; box-shadow: 0 2px 5px rgba(40, 167, 69, 0.3); }
 
         .btn-find { background-color: #fd7e14; color: white; }
         .btn-view { background-color: #e9ecef; color: #adb5bd; border: 1px solid transparent; }
@@ -232,7 +229,7 @@
             </div>
         </div>
 
-        <!-- 调整后的控制栏：仅包含搜索、视图和重置/选中 -->
+        <!-- 控制栏：整合搜索、录入按钮（居中）、视图/操作按钮 -->
         <div class="control-bar">
             <div class="search-row">
                 <span style="font-size:12px; color:#666;" class="desktop-only">🔍:</span>
@@ -240,7 +237,14 @@
                 <input type="text" id="findTags" placeholder="属性/赛道" style="width: 100px;" onkeydown="if(event.keyCode==13) commitSearch()">
                 <button class="btn-find" onclick="commitSearch()">Go</button>
             </div>
-            <div class="spacer"></div>
+            
+            <div class="spacer"></div> <!-- 左侧弹簧 -->
+            
+            <!-- 录入按钮放在中间 -->
+            <button class="btn-toggle" onclick="toggleInputPanel()" id="toggle-btn">➕ 录入/管理</button>
+            
+            <div class="spacer"></div> <!-- 右侧弹簧 -->
+            
             <div class="action-row">
                 <span class="control-label desktop-only" style="margin-right:5px;font-size:12px;color:#666;">👁️:</span>
                 <button class="btn-view active" id="btn-toggle-code" onclick="toggleColumn('code')">代码</button>
@@ -254,11 +258,6 @@
                 <button class="btn-reset-all" onclick="clearAllFilters()">🌪️ 重置</button>
                 <button class="btn-compare" id="btn-compare" onclick="toggleShowSelected()">📊 选中 (0)</button>
             </div>
-        </div>
-        
-        <!-- 新增：独立的管理栏，放置绿色的录入按钮 -->
-        <div class="manage-bar">
-            <button class="btn-toggle" onclick="toggleInputPanel()" id="toggle-btn">➕ 录入/管理</button>
         </div>
 
         <div id="input-container">
@@ -383,7 +382,6 @@
         
         let intervalId = null, sortState = { key: 'pe_up', dir: 'desc' }, isPanelOpen = false, pendingDeleteCode = null, pendingLogIndex = null, pendingSyncData = null, cachedMarketData = {}, selectedCodes = new Set(), columnFilters = {}, onlySelectedMode = false;
         
-        // 搜索缓存变量
         let stickySearchVal = "";
         let stickyTagVal = "";
 
@@ -654,7 +652,6 @@
             alert("已重置，正在重新拉取所有趋势数据...");
         }
 
-        // 提交搜索：保存变量、清空输入框、更新PlaceHolder、刷新表格
         function commitSearch() {
             const iInput = document.getElementById('findInput');
             const tInput = document.getElementById('findTags');
@@ -662,15 +659,12 @@
             const rawI = iInput.value.trim().toUpperCase();
             const rawT = tInput.value.trim().toLowerCase();
 
-            // 如果输入框不为空，更新 sticky 值
             if (rawI) stickySearchVal = rawI;
             if (rawT) stickyTagVal = rawT;
             
-            // 清空输入框
             iInput.value = '';
             tInput.value = '';
             
-            // 更新占位符提示当前过滤状态
             iInput.placeholder = stickySearchVal ? "🔍 过滤: " + stickySearchVal : "代码/名称";
             tInput.placeholder = stickyTagVal ? "🔍 过滤: " + stickyTagVal : "属性/赛道";
 
@@ -734,7 +728,6 @@
             let rows = data.filter(i => {
                 if (onlySelectedMode && !selectedCodes.has(i.code)) return false;
                 
-                // 优先使用 sticky 值，如果输入框有临时内容则覆盖（虽然已清空，但保留逻辑兼容性）
                 const activeInput = document.getElementById('findInput').value.trim().toUpperCase();
                 const k = activeInput || stickySearchVal;
                 
