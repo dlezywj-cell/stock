@@ -613,7 +613,7 @@
         async function fetchHistoryImpl(secid, code) {
             const yahooSymbol = toYahooSymbol(secid);
             const targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${yahooSymbol}?range=1mo&interval=1d`;
-            const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
+            const proxyUrl = `https://stock-proxy.dlezywj.workers.dev/?${encodeURIComponent(targetUrl)}`;
             try {
                 const res = await fetch(proxyUrl);
                 if (!res.ok) { historyCache[code] = null; fetchingSet.delete(code); return null; }
