@@ -1083,6 +1083,10 @@
                 updateStatus('error', '同步失败');
             }
         })();
+        // 禁止所有输入框的浏览器自动联想/历史记录
+        document.querySelectorAll('input').forEach(input => {
+        input.setAttribute('autocomplete', 'off');
+        });
     </script>
 </body>
 </html>
