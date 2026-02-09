@@ -40,7 +40,7 @@
         #progress-fill { height:100%; width:0%; background:linear-gradient(90deg, #007bff, #00c6ff); transition: width 0.2s; }
         #progress-text { font-size:11px; color:#666; font-family:monospace; white-space:nowrap; }
 
-        /* === 控制栏 (已修改：整合录入按钮) === */
+        /* === 控制栏 === */
         .control-bar { margin-bottom: 15px; display: flex; gap: 10px; align-items: center; background: #fff; padding: 10px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); flex-wrap: wrap; }
         
         .divider { border-left: 1px solid #eee; height: 20px; margin: 0 5px; }
@@ -82,12 +82,18 @@
         .btn-control { background-color: #6c757d; color: white; }
         .btn-control.active { background-color: #343a40; box-shadow: inset 0 3px 5px rgba(0,0,0,0.3); border: 1px solid #212529; }
 
-        /* 录入管理按钮样式 (绿色，加宽) */
         .btn-toggle { background-color: #28a745; color: white; padding: 8px 30px; font-size: 13px; box-shadow: 0 2px 5px rgba(40, 167, 69, 0.3); }
 
         .btn-find { background-color: #fd7e14; color: white; }
         .btn-view { background-color: #e9ecef; color: #adb5bd; border: 1px solid transparent; }
         .btn-view.active { background-color: #007bff; color: white; border-color: #007bff; }
+        
+        /* === 市场筛选按钮样式 (修改：Active状态为选中) === */
+        .btn-market { background-color: #f8f9fa; color: #999; border: 1px solid #ddd; padding: 6px 10px; transition: all 0.2s; }
+        .btn-market:hover { background-color: #eee; }
+        /* 选中状态（绿色） */
+        .btn-market.active { background-color: #20c997; color: white; border-color: #20c997; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); font-weight: bold; }
+
         .btn-compare { background-color: #6f42c1; color: white; }
         .btn-compare.active { background-color: #4a2c85; box-shadow: inset 0 3px 5px rgba(0,0,0,0.2); }
         .btn-reset-all { background-color: #6c757d; color: white; }
@@ -174,8 +180,8 @@
             .control-bar { flex-direction: column; align-items: stretch; gap: 8px; padding: 10px; }
             .control-bar > * { width: 100%; margin: 0; }
             .spacer, .divider { display: none; }
-            .search-row { display: flex; gap: 5px; }
-            .search-row input { flex: 1; width: auto !important; }
+            .search-row { display: flex; gap: 5px; flex-wrap: wrap; }
+            .search-row input { flex: 1; width: auto !important; min-width: 80px; }
             .action-row { display: flex; gap: 5px; flex-wrap: wrap; }
             .action-row button { flex: 1; justify-content: center; }
             #input-panel { padding: 15px 10px; }
@@ -235,6 +241,12 @@
                 <span style="font-size:12px; color:#666;" class="desktop-only">🔍:</span>
                 <input type="text" id="findInput" placeholder="代码/名称" style="width: 100px;" onkeydown="if(event.keyCode==13) commitSearch()">
                 <input type="text" id="findTags" placeholder="属性/赛道" style="width: 100px;" onkeydown="if(event.keyCode==13) commitSearch()">
+                
+                <!-- 市场筛选按钮：默认全选 (active) -->
+                <button class="btn-market active" id="mkt-a" onclick="toggleMarket('A')">A股</button>
+                <button class="btn-market active" id="mkt-hk" onclick="toggleMarket('HK')">港股</button>
+                <button class="btn-market active" id="mkt-us" onclick="toggleMarket('US')">美股</button>
+
                 <button class="btn-find" onclick="commitSearch()">Go</button>
             </div>
             
@@ -384,6 +396,8 @@
         
         let stickySearchVal = "";
         let stickyTagVal = "";
+        // 市场筛选状态：默认全选 (true)
+        let marketFilters = { A: true, HK: true, US: true };
 
         let historyCache = {}; 
         let fetchQueue = [];
@@ -652,6 +666,21 @@
             alert("已重置，正在重新拉取所有趋势数据...");
         }
 
+        function toggleMarket(m) {
+            // 切换状态
+            marketFilters[m] = !marketFilters[m];
+            
+            // 更新按钮样式
+            const btn = document.getElementById('mkt-' + m.toLowerCase());
+            if (marketFilters[m]) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+
+            updateTable();
+        }
+
         function commitSearch() {
             const iInput = document.getElementById('findInput');
             const tInput = document.getElementById('findTags');
@@ -728,6 +757,16 @@
             let rows = data.filter(i => {
                 if (onlySelectedMode && !selectedCodes.has(i.code)) return false;
                 
+                // 市场过滤逻辑 (并集显示，未选中的剔除)
+                let type = 'OTHER';
+                if (i.code.startsWith('116.')) type = 'HK';
+                else if (i.code.startsWith('105.') || i.code.startsWith('106.')) type = 'US';
+                else if (i.code.startsWith('0.') || i.code.startsWith('1.')) type = 'A'; // 排除105/106/116后剩下的1开头是上证
+                
+                if (type === 'A' && !marketFilters.A) return false;
+                if (type === 'HK' && !marketFilters.HK) return false;
+                if (type === 'US' && !marketFilters.US) return false;
+
                 const activeInput = document.getElementById('findInput').value.trim().toUpperCase();
                 const k = activeInput || stickySearchVal;
                 
@@ -833,6 +872,13 @@
             columnFilters={}; 
             stickySearchVal = ""; 
             stickyTagVal = "";
+            
+            // 重置市场筛选：全选
+            marketFilters = { A: true, HK: true, US: true };
+            document.getElementById('mkt-a').classList.add('active');
+            document.getElementById('mkt-hk').classList.add('active');
+            document.getElementById('mkt-us').classList.add('active');
+
             document.getElementById('findInput').value=''; 
             document.getElementById('findTags').value=''; 
             document.getElementById('findInput').placeholder = "代码/名称";
