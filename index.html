@@ -224,12 +224,17 @@
             <div class="tool-group">
                 <button class="btn-refresh-trend desktop-only" onclick="forceRefreshTrends()" title="清空缓存并重新拉取所有趋势数据" style="padding:6px 12px; border-radius:4px; background:#17a2b8; color:white; border:none; cursor:pointer;">🔄 刷新趋势</button>
                 <div class="divider"></div>
+                <input type="date" id="histDate" style="width:135px; padding:6px 8px; border:1px solid #ced4da; border-radius:4px;">
+                <button class="btn-control" id="btn-apply-hist" onclick="applyHistoricalDate()" title="拉取该日期收盘价，按市值比例换算上下空间">📅 查看截面</button>
+                <button class="btn-control" id="btn-reset-hist" onclick="resetHistoricalDate()" style="display:none;">🔙 最新</button>
+                <div class="divider"></div>
                 <button class="btn-control" id="btn-start" onclick="startRealtime()">▶ 开启</button>
                 <button class="btn-control" id="btn-stop" onclick="stopRealtime()">⏹ 暂停</button>
                 
                 <div class="sync-info">
                     <div id="syncDot" class="sync-dot"></div>
                     <span id="statusTxt" class="status-txt" onclick="syncFromGithub()">未连接</span>
+                    <span id="histIndicator" style="font-size:11px;color:#28a745;font-weight:600;margin-left:6px;">🟢最新</span>
                     <i class="fas fa-cog settings-icon" onclick="openSettingsModal()">⚙️</i>
                 </div>
             </div>
@@ -345,6 +350,9 @@
         </div>
     </div>
 
+    <div id="hist-banner" style="display:none; background:#fff3cd; border:1px solid #ffc107; color:#856404; padding:8px 15px; border-radius:6px; margin-bottom:10px; font-size:12px;">
+        📅 当前展示 <b id="hist-banner-date"></b> 收盘截面估算市值与空间（假设股数不变，按当日收盘价与最新价比例换算），涨跌幅与趋势箭头也已切换为「以该日为基准」的口径 — <a href="#" onclick="resetHistoricalDate();return false;" style="color:#856404;text-decoration:underline;">恢复最新数据</a>
+    </div>
     <div id="result"></div>
 
     <div id="filter-menu"><h4 id="filter-title">筛选</h4><div class="filter-row" id="filter-row-numeric"><select id="filter-op"><option value=">">></option><option value="<"><</option><option value=">=">≥</option><option value="<=">≤</option><option value="=">=</option></select><input type="number" id="filter-val" placeholder="数值"></div><div class="filter-row" id="filter-row-text" style="display:none;"><input type="text" id="filter-text-val" placeholder="内容..."></div><div class="filter-actions"><button class="btn-cancel" onclick="clearCurrentFilter()">清空</button><button class="btn-add" onclick="confirmFilter()">确定</button></div><input type="hidden" id="filter-col-key"></div>
@@ -404,6 +412,11 @@
         let activeRequests = 0;
         const MAX_CONCURRENT = 8; 
         let fetchingSet = new Set();
+
+        // 历史截面模式相关状态
+        let historicalMode = false;
+        let historicalDateStr = null;
+        let historicalSeriesCache = {}; // key: `${code}_${dateStr}` -> 截止该日期的收盘价序列(数组,最后一项=该日收盘价) 或 null
         
         function updateProgress(done, total) {
             const bar = document.getElementById('progress-bar-container');
@@ -666,6 +679,127 @@
             alert("已重置，正在重新拉取所有趋势数据...");
         }
 
+        // 拉取某支股票截止指定日期(或之前最近交易日)的一段收盘价序列
+        // 序列最后一项 = 该日(或之前最近交易日)的收盘价，可用于市值换算；
+        // 序列最后20项 = 以该日为基准的均线计算窗口，用于历史趋势箭头
+        async function fetchHistoricalSeriesForDate(secid, code, dateStr) {
+            const cacheKey = code + '_' + dateStr;
+            if (historicalSeriesCache[cacheKey] !== undefined) return historicalSeriesCache[cacheKey];
+
+            const yahooSymbol = toYahooSymbol(secid);
+            const targetDate = new Date(dateStr + 'T00:00:00Z');
+            // 往前留约45天缓冲，确保凑够20个交易日做均线（覆盖周末/节假日）
+            const period1 = Math.floor(targetDate.getTime() / 1000) - 45 * 24 * 3600;
+            const period2 = Math.floor(targetDate.getTime() / 1000) + 1 * 24 * 3600;
+            const targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${yahooSymbol}?period1=${period1}&period2=${period2}&interval=1d`;
+            const proxyUrl = `https://stock-proxy.dlezywj.workers.dev/?${encodeURIComponent(targetUrl)}`;
+            try {
+                const res = await fetch(proxyUrl);
+                if (!res.ok) { historicalSeriesCache[cacheKey] = null; return null; }
+                const json = await res.json();
+                const result = json?.chart?.result?.[0];
+                const closes = result?.indicators?.quote?.[0]?.close;
+                if (!closes || !closes.length) { historicalSeriesCache[cacheKey] = null; return null; }
+                const filtered = closes.filter(p => p != null);
+                historicalSeriesCache[cacheKey] = filtered.length ? filtered : null;
+                return historicalSeriesCache[cacheKey];
+            } catch (e) {
+                historicalSeriesCache[cacheKey] = null;
+                return null;
+            }
+        }
+
+        // 从历史序列中取出"该日(或之前最近交易日)"的收盘价，用于市值换算
+        function getHistSpotPrice(series) {
+            if (!series || !series.length) return null;
+            return series[series.length - 1];
+        }
+
+        // 该日相对前一交易日的涨跌幅（基于历史序列，独立于实时数据）
+        function getHistChangePct(series) {
+            if (!series || series.length < 2) return null;
+            const last = series[series.length - 1];
+            const prev = series[series.length - 2];
+            if (!prev || prev <= 0) return null;
+            return ((last - prev) / prev * 100).toFixed(2);
+        }
+
+        // 以历史日期为基准计算均线趋势（不依赖实时价）
+        function getHistoricalTrendIcon(series) {
+            if (!series || series.length < 20) return "";
+            const data = series.slice(-20);
+            const avg = (arr) => arr.reduce((a,b)=>a+b,0) / arr.length;
+            const ma5 = avg(data.slice(-5));
+            const ma10 = avg(data.slice(-10));
+            const ma20 = avg(data.slice(-20));
+
+            if (ma5 > ma10 && ma10 > ma20) return '<span style="color:#e53935 !important;font-weight:900 !important;font-size:18px;">↑</span>';
+            if (ma5 < ma10 && ma10 < ma20) return '<span style="color:#43a047 !important;font-weight:900 !important;font-size:18px;">↓</span>';
+
+            return "";
+        }
+
+        async function applyHistoricalDate() {
+            const dateVal = document.getElementById('histDate').value;
+            if (!dateVal) { alert('请先选择一个日期'); return; }
+            const todayStr = new Date().toISOString().split('T')[0];
+            if (dateVal >= todayStr) { alert('请选择今天之前的日期'); return; }
+
+            const btn = document.getElementById('btn-apply-hist');
+            const originText = btn.innerText;
+            btn.innerText = '⏳ 拉取中...';
+            btn.disabled = true;
+
+            const total = stocks.length;
+            let done = 0;
+            updateProgress(0, total);
+
+            const concurrency = 8;
+            let idx = 0;
+            async function worker() {
+                while (idx < stocks.length) {
+                    const s = stocks[idx++];
+                    await fetchHistoricalSeriesForDate(getSecid(s.code), s.code, dateVal);
+                    done++;
+                    updateProgress(done, total);
+                }
+            }
+            await Promise.all(Array.from({ length: Math.min(concurrency, Math.max(stocks.length, 1)) }, worker));
+
+            historicalMode = true;
+            historicalDateStr = dateVal;
+            btn.innerText = originText;
+            btn.disabled = false;
+            document.getElementById('btn-reset-hist').style.display = 'inline-flex';
+            updateHistoricalIndicator();
+            updateTable(true);
+        }
+
+        function resetHistoricalDate() {
+            historicalMode = false;
+            historicalDateStr = null;
+            const inp = document.getElementById('histDate');
+            if (inp) inp.value = '';
+            const resetBtn = document.getElementById('btn-reset-hist');
+            if (resetBtn) resetBtn.style.display = 'none';
+            updateHistoricalIndicator();
+            updateTable();
+        }
+
+        function updateHistoricalIndicator() {
+            const ind = document.getElementById('histIndicator');
+            const banner = document.getElementById('hist-banner');
+            const bannerDate = document.getElementById('hist-banner-date');
+            if (historicalMode) {
+                if (ind) { ind.innerText = '📅 历史:' + historicalDateStr; ind.style.color = '#dc3545'; }
+                if (banner) banner.style.display = 'block';
+                if (bannerDate) bannerDate.innerText = historicalDateStr;
+            } else {
+                if (ind) { ind.innerText = '🟢最新'; ind.style.color = '#28a745'; }
+                if (banner) banner.style.display = 'none';
+            }
+        }
+
         function toggleMarket(m) {
             // 切换状态
             marketFilters[m] = !marketFilters[m];
@@ -732,10 +866,30 @@
                     let p=parseFloat(m.f2)||parseFloat(m.f18), mc=parseFloat(m.f20); 
                     if(p>0 && mc>0){ cap=mc/100000000; chg=parseFloat(m.f3).toFixed(2); valid=true; currentPrice=p; }
                 }
+
+                // 历史截面模式：市值 = 最新市值 × (历史收盘价 / 最新价)，等价于「最新股数 × 历史收盘价」
+                let displayCap = cap;
+                let displayChg = chg;
+                let histMissing = false;
+                let histSeries = null;
+                if (historicalMode) {
+                    histSeries = historicalSeriesCache[s.code + '_' + historicalDateStr];
+                    const histPrice = valid ? getHistSpotPrice(histSeries) : null;
+                    if (valid && histPrice != null && histPrice > 0 && currentPrice > 0) {
+                        displayCap = cap * (histPrice / currentPrice);
+                    } else {
+                        displayCap = 0;
+                        histMissing = true;
+                    }
+                    const histChg = getHistChangePct(histSeries);
+                    displayChg = histChg != null ? histChg : '-';
+                }
+                const dataValid = valid && !histMissing;
+
                 let pe = { down: '-', up: '-' }, ps = { down: '-', up: '-' };
-                if (valid) {
-                    if (s.profit && s.lowPE) { pe.down=((s.profit*s.lowPE/cap-1)*100).toFixed(2); pe.up=((s.profit*s.highPE-cap)/cap*100).toFixed(2); }
-                    if (s.revenue && s.lowPS) { ps.down=((s.revenue*s.lowPS/cap-1)*100).toFixed(2); ps.up=((s.revenue*s.highPS-cap)/cap*100).toFixed(2); }
+                if (dataValid) {
+                    if (s.profit && s.lowPE) { pe.down=((s.profit*s.lowPE/displayCap-1)*100).toFixed(2); pe.up=((s.profit*s.highPE-displayCap)/displayCap*100).toFixed(2); }
+                    if (s.revenue && s.lowPS) { ps.down=((s.revenue*s.lowPS/displayCap-1)*100).toFixed(2); ps.up=((s.revenue*s.highPS-displayCap)/displayCap*100).toFixed(2); }
                 }
                 
                 if (historyCache[s.code] === undefined && valid) {
@@ -743,8 +897,10 @@
                     missingHistory++;
                 }
                 
-                const trend = getTrendIcon(historyCache[s.code], currentPrice, s.code);
-                return { ...s, cap, chg, valid, peRes:pe, psRes:ps, trend };
+                const trend = historicalMode
+                    ? getHistoricalTrendIcon(histSeries)
+                    : getTrendIcon(historyCache[s.code], currentPrice, s.code);
+                return { ...s, cap: displayCap, chg: displayChg, valid: dataValid, peRes:pe, psRes:ps, trend };
             });
             
             if(missingHistory > 0) updateProgress(stocks.length - missingHistory, stocks.length);
@@ -853,7 +1009,7 @@
                     <td style="text-align:center;">${i.trend}</td>
                     <td style="font-weight:600">${i.name}</td><td class="${show('code')}" style="color:#888;font-size:12px">${i.code}</td>
                     <td class="${show('tags')}" style="text-align:left">${(i.tags||"").split(' ').map(t=>t?`<span class="tag-badge">${t}</span>`:'').join('')}</td>
-                    <td style="font-weight:bold;color:${parseFloat(i.chg)>=0?'#d32f2f':'#2e7d32'}">${i.chg}%</td>
+                    <td style="font-weight:bold;color:${parseFloat(i.chg)>=0?'#d32f2f':'#2e7d32'}">${i.chg==='-'?'-':i.chg+'%'}</td>
                     <td class="${show('cap')}" style="font-family:monospace">${i.cap?i.cap.toFixed(2):'-'}</td>
                     <td>${i.profit||'-'}</td><td style="font-size:12px">${i.lowPE||'-'}~${i.highPE||'-'}</td><td>${p(i.peRes.down)}</td><td>${p(i.peRes.up)}</td>
                     <td>${i.revenue||'-'}</td><td style="font-size:12px">${i.lowPS||'-'}~${i.highPS||'-'}</td><td>${p(i.psRes.down)}</td><td>${p(i.psRes.up)}</td>
