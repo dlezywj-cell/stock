@@ -894,7 +894,9 @@
             if (!skipFetch) {
                 const secids = stocks.map(s=>getSecid(s.code)).join(',');
                 const url = `https://push2.eastmoney.com/api/qt/ulist.np/get?secids=${secids}&fields=f12,f14,f2,f3,f18,f20&invt=2&fltt=2&_=${Date.now()}`;
-                const json = await apiFetch(url, 'cb', 'MarketAPI');
+                const proxyUrl = `https://stock-proxy.dlezywj.workers.dev/?${encodeURIComponent(url)}`;
+                let json = await apiFetch(proxyUrl, null, 'MarketAPI');
+                if (!json) json = await apiFetch(url, 'cb', 'MarketAPI-Fallback');
                 if (json?.data?.diff) {
                     (Array.isArray(json.data.diff)?json.data.diff:Object.values(json.data.diff)).forEach(i => cachedMarketData[i.f12] = i);
                 }
