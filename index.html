@@ -208,6 +208,7 @@
         .tag-picker-chip { background: #f8f9fa; color: #495057; border: 1px solid #dee2e6; padding: 4px 10px; border-radius: 999px; font-size: 12px; cursor: pointer; user-select: none; }
         .tag-picker-chip:hover { background: #e9ecef; }
         .tag-picker-chip.active { background: #007bff; color: white; border-color: #007bff; }
+        .tag-picker-count { font-size: 11px; opacity: 0.75; margin-left: 4px; }
         @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
@@ -910,6 +911,17 @@
             )].sort((a, b) => a.localeCompare(b, 'zh-Hans-CN'));
         }
 
+        function getTagCounts() {
+            const counts = {};
+            stocks.forEach(stock => {
+                const uniqueTags = new Set((stock.tags || "").split(/\s+/).map(tag => tag.trim()).filter(Boolean));
+                uniqueTags.forEach(tag => {
+                    counts[tag] = (counts[tag] || 0) + 1;
+                });
+            });
+            return counts;
+        }
+
         function getActiveTagTokens() {
             const activeTagInput = document.getElementById('findTags').value.trim().toLowerCase();
             const tagText = activeTagInput || stickyTagVal;
@@ -958,6 +970,7 @@
 
             const activeTags = new Set(getActiveTagTokens());
             const tags = getAllTags();
+            const tagCounts = getTagCounts();
 
             const clearBtn = `<div class="tag-filter-actions"><button type="button" class="tag-filter-clear" onclick="clearTagFilterSelection()">重置标签</button></div>`;
 
@@ -968,7 +981,8 @@
 
             picker.innerHTML = clearBtn + tags.map(tag => {
                 const activeClass = activeTags.has(tag.toLowerCase()) ? 'active' : '';
-                return `<button type="button" class="tag-picker-chip ${activeClass}" onclick="toggleTagFilter('${tag.replace(/'/g, "\\'")}')">${tag}</button>`;
+                const count = tagCounts[tag] || 0;
+                return `<button type="button" class="tag-picker-chip ${activeClass}" onclick="toggleTagFilter('${tag.replace(/'/g, "\\'")}')">${tag}<span class="tag-picker-count">(${count})</span></button>`;
             }).join('');
         }
 
