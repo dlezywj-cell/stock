@@ -418,6 +418,7 @@
         
         let stickySearchVal = "";
         let stickyTagVal = "";
+        let tagClickCounts = JSON.parse(APP_STORAGE.getItem('stock_sys_tag_click_counts') || '{}');
         // 市场筛选状态：默认全选 (true)
         let marketFilters = { A: true, HK: true, US: true };
 
@@ -908,7 +909,11 @@
                     .flatMap(stock => (stock.tags || "").split(/\s+/))
                     .map(tag => tag.trim())
                     .filter(Boolean)
-            )].sort((a, b) => a.localeCompare(b, 'zh-Hans-CN'));
+            )].sort((a, b) => {
+                const clickDiff = (tagClickCounts[b] || 0) - (tagClickCounts[a] || 0);
+                if (clickDiff !== 0) return clickDiff;
+                return a.localeCompare(b, 'zh-Hans-CN');
+            });
         }
 
         function getTagCounts() {
@@ -935,6 +940,9 @@
             const nextTags = activeTags.includes(lowerTag)
                 ? activeTags.filter(item => item !== lowerTag)
                 : [...activeTags, lowerTag];
+
+            tagClickCounts[tag] = (tagClickCounts[tag] || 0) + 1;
+            APP_STORAGE.setItem('stock_sys_tag_click_counts', JSON.stringify(tagClickCounts));
 
             stickyTagVal = "";
             tInput.value = nextTags.join(' ');
