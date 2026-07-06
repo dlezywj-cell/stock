@@ -198,6 +198,16 @@
         }
         .search-row { display: flex; align-items: center; gap: 5px; }
         .action-row { display: flex; align-items: center; gap: 5px; }
+        .tag-filter-wrap { position: relative; display: inline-block; }
+        .tag-filter-dropdown { position: absolute; top: calc(100% + 6px); left: 0; width: 280px; max-height: 180px; overflow-y: auto; background: #fff; border: 1px solid #dee2e6; border-radius: 8px; box-shadow: 0 8px 20px rgba(0,0,0,0.12); padding: 8px; z-index: 1200; display: none; }
+        .tag-filter-dropdown.show { display: block; }
+        .tag-filter-actions { display: flex; justify-content: flex-end; margin-bottom: 8px; }
+        .tag-filter-clear { background: #f1f3f5; color: #495057; border: 1px solid #dee2e6; padding: 4px 10px; border-radius: 999px; font-size: 12px; cursor: pointer; }
+        .tag-filter-clear:hover { background: #e9ecef; }
+        .tag-filter-empty { font-size: 12px; color: #999; padding: 6px 4px; }
+        .tag-picker-chip { background: #f8f9fa; color: #495057; border: 1px solid #dee2e6; padding: 4px 10px; border-radius: 999px; font-size: 12px; cursor: pointer; user-select: none; }
+        .tag-picker-chip:hover { background: #e9ecef; }
+        .tag-picker-chip.active { background: #007bff; color: white; border-color: #007bff; }
         @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
@@ -245,7 +255,10 @@
             <div class="search-row">
                 <span style="font-size:12px; color:#666;" class="desktop-only">🔍:</span>
                 <input type="text" id="findInput" placeholder="代码/名称" style="width: 100px;" onkeydown="if(event.keyCode==13) commitSearch()">
-                <input type="text" id="findTags" placeholder="属性/赛道" style="width: 100px;" onkeydown="if(event.keyCode==13) commitSearch()">
+                <div class="tag-filter-wrap" id="tag-filter-wrap">
+                    <input type="text" id="findTags" placeholder="属性/赛道" style="width: 100px;" onfocus="showTagDropdown()" oninput="renderTagPicker(); showTagDropdown(); updateTable(true)" onkeydown="if(event.keyCode==13) commitSearch()">
+                    <div class="tag-filter-dropdown" id="tag-picker"></div>
+                </div>
                 
                 <!-- 市场筛选按钮：默认全选 (active) -->
                 <button class="btn-market active" id="mkt-a" onclick="toggleMarket('A')">A股</button>
@@ -883,7 +896,80 @@
             iInput.placeholder = stickySearchVal ? "🔍 过滤: " + stickySearchVal : "代码/名称";
             tInput.placeholder = stickyTagVal ? "🔍 过滤: " + stickyTagVal : "属性/赛道";
 
+            hideTagDropdown();
+            renderTagPicker();
             updateTable();
+        }
+
+        function getAllTags() {
+            return [...new Set(
+                stocks
+                    .flatMap(stock => (stock.tags || "").split(/\s+/))
+                    .map(tag => tag.trim())
+                    .filter(Boolean)
+            )].sort((a, b) => a.localeCompare(b, 'zh-Hans-CN'));
+        }
+
+        function getActiveTagTokens() {
+            const activeTagInput = document.getElementById('findTags').value.trim().toLowerCase();
+            const tagText = activeTagInput || stickyTagVal;
+            return tagText ? tagText.split(/\s+/).filter(Boolean) : [];
+        }
+
+        function toggleTagFilter(tag) {
+            const tInput = document.getElementById('findTags');
+            const activeTags = getActiveTagTokens();
+            const lowerTag = tag.toLowerCase();
+            const nextTags = activeTags.includes(lowerTag)
+                ? activeTags.filter(item => item !== lowerTag)
+                : [...activeTags, lowerTag];
+
+            stickyTagVal = "";
+            tInput.value = nextTags.join(' ');
+            tInput.placeholder = "属性/赛道";
+            renderTagPicker();
+            showTagDropdown();
+            updateTable();
+        }
+
+        function clearTagFilterSelection() {
+            stickyTagVal = "";
+            const tInput = document.getElementById('findTags');
+            tInput.value = "";
+            tInput.placeholder = "属性/赛道";
+            renderTagPicker();
+            showTagDropdown();
+            updateTable(true);
+        }
+
+        function showTagDropdown() {
+            const picker = document.getElementById('tag-picker');
+            if (picker) picker.classList.add('show');
+        }
+
+        function hideTagDropdown() {
+            const picker = document.getElementById('tag-picker');
+            if (picker) picker.classList.remove('show');
+        }
+
+        function renderTagPicker() {
+            const picker = document.getElementById('tag-picker');
+            if (!picker) return;
+
+            const activeTags = new Set(getActiveTagTokens());
+            const tags = getAllTags();
+
+            const clearBtn = `<div class="tag-filter-actions"><button type="button" class="tag-filter-clear" onclick="clearTagFilterSelection()">重置标签</button></div>`;
+
+            if (tags.length === 0) {
+                picker.innerHTML = clearBtn + '<div class="tag-filter-empty">暂无可选属性</div>';
+                return;
+            }
+
+            picker.innerHTML = clearBtn + tags.map(tag => {
+                const activeClass = activeTags.has(tag.toLowerCase()) ? 'active' : '';
+                return `<button type="button" class="tag-picker-chip ${activeClass}" onclick="toggleTagFilter('${tag.replace(/'/g, "\\'")}')">${tag}</button>`;
+            }).join('');
         }
 
         async function updateTable(skipFetch = false) {
@@ -986,7 +1072,7 @@
                 if (tagK) {
                     const stockTagsArr = (i.tags || "").toLowerCase().split(/\s+/);
                     const searchTagsArr = tagK.split(/\s+/);
-                    const match = searchTagsArr.every(searchTag => stockTagsArr.includes(searchTag));
+                    const match = searchTagsArr.some(searchTag => stockTagsArr.includes(searchTag));
                     if (!match) return false;
                 }
 
@@ -1080,18 +1166,14 @@
             columnFilters={}; 
             stickySearchVal = ""; 
             stickyTagVal = "";
-            
-            // 重置市场筛选：全选
-            marketFilters = { A: true, HK: true, US: true };
-            document.getElementById('mkt-a').classList.add('active');
-            document.getElementById('mkt-hk').classList.add('active');
-            document.getElementById('mkt-us').classList.add('active');
 
             document.getElementById('findInput').value=''; 
             document.getElementById('findTags').value=''; 
             document.getElementById('findInput').placeholder = "代码/名称";
             document.getElementById('findTags').placeholder = "属性/赛道";
 
+            hideTagDropdown();
+            renderTagPicker();
             if(onlySelectedMode)toggleShowSelected(); 
             updateTable(); 
         }
@@ -1298,6 +1380,7 @@
         });
 
         checkUnsavedStatus();
+        renderTagPicker();
         updateTable();
         updateControlBtns(false);
         updateStatus('paused', '准备就绪');
@@ -1340,6 +1423,11 @@
         // 禁止所有输入框的浏览器自动联想/历史记录
         document.querySelectorAll('input').forEach(input => {
         input.setAttribute('autocomplete', 'off');
+        });
+
+        document.addEventListener('click', (event) => {
+            const wrap = document.getElementById('tag-filter-wrap');
+            if (wrap && !wrap.contains(event.target)) hideTagDropdown();
         });
     </script>
 </body>
