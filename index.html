@@ -16,6 +16,9 @@
         .mobile-status-group:active { background-color: #e9ecef; }
         
         .btn-menu { background: #f8f9fa; border: 1px solid #ddd; color: #333; padding: 6px 12px; border-radius: 4px; font-size: 14px; }
+        .mobile-system-meta { display: none; align-items: center; gap: 10px; }
+        .mobile-hist-indicator { font-size: 11px; color: #28a745; font-weight: 600; white-space: nowrap; }
+        .mobile-settings-btn { appearance: none; background: transparent; color: #666; padding: 2px; border: 0; font-size: 18px; box-shadow: none; }
 
         /* === 顶部区域 === */
         #top-area { flex-shrink: 0; }
@@ -45,6 +48,7 @@
         
         .divider { border-left: 1px solid #eee; height: 20px; margin: 0 5px; }
         .spacer { flex-grow: 1; } 
+        .market-row, .realtime-row { display: contents; }
 
         /* === 录入面板 === */
         #input-container { background: #fff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); overflow: hidden; transition: all 0.3s ease; margin-bottom: 15px; display: none; }
@@ -171,28 +175,36 @@
         /* === 移动端深度优化 === */
         @media (max-width: 768px) {
             body { padding: 10px; }
-            #mobile-nav { display: flex; }
+            #mobile-nav { display: grid; grid-template-columns: 1fr auto; gap: 8px 12px; }
+            #mobile-nav h3 { grid-column: 1; grid-row: 1; }
+            .mobile-system-meta { display: flex; grid-column: 2; grid-row: 1; justify-self: end; }
+            .mobile-status-group { grid-column: 1; grid-row: 2; justify-self: start; }
+            #mobile-menu-btn { grid-column: 2; grid-row: 2; justify-self: end; }
             #top-area { display: none; }
             #top-area.show { display: block; animation: slideDown 0.2s ease-out; }
             .header-bar { flex-direction: column; gap: 10px; padding: 10px; }
-            /* 手机上的工具栏允许换行，避免“暂停”等按钮被屏幕边缘截断。 */
-            .tool-group { width: 100%; justify-content: flex-start; flex-wrap: wrap; }
-            .tool-group button { flex: 1; justify-content: center; }
+            .tool-group { width: 100%; }
+            .cloud-tools { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+            .cloud-tools button { width: 100%; justify-content: center; }
+            .history-tools { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+            .history-tools #histDate { grid-column: 1; grid-row: 1; min-width: 0; }
+            .history-tools #btn-apply-hist { grid-column: 2; grid-row: 1; justify-content: center; }
+            .realtime-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; grid-column: 1 / -1; grid-row: 2; }
+            .realtime-row .btn-control { width: 100%; justify-content: center; }
+            .history-tools #btn-reset-hist { grid-column: 1 / -1; grid-row: 3; justify-content: center; }
             .header-bar .divider, .desktop-only { display: none; }
-            .header-bar .sync-info { width: 100%; margin-left: 0; padding-left: 0; justify-content: flex-start; }
+            .header-bar .sync-info { display: none; }
             .control-bar { flex-direction: column; align-items: stretch; gap: 8px; padding: 10px; }
             .control-bar > * { width: 100%; margin: 0; }
             .spacer, .divider { display: none; }
             /* 搜索第一行：代码、属性/赛道、Go；第二行：三个市场。 */
-            .search-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) auto; gap: 5px; }
+            .control-bar .search-row { display: grid; grid-template-columns: minmax(88px, 1fr) minmax(0, 2fr) 44px; gap: 7px; }
             .search-row input { width: 100% !important; min-width: 0; }
             #findInput { grid-column: 1; grid-row: 1; }
             #tag-filter-wrap { grid-column: 2; grid-row: 1; min-width: 0; }
             .search-row .btn-find { grid-column: 3; grid-row: 1; }
-            #mkt-a { grid-column: 1; grid-row: 2; }
-            #mkt-hk { grid-column: 2; grid-row: 2; }
-            #mkt-us { grid-column: 3; grid-row: 2; }
-            .search-row .btn-market { width: 100%; justify-content: center; }
+            .market-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; grid-column: 1 / -1; grid-row: 2; }
+            .market-row .btn-market { width: 100%; justify-content: center; }
             .action-row { display: flex; gap: 5px; flex-wrap: wrap; }
             .action-row button { flex: 1; justify-content: center; }
             #input-panel { padding: 15px 10px; }
@@ -226,6 +238,10 @@
 <body>
     <div id="mobile-nav">
         <h3>📈 估值系统</h3>
+        <div class="mobile-system-meta">
+            <span id="mobileHistIndicator" class="mobile-hist-indicator">🟢最新</span>
+            <button class="mobile-settings-btn" onclick="openSettingsModal()" aria-label="系统设置" title="系统设置">⚙️</button>
+        </div>
         <div class="mobile-status-group" onclick="toggleRealtime()">
             <div id="mobileSyncDot" class="sync-dot paused"></div>
             <span id="mobileStatusTxt">准备就绪</span>
@@ -235,7 +251,7 @@
 
     <div id="top-area">
         <div class="header-bar">
-            <div class="tool-group">
+            <div class="tool-group cloud-tools">
                 <button class="btn-cloud-pull" onclick="syncFromGithub()">☁️ 拉取数据</button>
                 <button class="btn-cloud-push" onclick="uploadToGithub()">🚀 保存到 GitHub</button>
             </div>
@@ -243,15 +259,17 @@
                 <div id="progress-bg"><div id="progress-fill"></div></div>
                 <div id="progress-text">准备中...</div>
             </div>
-            <div class="tool-group">
+            <div class="tool-group history-tools">
                 <button class="btn-refresh-trend desktop-only" onclick="forceRefreshTrends()" title="清空缓存并重新拉取所有趋势数据" style="padding:6px 12px; border-radius:4px; background:#17a2b8; color:white; border:none; cursor:pointer;">🔄 刷新趋势</button>
                 <div class="divider"></div>
                 <input type="date" id="histDate" style="width:135px; padding:6px 8px; border:1px solid #ced4da; border-radius:4px;">
                 <button class="btn-control" id="btn-apply-hist" onclick="applyHistoricalDate()" title="拉取该日期收盘价，按市值比例换算上下空间">📅 查看截面</button>
                 <button class="btn-control" id="btn-reset-hist" onclick="resetHistoricalDate()" style="display:none;">🔙 最新</button>
                 <div class="divider"></div>
-                <button class="btn-control" id="btn-start" onclick="startRealtime()">▶ 开启</button>
-                <button class="btn-control" id="btn-stop" onclick="stopRealtime()">⏹ 暂停</button>
+                <div class="realtime-row">
+                    <button class="btn-control" id="btn-start" onclick="startRealtime()">▶ 开启</button>
+                    <button class="btn-control" id="btn-stop" onclick="stopRealtime()">⏹ 暂停</button>
+                </div>
                 
                 <div class="sync-info">
                     <div id="syncDot" class="sync-dot"></div>
@@ -273,9 +291,11 @@
                 </div>
                 
                 <!-- 市场筛选按钮：默认全选 (active) -->
-                <button class="btn-market active" id="mkt-a" onclick="toggleMarket('A')">A股</button>
-                <button class="btn-market active" id="mkt-hk" onclick="toggleMarket('HK')">港股</button>
-                <button class="btn-market active" id="mkt-us" onclick="toggleMarket('US')">美股</button>
+                <div class="market-row">
+                    <button class="btn-market active" id="mkt-a" onclick="toggleMarket('A')">A股</button>
+                    <button class="btn-market active" id="mkt-hk" onclick="toggleMarket('HK')">港股</button>
+                    <button class="btn-market active" id="mkt-us" onclick="toggleMarket('US')">美股</button>
+                </div>
 
                 <button class="btn-find" onclick="commitSearch()">Go</button>
             </div>
@@ -866,14 +886,17 @@
 
         function updateHistoricalIndicator() {
             const ind = document.getElementById('histIndicator');
+            const mobileInd = document.getElementById('mobileHistIndicator');
             const banner = document.getElementById('hist-banner');
             const bannerDate = document.getElementById('hist-banner-date');
             if (historicalMode) {
                 if (ind) { ind.innerText = '📅 历史:' + historicalDateStr; ind.style.color = '#dc3545'; }
+                if (mobileInd) { mobileInd.innerText = '📅 历史'; mobileInd.style.color = '#dc3545'; }
                 if (banner) banner.style.display = 'block';
                 if (bannerDate) bannerDate.innerText = historicalDateStr;
             } else {
                 if (ind) { ind.innerText = '🟢最新'; ind.style.color = '#28a745'; }
+                if (mobileInd) { mobileInd.innerText = '🟢最新'; mobileInd.style.color = '#28a745'; }
                 if (banner) banner.style.display = 'none';
             }
         }
