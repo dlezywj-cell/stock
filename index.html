@@ -175,13 +175,24 @@
             #top-area { display: none; }
             #top-area.show { display: block; animation: slideDown 0.2s ease-out; }
             .header-bar { flex-direction: column; gap: 10px; padding: 10px; }
-            .tool-group { width: 100%; justify-content: space-between; }
+            /* 手机上的工具栏允许换行，避免“暂停”等按钮被屏幕边缘截断。 */
+            .tool-group { width: 100%; justify-content: flex-start; flex-wrap: wrap; }
             .tool-group button { flex: 1; justify-content: center; }
+            .header-bar .divider, .desktop-only { display: none; }
+            .header-bar .sync-info { width: 100%; margin-left: 0; padding-left: 0; justify-content: flex-start; }
             .control-bar { flex-direction: column; align-items: stretch; gap: 8px; padding: 10px; }
             .control-bar > * { width: 100%; margin: 0; }
             .spacer, .divider { display: none; }
-            .search-row { display: flex; gap: 5px; flex-wrap: wrap; }
-            .search-row input { flex: 1; width: auto !important; min-width: 80px; }
+            /* 搜索第一行：代码、属性/赛道、Go；第二行：三个市场。 */
+            .search-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) auto; gap: 5px; }
+            .search-row input { width: 100% !important; min-width: 0; }
+            #findInput { grid-column: 1; grid-row: 1; }
+            #tag-filter-wrap { grid-column: 2; grid-row: 1; min-width: 0; }
+            .search-row .btn-find { grid-column: 3; grid-row: 1; }
+            #mkt-a { grid-column: 1; grid-row: 2; }
+            #mkt-hk { grid-column: 2; grid-row: 2; }
+            #mkt-us { grid-column: 3; grid-row: 2; }
+            .search-row .btn-market { width: 100%; justify-content: center; }
             .action-row { display: flex; gap: 5px; flex-wrap: wrap; }
             .action-row button { flex: 1; justify-content: center; }
             #input-panel { padding: 15px 10px; }
