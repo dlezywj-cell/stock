@@ -16,8 +16,8 @@
         .mobile-status-group:active { background-color: #e9ecef; }
         
         .btn-menu { background: #f8f9fa; border: 1px solid #ddd; color: #333; padding: 6px 12px; border-radius: 4px; font-size: 14px; }
-        .mobile-system-meta { display: none; align-items: center; gap: 10px; }
-        .mobile-hist-indicator { font-size: 11px; color: #28a745; font-weight: 600; white-space: nowrap; }
+        .mobile-nav-actions { display: none; align-items: center; gap: 6px; }
+        .mobile-hist-indicator { display: none; font-size: 11px; color: #28a745; font-weight: 600; white-space: nowrap; }
         .mobile-settings-btn { appearance: none; background: transparent; color: #666; padding: 2px; border: 0; font-size: 18px; box-shadow: none; }
 
         /* === 顶部区域 === */
@@ -48,7 +48,7 @@
         
         .divider { border-left: 1px solid #eee; height: 20px; margin: 0 5px; }
         .spacer { flex-grow: 1; } 
-        .market-row, .realtime-row { display: contents; }
+        .market-row, .realtime-row, .history-query-row { display: contents; }
 
         /* === 录入面板 === */
         #input-container { background: #fff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); overflow: hidden; transition: all 0.3s ease; margin-bottom: 15px; display: none; }
@@ -175,20 +175,21 @@
         /* === 移动端深度优化 === */
         @media (max-width: 768px) {
             body { padding: 10px; }
-            #mobile-nav { display: grid; grid-template-columns: 1fr auto; gap: 8px 12px; }
+            #mobile-nav { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px; }
             #mobile-nav h3 { grid-column: 1; grid-row: 1; }
-            .mobile-system-meta { display: flex; grid-column: 2; grid-row: 1; justify-self: end; }
-            .mobile-status-group { grid-column: 1; grid-row: 2; justify-self: start; }
-            #mobile-menu-btn { grid-column: 2; grid-row: 2; justify-self: end; }
+            .mobile-status-group { grid-column: 2; grid-row: 1; justify-self: center; }
+            .mobile-nav-actions { display: flex; grid-column: 3; grid-row: 1; justify-self: end; }
             #top-area { display: none; }
             #top-area.show { display: block; animation: slideDown 0.2s ease-out; }
             .header-bar { flex-direction: column; gap: 10px; padding: 10px; }
             .tool-group { width: 100%; }
             .cloud-tools { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
             .cloud-tools button { width: 100%; justify-content: center; }
-            .history-tools { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
-            .history-tools #histDate { grid-column: 1; grid-row: 1; min-width: 0; }
-            .history-tools #btn-apply-hist { grid-column: 2; grid-row: 1; justify-content: center; }
+            .history-tools { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+            .history-query-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 6px; grid-column: 1; grid-row: 1; align-items: center; min-width: 0; }
+            .history-query-row #histDate { width: 100% !important; max-width: 100%; min-width: 0; box-sizing: border-box; overflow: hidden; }
+            .history-query-row #btn-apply-hist { justify-content: center; position: relative; }
+            .history-query-row .mobile-hist-indicator { display: inline-flex; align-items: center; justify-content: center; }
             .realtime-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; grid-column: 1 / -1; grid-row: 2; }
             .realtime-row .btn-control { width: 100%; justify-content: center; }
             .history-tools #btn-reset-hist { grid-column: 1 / -1; grid-row: 3; justify-content: center; }
@@ -238,15 +239,14 @@
 <body>
     <div id="mobile-nav">
         <h3>📈 估值系统</h3>
-        <div class="mobile-system-meta">
-            <span id="mobileHistIndicator" class="mobile-hist-indicator">🟢最新</span>
-            <button class="mobile-settings-btn" onclick="openSettingsModal()" aria-label="系统设置" title="系统设置">⚙️</button>
-        </div>
         <div class="mobile-status-group" onclick="toggleRealtime()">
             <div id="mobileSyncDot" class="sync-dot paused"></div>
             <span id="mobileStatusTxt">准备就绪</span>
         </div>
-        <button class="btn-menu" onclick="toggleMobileMenu()" id="mobile-menu-btn">⚙️ 菜单</button>
+        <div class="mobile-nav-actions">
+            <button class="mobile-settings-btn" onclick="openSettingsModal()" aria-label="系统设置" title="系统设置">⚙️</button>
+            <button class="btn-menu" onclick="toggleMobileMenu()" id="mobile-menu-btn">⚙️ 菜单</button>
+        </div>
     </div>
 
     <div id="top-area">
@@ -262,8 +262,11 @@
             <div class="tool-group history-tools">
                 <button class="btn-refresh-trend desktop-only" onclick="forceRefreshTrends()" title="清空缓存并重新拉取所有趋势数据" style="padding:6px 12px; border-radius:4px; background:#17a2b8; color:white; border:none; cursor:pointer;">🔄 刷新趋势</button>
                 <div class="divider"></div>
-                <input type="date" id="histDate" style="width:135px; padding:6px 8px; border:1px solid #ced4da; border-radius:4px;">
-                <button class="btn-control" id="btn-apply-hist" onclick="applyHistoricalDate()" title="拉取该日期收盘价，按市值比例换算上下空间">📅 查看截面</button>
+                <div class="history-query-row">
+                    <input type="date" id="histDate" style="width:135px; padding:6px 8px; border:1px solid #ced4da; border-radius:4px;">
+                    <button class="btn-control" id="btn-apply-hist" onclick="applyHistoricalDate()" title="拉取该日期收盘价，按市值比例换算上下空间">📅 查看截面</button>
+                    <span id="mobileHistIndicator" class="mobile-hist-indicator">🟢最新</span>
+                </div>
                 <button class="btn-control" id="btn-reset-hist" onclick="resetHistoricalDate()" style="display:none;">🔙 最新</button>
                 <div class="divider"></div>
                 <div class="realtime-row">
