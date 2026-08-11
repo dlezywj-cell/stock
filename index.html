@@ -186,7 +186,7 @@
             .cloud-tools { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
             .cloud-tools button { width: 100%; justify-content: center; }
             .history-tools { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
-            .history-query-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 6px; grid-column: 1; grid-row: 1; align-items: center; min-width: 0; }
+            .history-query-row { display: grid; grid-template-columns: minmax(0, calc(100% - 155px)) auto auto; gap: 8px; grid-column: 1; grid-row: 1; align-items: center; justify-content: start; min-width: 0; }
             .history-query-row #histDate { width: 100% !important; max-width: 100%; min-width: 0; box-sizing: border-box; overflow: hidden; }
             .history-query-row #btn-apply-hist { justify-content: center; position: relative; }
             .history-query-row .mobile-hist-indicator { display: inline-flex; align-items: center; justify-content: center; }
@@ -245,7 +245,7 @@
         </div>
         <div class="mobile-nav-actions">
             <button class="mobile-settings-btn" onclick="openSettingsModal()" aria-label="系统设置" title="系统设置">⚙️</button>
-            <button class="btn-menu" onclick="toggleMobileMenu()" id="mobile-menu-btn">⚙️ 菜单</button>
+            <button class="btn-menu" onclick="toggleMobileMenu()" id="mobile-menu-btn">菜单</button>
         </div>
     </div>
 
@@ -442,7 +442,7 @@
         const APP_STORAGE = localStorage; 
 
         function getNowStr() { const d = new Date(); const pad = (n) => n.toString().padStart(2, '0'); return `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`; }
-        function toggleMobileMenu(force) { const area = document.getElementById('top-area'), btn = document.getElementById('mobile-menu-btn'), isHidden = area.style.display === 'none' || getComputedStyle(area).display === 'none', show = force !== undefined ? force : isHidden; if (show) { area.style.display = 'block'; area.classList.add('show'); btn.innerText = '🔼 收起'; } else { area.style.display = 'none'; area.classList.remove('show'); btn.innerText = '⚙️ 菜单'; } }
+        function toggleMobileMenu(force) { const area = document.getElementById('top-area'), btn = document.getElementById('mobile-menu-btn'), isHidden = area.style.display === 'none' || getComputedStyle(area).display === 'none', show = force !== undefined ? force : isHidden; if (show) { area.style.display = 'block'; area.classList.add('show'); btn.innerText = '收起'; } else { area.style.display = 'none'; area.classList.remove('show'); btn.innerText = '菜单'; } }
         if (window.innerWidth <= 768) document.getElementById('top-area').style.display = 'none';
 
         let stocks = JSON.parse(APP_STORAGE.getItem('stock_sys_data')) || [];
