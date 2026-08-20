@@ -146,6 +146,8 @@
         .sort-icon { font-size: 10px; margin-left: 4px; color: #adb5bd; }
         .sort-active { color: #007bff; }
         th.sortable:hover { background-color: #e2e6ea; cursor: pointer; color: #007bff; }
+        .report-date { font-family: monospace; color: #495057; }
+        .report-date.soon { color: #dc3545; font-weight: 700; }
 
         /* 弹窗 */
         .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(2px); justify-content: center; align-items: center; }
@@ -315,6 +317,7 @@
                 <button class="btn-view active" id="btn-toggle-code" onclick="toggleColumn('code')">代码</button>
                 <button class="btn-view active" id="btn-toggle-tags" onclick="toggleColumn('tags')">属性</button>
                 <button class="btn-view" id="btn-toggle-cap" onclick="toggleColumn('cap')">市值</button>
+                <button class="btn-view active" id="btn-toggle-report" onclick="toggleColumn('report')">财报</button>
                 <button class="btn-view active" id="btn-toggle-update" onclick="toggleColumn('update')">更新</button>
                 <button class="btn-view active" id="btn-toggle-action" onclick="toggleColumn('action')">操作</button>
             </div>
@@ -446,7 +449,7 @@
         if (window.innerWidth <= 768) document.getElementById('top-area').style.display = 'none';
 
         let stocks = JSON.parse(APP_STORAGE.getItem('stock_sys_data')) || [];
-        let viewSettings = { showCode: true, showTags: true, showUpdate: true, showAction: true, showCap: false, ...JSON.parse(APP_STORAGE.getItem('stock_sys_view')) };
+        let viewSettings = { showCode: true, showTags: true, showReport: true, showUpdate: true, showAction: true, showCap: false, ...JSON.parse(APP_STORAGE.getItem('stock_sys_view')) };
         
         let intervalId = null, sortState = { key: 'pe_up', dir: 'desc' }, isPanelOpen = false, pendingDeleteCode = null, pendingLogIndex = null, pendingSyncData = null, cachedMarketData = {}, selectedCodes = new Set(), columnFilters = {}, onlySelectedMode = false;
         
@@ -461,6 +464,18 @@
         let activeRequests = 0;
         const MAX_CONCURRENT = 8; 
         let fetchingSet = new Set();
+
+        const REPORT_DATE_STORAGE_KEY = 'stock_sys_report_dates_v2';
+        let reportDateState = (() => {
+            try {
+                const saved = JSON.parse(APP_STORAGE.getItem(REPORT_DATE_STORAGE_KEY) || '{}');
+                return { fetchedOn: saved.fetchedOn || '', data: saved.data || {} };
+            } catch (e) {
+                return { fetchedOn: '', data: {} };
+            }
+        })();
+        let reportDateFetchPromise = null;
+        let reportDateLastAttempt = 0;
 
         // 历史截面模式相关状态
         let historicalMode = false;
@@ -590,6 +605,188 @@
             }
 
             return null;
+        }
+
+        function getLocalDateStr(date = new Date()) {
+            const pad = n => String(n).padStart(2, '0');
+            return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+        }
+
+        function getAStockRawCode(code) {
+            const secid = getSecid(code);
+            return /^(0|1)\.\d{6}$/.test(secid) ? secid.split('.')[1] : null;
+        }
+
+        function getHKStockRawCode(code) {
+            const secid = getSecid(code);
+            const match = secid.match(/^116\.(\d+)$/);
+            return match ? String(parseInt(match[1], 10)).padStart(5, '0') : null;
+        }
+
+        function getReportDateInfo(code) {
+            const item = reportDateState.data[code];
+            return item && item.date ? item : null;
+        }
+
+        function persistReportDateState() {
+            APP_STORAGE.setItem(REPORT_DATE_STORAGE_KEY, JSON.stringify(reportDateState));
+        }
+
+        async function fetchReportDateBatch(batch, today) {
+            const rawCodes = [...new Set(batch.map(item => item.rawCode))];
+            const codeFilter = rawCodes.map(code => `"${code}"`).join(',');
+            const params = new URLSearchParams({
+                pageSize: '500',
+                pageNumber: '1',
+                reportName: 'RPT_PUBLIC_BS_APPOIN',
+                columns: 'SECURITY_CODE,SECUCODE,APPOINT_PUBLISH_DATE,REPORT_DATE,REPORT_TYPE_NAME,IS_PUBLISH',
+                sortColumns: 'APPOINT_PUBLISH_DATE',
+                sortTypes: '-1',
+                filter: `(SECURITY_CODE in (${codeFilter}))`,
+                source: 'WEB',
+                client: 'WEB'
+            });
+            const url = `https://datacenter-web.eastmoney.com/api/data/v1/get?${params.toString()}`;
+            const proxyUrl = `https://stock-proxy.dlezywj.workers.dev/?${encodeURIComponent(url)}`;
+            let json = await apiFetch(proxyUrl, null, 'ReportDateAPI');
+            if (!json) json = await apiFetch(url, 'callback', 'ReportDateAPI-Fallback');
+            if (!json?.success || !json?.result) return false;
+
+            const nearestByRawCode = {};
+            const rows = Array.isArray(json.result.data) ? json.result.data : [];
+            rows.forEach(row => {
+                const date = String(row.APPOINT_PUBLISH_DATE || '').slice(0, 10);
+                // 以预约披露日是否仍在今天或未来为准。
+                // 个别公司会在预约日前一晚发布公告，此时数据源已将 IS_PUBLISH 标为 1，
+                // 但预约日仍应保留到当天结束，避免错过用户需要关注的财报窗口。
+                if (!date || date < today) return;
+                const rawCode = String(row.SECURITY_CODE || '');
+                const current = nearestByRawCode[rawCode];
+                if (!current || date < current.date) {
+                    nearestByRawCode[rawCode] = {
+                        date,
+                        reportDate: String(row.REPORT_DATE || '').slice(0, 10),
+                        reportType: row.REPORT_TYPE_NAME || ''
+                    };
+                }
+            });
+
+            batch.forEach(item => {
+                reportDateState.data[item.code] = nearestByRawCode[item.rawCode] || { date: '', reportDate: '', reportType: '' };
+            });
+            return true;
+        }
+
+        async function fetchText(url, timeoutMs = 8000) {
+            try {
+                const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
+                const timerId = ctrl ? setTimeout(() => ctrl.abort(), timeoutMs) : null;
+                const res = await fetch(url, ctrl ? { signal: ctrl.signal } : {});
+                if (timerId) clearTimeout(timerId);
+                return res.ok ? await res.text() : null;
+            } catch (e) {
+                return null;
+            }
+        }
+
+        async function fetchHKReportDates(batch, today) {
+            const pages = [
+                'https://www3.hkexnews.hk/reports/bmn/ebmn_c.htm',
+                'https://www3.hkexnews.hk/reports/bmn/cbmngem.htm'
+            ];
+            const nearestByRawCode = {};
+            let succeeded = false;
+
+            for (const pageUrl of pages) {
+                const proxyUrl = `https://stock-proxy.dlezywj.workers.dev/?${encodeURIComponent(pageUrl)}`;
+                const html = await fetchText(proxyUrl);
+                if (!html) continue;
+                succeeded = true;
+
+                const doc = new DOMParser().parseFromString(html, 'text/html');
+                doc.querySelectorAll('tr').forEach(row => {
+                    const cells = Array.from(row.cells || []).map(cell => cell.textContent.replace(/\s+/g, ' ').trim());
+                    if (cells.length < 6 || !/^\d{2}\/\d{2}\/\d{4}$/.test(cells[0])) return;
+                    if (!/業績|业绩/.test(cells[4])) return;
+
+                    const [day, month, year] = cells[0].split('/');
+                    const date = `${year}-${month}-${day}`;
+                    if (date < today) return;
+
+                    const digits = cells[3].replace(/\D/g, '');
+                    if (!digits) return;
+                    const rawCode = String(parseInt(digits, 10)).padStart(5, '0');
+                    const current = nearestByRawCode[rawCode];
+                    if (!current || date < current.date) {
+                        nearestByRawCode[rawCode] = {
+                            date,
+                            reportDate: cells[5] || '',
+                            reportType: cells[4] || '業績',
+                            source: 'HKEX'
+                        };
+                    }
+                });
+            }
+
+            if (!succeeded) return false;
+            batch.forEach(item => {
+                reportDateState.data[item.code] = nearestByRawCode[item.rawCode] || { date: '', reportDate: '', reportType: '', source: 'HKEX' };
+            });
+            return true;
+        }
+
+        function ensureReportDates() {
+            const today = getLocalDateStr();
+            if (reportDateState.fetchedOn !== today) {
+                reportDateState = { fetchedOn: today, data: {} };
+            }
+
+            const pendingA = stocks
+                .map(stock => ({ code: stock.code, rawCode: getAStockRawCode(stock.code) }))
+                .filter(item => item.rawCode && !Object.prototype.hasOwnProperty.call(reportDateState.data, item.code));
+            const pendingHK = stocks
+                .map(stock => ({ code: stock.code, rawCode: getHKStockRawCode(stock.code) }))
+                .filter(item => item.rawCode && !Object.prototype.hasOwnProperty.call(reportDateState.data, item.code));
+            if ((!pendingA.length && !pendingHK.length) || reportDateFetchPromise) return reportDateFetchPromise;
+            if (Date.now() - reportDateLastAttempt < 30 * 60 * 1000) return null;
+
+            reportDateLastAttempt = Date.now();
+            const batches = [];
+            for (let i = 0; i < pendingA.length; i += 40) batches.push(pendingA.slice(i, i + 40));
+
+            reportDateFetchPromise = (async () => {
+                let changed = false;
+                let allSucceeded = true;
+                for (const batch of batches) {
+                    if (await fetchReportDateBatch(batch, today)) changed = true;
+                    else allSucceeded = false;
+                }
+                if (pendingHK.length) {
+                    if (await fetchHKReportDates(pendingHK, today)) changed = true;
+                    else allSucceeded = false;
+                }
+                if (allSucceeded) reportDateLastAttempt = 0;
+                if (changed) {
+                    persistReportDateState();
+                    updateTable(true);
+                }
+            })().finally(() => {
+                reportDateFetchPromise = null;
+                // 查询过程中可能有新股票被录入或从 GitHub 同步进来；
+                // 当前批次结束后立即补查，避免必须等待下一次手动刷新。
+                ensureReportDates();
+            });
+            return reportDateFetchPromise;
+        }
+
+        function formatReportDateCell(info) {
+            if (!info?.date) return '<span class="data-empty">-</span>';
+            const today = new Date(getLocalDateStr() + 'T00:00:00');
+            const target = new Date(info.date + 'T00:00:00');
+            const days = Math.round((target - today) / 86400000);
+            const soonClass = days >= 0 && days <= 7 ? ' soon' : '';
+            const title = [info.reportType, info.reportDate ? `报告期：${info.reportDate}` : '', info.source || '东方财富预约披露'].filter(Boolean).join('；');
+            return `<span class="report-date${soonClass}" title="${title}">${info.date.replace(/-/g, '/')}</span>`;
         }
 
         function checkUnsavedStatus() {
@@ -1035,6 +1232,7 @@
             const el = document.getElementById('result');
             
             if (stocks.length === 0) { el.innerHTML = '<div style="padding:40px;text-align:center;color:#999;">📭 列表为空</div>'; return; }
+            ensureReportDates();
             
             if (!skipFetch) {
                 const secids = stocks.map(s=>getSecid(s.code)).join(',');
@@ -1097,7 +1295,7 @@
                 const trend = historicalMode
                     ? getHistoricalTrendIcon(histSeries)
                     : getTrendIcon(historyCache[s.code], currentPrice, s.code);
-                return { ...s, cap: displayCap, chg: displayChg, valid: dataValid, peRes:pe, psRes:ps, trend };
+                return { ...s, cap: displayCap, chg: displayChg, valid: dataValid, peRes:pe, psRes:ps, trend, reportDateInfo: getReportDateInfo(s.code) };
             });
             
             if(missingHistory > 0) updateProgress(stocks.length - missingHistory, stocks.length);
@@ -1156,6 +1354,14 @@
                         const dB = b.logs?.[0]?.date || "";
                         return sortState.dir === 'desc' ? dB.localeCompare(dA) : dA.localeCompare(dB);
                     }
+                    if (sortState.key === 'report_date') {
+                        const dA = a.reportDateInfo?.date || '';
+                        const dB = b.reportDateInfo?.date || '';
+                        if (!dA && !dB) return 0;
+                        if (!dA) return 1;
+                        if (!dB) return -1;
+                        return sortState.dir === 'desc' ? dB.localeCompare(dA) : dA.localeCompare(dB);
+                    }
                     if (sortState.key === 'trend') {
                         const getScore = (o) => {
                             if (o.trend.includes('↑')) return 2; 
@@ -1183,7 +1389,7 @@
             const allSel = rows.length>0 && rows.every(i=>selectedCodes.has(i.code));
 
             let html = `<table><thead><tr>
-                <th class="th-basic" colspan="${3 + (viewSettings.showCode?1:0) + (viewSettings.showTags?1:0) + (viewSettings.showCap?1:0)}">📊 基础行情</th>
+                <th class="th-basic" colspan="${3 + (viewSettings.showCode?1:0) + (viewSettings.showTags?1:0) + (viewSettings.showCap?1:0) + (viewSettings.showReport?1:0)}">📊 基础行情</th>
                 <th class="th-pe" colspan="4">💰 PE (利润)</th><th class="th-ps" colspan="4">🚀 PS (营收)</th>
                 <th rowspan="2" class="sortable ${show('update')} ${sk('last_update')}" onclick="setSort('last_update')" style="width:70px">📅 ${getSortIcon('last_update')}</th>
                 <th class="th-basic ${show('action')}" rowspan="2">⚙️</th>
@@ -1193,11 +1399,12 @@
                 <th>名称</th><th class="${show('code')}">代码</th><th class="${show('tags')}">属性 ${icon('tags')}</th>
                 <th onclick="setSort('chg')" class="sortable ${sk('chg')}">涨跌 ${getSortIcon('chg')}</th>
                 <th onclick="setSort('cap')" class="sortable ${show('cap')} ${sk('cap')}">市值 ${getSortIcon('cap')}</th>
+                <th onclick="setSort('report_date')" class="sortable ${show('report')} ${sk('report_date')}">财报日 ${getSortIcon('report_date')}</th>
                 <th onclick="setSort('profit')" class="sortable ${sk('profit')}">净利 ${getSortIcon('profit')}</th><th>合理PE</th><th onclick="setSort('pe_down')" class="sortable ${sk('pe_down')}">下% ${icon('pe_down')}</th><th onclick="setSort('pe_up')" class="sortable ${sk('pe_up')}">上% ${icon('pe_up')}</th>
                 <th onclick="setSort('revenue')" class="sortable ${sk('revenue')}">营收 ${getSortIcon('revenue')}</th><th>合理PS</th><th onclick="setSort('ps_down')" class="sortable ${sk('ps_down')}">下% ${icon('ps_down')}</th><th onclick="setSort('ps_up')" class="sortable ${sk('ps_up')}">上% ${icon('ps_up')}</th>
             </tr></thead><tbody>`;
 
-            if(rows.length===0) html+=`<tr><td colspan="20" style="text-align:center;padding:20px;color:#ccc">无数据</td></tr>`;
+            if(rows.length===0) html+=`<tr><td colspan="21" style="text-align:center;padding:20px;color:#ccc">无数据</td></tr>`;
             else rows.forEach(i => {
                 const p = (v) => `<span style="color:${parseFloat(v)>=0?'#d32f2f':'#2e7d32'};font-weight:${Math.abs(v)>30?'800':'bold'}">${v==='-'?'-':v+'%'}</span>`;
                 const u = i.logs?.[0]?.date ? `<span style="font-size:11px;color:#666;display:block;line-height:1.2">${i.logs[0].date.split(' ')[0]}<br><span style="color:#999;font-size:10px">${i.logs[0].date.split(' ')[1]}</span></span>` : '-';
@@ -1208,6 +1415,7 @@
                     <td class="${show('tags')}" style="text-align:left">${(i.tags||"").split(' ').map(t=>t?`<span class="tag-badge">${t}</span>`:'').join('')}</td>
                     <td style="font-weight:bold;color:${parseFloat(i.chg)>=0?'#d32f2f':'#2e7d32'}">${i.chg==='-'?'-':i.chg+'%'}</td>
                     <td class="${show('cap')}" style="font-family:monospace">${i.cap?i.cap.toFixed(2):'-'}</td>
+                    <td class="${show('report')}">${formatReportDateCell(i.reportDateInfo)}</td>
                     <td>${i.profit||'-'}</td><td style="font-size:12px">${i.lowPE||'-'}~${i.highPE||'-'}</td><td>${p(i.peRes.down)}</td><td>${p(i.peRes.up)}</td>
                     <td>${i.revenue||'-'}</td><td style="font-size:12px">${i.lowPS||'-'}~${i.highPS||'-'}</td><td>${p(i.psRes.down)}</td><td>${p(i.psRes.up)}</td>
                     <td class="${show('update')}">${u}</td>
@@ -1240,7 +1448,7 @@
         function toggleShowSelected() { onlySelectedMode=!onlySelectedMode; const b=document.getElementById('btn-compare'); if(onlySelectedMode){b.classList.add('active');b.innerText="🔙 全部";}else{b.classList.remove('active');updateCompareBtn();} updateTable(); }
         function updateCompareBtn() { if(!onlySelectedMode)document.getElementById('btn-compare').innerText=`📊 选中 (${selectedCodes.size})`; }
         function toggleColumn(c) { const k='show'+c.charAt(0).toUpperCase()+c.slice(1); viewSettings[k]=!viewSettings[k]; APP_STORAGE.setItem('stock_sys_view',JSON.stringify(viewSettings)); updateViewButtons(); updateTable(); }
-        function updateViewButtons() { ['code','tags','update','action','cap'].forEach(c => { const b=document.getElementById('btn-toggle-'+c); if(viewSettings['show'+c.charAt(0).toUpperCase()+c.slice(1)])b.classList.add('active');else b.classList.remove('active'); }); }
+        function updateViewButtons() { ['code','tags','report','update','action','cap'].forEach(c => { const b=document.getElementById('btn-toggle-'+c); if(viewSettings['show'+c.charAt(0).toUpperCase()+c.slice(1)])b.classList.add('active');else b.classList.remove('active'); }); }
 
         function openFilterMenu(k,e) { const m=document.getElementById('filter-menu'); m.style.display='block'; const r=e.target.getBoundingClientRect(); m.style.top=(window.scrollY+r.bottom+5)+'px'; m.style.left=Math.min(window.innerWidth-220, r.left-100)+'px'; document.getElementById('filter-col-key').value=k; const t=k==='tags'; document.getElementById('filter-row-numeric').style.display=t?'none':'flex'; document.getElementById('filter-row-text').style.display=t?'flex':'none'; setTimeout(()=>document.addEventListener('click',closeFilterMenuOutside),0); }
         function closeFilterMenuOutside(e) { const m=document.getElementById('filter-menu'); if(!m.contains(e.target)){m.style.display='none';document.removeEventListener('click',closeFilterMenuOutside);} }
@@ -1426,7 +1634,7 @@
             updateControlBtns(false);
         }
 
-        function setSort(k) { if(sortState.key===k) sortState.dir=sortState.dir==='desc'?'asc':'desc'; else {sortState.key=k; sortState.dir='desc';} updateTable(); }
+        function setSort(k) { if(sortState.key===k) sortState.dir=sortState.dir==='desc'?'asc':'desc'; else {sortState.key=k; sortState.dir=k==='report_date'?'asc':'desc';} updateTable(); }
         function getSortIcon(k) { return sortState.key!==k?'':(sortState.dir==='desc'?'⬇':'⬆'); }
         function saveStorage() { APP_STORAGE.setItem('stock_sys_data', JSON.stringify(stocks)); }
         window.onclick=function(e){if(e.target.className==='modal')e.target.style.display='none';}
