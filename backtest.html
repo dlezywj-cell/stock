@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Score 策略回测 · 股票池</title>
+    <link rel="stylesheet" href="backtest.css?v=1">
+</head>
+<body>
+    <main>
+        <header><div><a class="back" href="index.html">← 股票池</a><h1>Score 策略回测</h1><p>按历史评分选股，观察组合随时间的表现。</p></div><span class="badge">历史股票池回放</span></header>
+        <section class="card">
+            <form id="backtest-form">
+                <div class="fields">
+                    <label>开始日期<input type="date" id="start" required></label>
+                    <label>结束日期<input type="date" id="end" required></label>
+                    <label>初始资金（万元人民币）<input type="number" id="capital" value="1000" min="1" step="1" required></label>
+                    <label>持仓数量<input type="number" id="top-n" value="20" min="1" max="100" step="1" required></label>
+                    <label>调仓周期<select id="frequency"><option value="daily">每日</option><option value="weekly" selected>每周</option><option value="monthly">每月</option></select></label>
+                    <label>市场<select id="market"><option value="ALL">全部市场</option><option value="CNY">A股</option><option value="HKD">港股</option><option value="USD">美股</option></select></label>
+                </div>
+                <details class="advanced"><summary>成本与设置</summary>
+                    <div class="fields small-fields">
+                        <label>单边综合成本（基点）<input type="number" id="cost" value="10" min="0" max="250" step="1"><small>10基点＝成交额的0.1%，含手续费与滑点假设</small></label>
+                        <label class="check"><input type="checkbox" id="stress" checked>同时测试成本翻倍</label>
+                    </div>
+                    <p class="muted">沿用股票池的 GitHub 设置，只读取私有数据。</p>
+                    <div class="fields small-fields">
+                        <label>用户名<input id="username" value="dlezywj-cell" autocomplete="off"></label>
+                        <label>数据仓库<input id="repo" value="stockdata" autocomplete="off"></label>
+                        <label>分支<input id="branch" value="main" autocomplete="off"></label>
+                        <label>GitHub Token<input id="token" type="password" autocomplete="new-password" placeholder="与股票池相同"></label>
+                    </div>
+                    <div class="actions"><button type="button" id="save-settings">保存设置</button><button type="button" id="clear-cache">清除回测缓存</button></div>
+                </details>
+                <div class="actions"><button type="submit" id="run" class="primary">开始回测</button><button type="button" id="cancel" hidden>取消</button><button type="button" id="import">导入回测数据</button><input type="file" id="import-file" accept=".json,application/json" hidden><span id="dataset-label" class="muted"></span></div>
+            </form>
+            <div id="progress-area" hidden><progress id="progress" max="1" value="0"></progress><span id="status" role="status"></span></div>
+            <p id="error" role="alert" hidden></p>
+        </section>
+        <div class="method-note"><strong>模型口径</strong> 历史预测取自 GitHub 当时保存的记录；市值按最新股本近似。股本变动和行情缺失会影响结果。</div>
+        <details class="card rules"><summary>评分与交易规则</summary>
+            <p>Score＝估值分×预测置信系数×60%＋趋势分×40%。估值分内，上行空间占60%、赔率占40%；上行100%、赔率4倍满分。PE/PS等权，单一方法打八折；置信系数按2/4/6个月分为1/0.7/0.5/0。</p>
+            <p>假设：历史 Score 较高的标的，通过等权配置与定期调仓，可形成有价值的组合筛选信号。此页面用于检验该假设。</p>
+            <p>每日以UTC 00:00之前保存的预测、此前收盘价及20日均线评分。首次及每个调仓周期的首个可用交易日下单，按信号收盘后的下一可交易日开盘价模拟成交。同分按代码排序，未满目标数量的名额留现金。</p>
+            <p>跨市场按亚洲、美股开盘先后执行，资金不足时按比例缩减买入；无开盘价或成交量时订单顺延至下次可交易日，下一次调仓会替换未完成订单。采用碎股等权、人民币记账；成交汇率用此前可用收盘汇率，持仓每日按最新已知汇率估值。</p>
+            <p>复权价格近似包含现金分红再投资；暂不模拟整手、涨跌停封单、交易额度、流动性冲击、精确税费或盘中汇率。期末按收盘价估值，不强制平仓。年化波动与夏普按252天、无风险利率0计算。</p>
+            <p>历史预测仅覆盖已保存的日期；临时修改但未上传的数据不会进入历史。数据文件和运行结果只在本机处理；导出的数据可能包含私人预测，请自行保管。</p>
+        </details>
+        <section id="results" hidden aria-label="回测结果">
+            <div class="results-heading"><div><h2>回测结果</h2><p id="result-caption" class="muted"></p></div><div class="actions"><button id="export-nav">导出净值</button><button id="export-trades">导出成交</button><button id="export-data">导出数据</button></div></div>
+            <div id="metrics" class="metrics"></div>
+            <section class="card chart-card"><div class="chart-header"><h3>组合净值</h3><div class="legend"><span>● 基准成本</span><span id="stress-legend">● 成本翻倍</span></div></div><svg id="chart" viewBox="0 0 1000 300" role="img" aria-label="组合净值曲线"></svg><p id="stress-result" class="muted"></p></section>
+            <section class="card"><div class="chart-header"><h3>回撤</h3><span class="muted">相对此前净值高点</span></div><svg id="drawdown" viewBox="0 0 1000 180" role="img" aria-label="组合回撤曲线"></svg></section>
+            <div id="warnings" class="notice"></div>
+            <section class="card"><div class="chart-header"><h3>调仓记录</h3><label class="inline">日期<select id="rebalance-date"></select></label></div><p id="rebalance-summary" class="muted"></p><div class="table-wrap"><table><thead><tr><th>排名</th><th>股票</th><th>代码</th><th>Score</th><th>置信系数</th><th>信号行情日</th></tr></thead><tbody id="ranked"></tbody></table></div></section>
+            <details class="card"><summary id="coverage-title">数据覆盖</summary><p id="coverage-summary"></p><ul id="failures"></ul><p id="sources" class="muted"></p></details>
+        </section>
+    </main>
+    <script src="score.js?v=2"></script><script src="backtest-engine.js?v=1"></script><script src="backtest-data.js?v=1"></script><script src="backtest-ui.js?v=1"></script>
+</body>
+</html>
