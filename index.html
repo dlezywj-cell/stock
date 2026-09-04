@@ -236,20 +236,21 @@
         .tag-picker-chip.active { background: #007bff; color: white; border-color: #007bff; }
         .tag-picker-count { font-size: 11px; opacity: 0.75; margin-left: 4px; }
         @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-        .watchlist-bar { display:flex; flex-wrap:wrap; align-items:center; gap:8px; background:#fff; padding:10px; border-radius:8px; margin-bottom:10px; flex-shrink:0; }
+        .header-bar { flex-wrap:wrap; gap:10px; }
+        .cloud-tools { flex-wrap:wrap; }
+        .history-tools { margin-left:auto; }
+        .watchlist-bar { display:flex; flex-wrap:wrap; align-items:center; gap:6px; }
         .watchlist-bar label { margin:0; font-weight:600; }
-        .watchlist-bar select { min-width:130px; max-width:250px; padding:6px; border:1px solid #ced4da; border-radius:4px; }
-        .watchlist-hint { color:#777; font-size:12px; }
+        .watchlist-bar select { width:130px; max-width:180px; padding:6px; border:1px solid #ced4da; border-radius:4px; }
         .watchlist-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:16px; }
         #btn-manage-watchlist, #btn-clear-selection { background:#e9ecef; color:#495057; }
         #watchlist-name { width:100%; box-sizing:border-box; }
         button:disabled { opacity:.45; cursor:default; transform:none; box-shadow:none; }
         @media (max-width:768px) {
-            .watchlist-bar { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); }
+            .watchlist-bar { grid-column:1 / -1; display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); }
             .watchlist-bar label { grid-column:1; grid-row:1; }
             .watchlist-bar select { grid-column:2 / 4; grid-row:1; width:100%; min-width:0; max-width:none; }
             .watchlist-bar button { justify-content:center; }
-            .watchlist-hint { grid-column:1 / -1; }
         }
     </style>
 </head>
@@ -271,6 +272,13 @@
             <div class="tool-group cloud-tools">
                 <button class="btn-cloud-pull" onclick="syncFromGithub()">☁️ 拉取数据</button>
                 <button class="btn-cloud-push" onclick="uploadToGithub()">🚀 保存到 GitHub</button>
+                <div class="watchlist-bar">
+                    <label for="watchlist-select">⭐ 自选</label>
+                    <select id="watchlist-select" onchange="selectWatchlist(this.value)"><option value="">全部股票</option></select>
+                    <button class="btn-add" id="btn-save-watchlist" onclick="openWatchlistModal('new')" disabled>保存选中</button>
+                    <button id="btn-manage-watchlist" onclick="openWatchlistModal('manage')" disabled>管理</button>
+                    <button id="btn-clear-selection" onclick="clearStockSelection()" title="清空勾选" disabled>清空</button>
+                </div>
             </div>
             <div id="progress-bar-container">
                 <div id="progress-bg"><div id="progress-fill"></div></div>
@@ -418,14 +426,6 @@
 
     <div id="hist-banner" style="display:none; background:#fff3cd; border:1px solid #ffc107; color:#856404; padding:8px 15px; border-radius:6px; margin-bottom:10px; font-size:12px;">
         📅 当前展示 <b id="hist-banner-date"></b> 收盘截面估算市值与空间（假设股数不变，按当日收盘价与最新价比例换算），涨跌幅与趋势箭头也已切换为「以该日为基准」的口径 — <a href="#" onclick="resetHistoricalDate();return false;" style="color:#856404;text-decoration:underline;">恢复最新数据</a>
-    </div>
-    <div class="watchlist-bar">
-        <label for="watchlist-select">⭐ 自选组合</label>
-        <select id="watchlist-select" onchange="selectWatchlist(this.value)"><option value="">全部股票</option></select>
-        <button class="btn-add" id="btn-save-watchlist" onclick="openWatchlistModal('new')" disabled>保存选中</button>
-        <button id="btn-manage-watchlist" onclick="openWatchlistModal('manage')" disabled>管理</button>
-        <button id="btn-clear-selection" onclick="clearStockSelection()" disabled>清空勾选</button>
-        <span class="watchlist-hint" id="watchlist-hint" role="status"></span>
     </div>
     <div id="result"></div>
 
@@ -1502,7 +1502,6 @@
             document.getElementById('btn-save-watchlist').disabled = selectedCodes.size === 0;
             document.getElementById('btn-clear-selection').disabled = selectedCodes.size === 0;
             document.getElementById('btn-manage-watchlist').disabled = !activeWatchlist;
-            document.getElementById('watchlist-hint').textContent = `已勾选 ${selectedCodes.size} 只 · ` + (APP_STORAGE.getItem('stock_sys_unsaved') === 'true' ? '本机已保存，待同步 GitHub' : '勾选股票后可保存为组合');
             updateCompareBtn();
         }
 
