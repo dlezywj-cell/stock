@@ -19,7 +19,7 @@ const encode = data => Buffer.from(JSON.stringify(data)).toString('base64');
         page.on('dialog', dialog => dialog.accept());
         await context.route('**/*', async route => {
             if (route.request().url() === 'http://watchlists.test/') return route.fulfill({contentType:'text/html',body:html});
-            if (route.request().url() === 'http://watchlists.test/score.js') return route.fulfill({contentType:'text/javascript',body:fs.readFileSync(path.join(__dirname,'../score.js'),'utf8')});
+            if (new URL(route.request().url()).pathname === '/score.js') return route.fulfill({contentType:'text/javascript',body:fs.readFileSync(path.join(__dirname,'../score.js'),'utf8')});
             if (route.request().url().includes('api.github.com')) {
                 if (route.request().method() === 'PUT') {
                     const body = route.request().postDataJSON();
@@ -162,15 +162,15 @@ const encode = data => Buffer.from(JSON.stringify(data)).toString('base64');
             selectWatchlist(''); clearStockSelection();
         });
         const scores = () => page.evaluate(() => currentVisibleStocks.map(s=>s.score.total));
-        assert.deepEqual(await scores(),[86.4,56.4,null]);
+        assert.deepEqual(await scores(),[79.6,40,null]);
         const headings = await page.locator('#result thead tr').nth(1).locator('th').allTextContents();
         assert.equal(headings.findIndex(h=>h.startsWith('Score')),headings.findIndex(h=>h.startsWith('涨跌'))+1);
         await page.getByRole('columnheader',{name:/^Score/}).click();
-        assert.deepEqual(await scores(),[86.4,56.4,null]);
+        assert.deepEqual(await scores(),[79.6,40,null]);
         await page.getByRole('columnheader',{name:/^Score/}).click();
-        assert.deepEqual(await scores(),[56.4,86.4,null]);
+        assert.deepEqual(await scores(),[40,79.6,null]);
         await page.locator('.score-button').first().click();
-        assert.match(await page.locator('#score-details').textContent(),/更新 0×30%/);
+        assert.match(await page.locator('#score-details').textContent(),/置信系数 0×60%/);
         await page.getByRole('button',{name:'关闭评分明细'}).click();
         const oldest = () => page.evaluate(() => stocks[1].forecastUpdatedAt);
         await page.evaluate(() => { editStock(stocks[1].code); document.getElementById('inNote').value='普通备注'; saveStock(); });

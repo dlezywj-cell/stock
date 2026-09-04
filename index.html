@@ -498,7 +498,7 @@
         </div>
     </div>
 
-    <script src="score.js"></script>
+    <script src="score.js?v=2"></script>
     <script>
         const APP_STORAGE = localStorage; 
 
@@ -1499,13 +1499,13 @@
             document.getElementById('score-title').textContent = `${stock.name} · Score ${f(s.total)}`;
             document.getElementById('score-details').textContent = [
                 s.reasons.join('；'),
-                `总分 = 估值 ${f(s.valuation)}×40% + 趋势 ${f(s.trendScore)}×30% + 更新 ${s.update}×30%`,
+                `总分 = 估值 ${f(s.valuation)}×置信系数 ${s.confidence}×60% + 趋势 ${f(s.trendScore)}×40%`,
                 describeMethod('PE', s.pe), describeMethod('PS', s.ps),
                 s.methodCount === 1 ? '仅一种估值有效：估值分×80%' : s.methodCount === 2 ? 'PE、PS 估值分取平均' : '',
                 `趋势：${({up:'上涨',sideways:'震荡',down:'下跌'})[s.trend] || '数据不足'}`,
-                `预测日期：${s.updatedAt || '无记录'}\n更新分：≤2个月100，＞2至4个月60，＞4个月0；日期缺失或异常计0`,
+                `预测日期：${s.updatedAt || '无记录'}\n置信系数：≤2个月1，＞2至4个月0.7，＞4至6个月0.5，＞6个月0；日期缺失或异常取0。仅调整估值分。`,
                 '上行100%满分；赔率4倍满分；无上行空间计0。',
-                historicalMode ? '当前为历史截面：使用截面价格和趋势、现有业绩预测，更新分按今天计算。' : ''
+                historicalMode ? '当前为历史截面：使用截面价格和趋势、现有业绩预测，置信系数按今天计算。' : ''
             ].filter(Boolean).join('\n\n');
             document.getElementById('score-modal').style.display = 'flex';
             document.querySelector('#score-modal .close-btn').focus();

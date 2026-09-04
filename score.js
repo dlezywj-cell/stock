@@ -44,10 +44,10 @@ const StockScore = (() => {
             .sort((a,b) => dateOnly(b.date) - dateOnly(a.date))[0]?.date || null;
     }
 
-    function freshness(value, now = new Date()) {
+    function confidence(value, now = new Date()) {
         const date = dateOnly(value), today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         if (!date || date > today) return 0;
-        return today <= addMonths(date, 2) ? 100 : today <= addMonths(date, 4) ? 60 : 0;
+        return today <= addMonths(date, 2) ? 1 : today <= addMonths(date, 4) ? .7 : today <= addMonths(date, 6) ? .5 : 0;
     }
 
     function calculate(stock, { cap, trend: state, now = new Date() }) {
@@ -56,15 +56,15 @@ const StockScore = (() => {
         const methods = [pe, ps].filter(Boolean);
         const valuation = methods.length === 2 ? (pe.total + ps.total) / 2 : methods.length === 1 ? methods[0].total * .8 : null;
         const trendScore = ({ up:100, sideways:50, down:0 })[state] ?? null;
-        const updatedAt = forecastDate(stock), update = freshness(updatedAt, now);
+        const updatedAt = forecastDate(stock), coefficient = confidence(updatedAt, now);
         const reasons = [];
         if (positive(cap) === null) reasons.push('缺少有效市值');
         else if (!methods.length) reasons.push('缺少有效 PE / PS 估值');
         if (trendScore === null) reasons.push('趋势数据不足');
-        const total = reasons.length ? null : Math.round((.4 * valuation + .3 * trendScore + .3 * update) * 10) / 10;
-        return { total, pe, ps, valuation, trend:state, trendScore, updatedAt, update, methodCount:methods.length, reasons };
+        const total = reasons.length ? null : Math.round((.6 * valuation * coefficient + .4 * trendScore) * 10) / 10;
+        return { total, pe, ps, valuation, trend:state, trendScore, updatedAt, confidence:coefficient, methodCount:methods.length, reasons };
     }
 
-    return { method, trend, forecastDate, freshness, calculate };
+    return { method, trend, forecastDate, confidence, calculate };
 })();
 if (typeof module !== 'undefined' && module.exports) module.exports = StockScore;

@@ -26,28 +26,40 @@ test('no upside, zero/positive lower space and invalid fundamentals', () => {
 
 test('total weighting, one-method penalty, no-method and no-trend gaps', () => {
     const options = {cap:100, trend:'up', now:day('2026-09-04')};
-    near(score.calculate(stock, options).total,86.4);
-    near(score.calculate({...stock,revenue:0},options).total,81.1);
-    near(score.calculate({...stock,forecastUpdatedAt:'2026/01/01'},options).total,56.4);
+    near(score.calculate(stock, options).total,79.6);
+    near(score.calculate({...stock,revenue:0},options).total,71.7);
+    near(score.calculate({...stock,forecastUpdatedAt:'2026/01/01'},options).total,40);
     near(score.calculate({...stock,highPE:200,highPS:200},options).total,100);
     assert.equal(score.calculate({...stock,revenue:0,profit:-1},options).total,null);
     assert.equal(score.calculate(stock,{...options,trend:null}).total,null);
-    near(score.calculate(stock,{...options,trend:'sideways'}).total,71.4);
-    near(score.calculate(stock,{...options,trend:'down'}).total,56.4);
+    near(score.calculate(stock,{...options,trend:'sideways'}).total,59.6);
+    near(score.calculate(stock,{...options,trend:'down'}).total,39.6);
 });
 
-test('freshness uses inclusive natural-month boundaries and zero for unknown/future dates', () => {
+test('confidence uses inclusive natural-month boundaries and zero for unknown/future dates', () => {
     const date = '2026/05/04 15:32:00';
-    assert.equal(score.freshness(date,day('2026-07-04')),100);
-    assert.equal(score.freshness(date,day('2026-07-05')),60);
-    assert.equal(score.freshness(date,day('2026-09-04')),60);
-    assert.equal(score.freshness(date,day('2026-09-05')),0);
-    assert.equal(score.freshness('2025/12/31',day('2026-02-28')),100);
-    assert.equal(score.freshness('2025/12/31',day('2026-03-01')),60);
-    assert.equal(score.freshness('2023/12/31',day('2024-02-29')),100);
-    assert.equal(score.freshness('2026/02/30',day('2026-03-01')),0);
-    assert.equal(score.freshness('2026/09/05',day('2026-09-04')),0);
-    assert.equal(score.freshness(null),0);
+    assert.equal(score.confidence(date,day('2026-07-04')),1);
+    assert.equal(score.confidence(date,day('2026-07-05')),.7);
+    assert.equal(score.confidence(date,day('2026-09-04')),.7);
+    assert.equal(score.confidence(date,day('2026-09-05')),.5);
+    assert.equal(score.confidence(date,day('2026-11-04')),.5);
+    assert.equal(score.confidence(date,day('2026-11-05')),0);
+    assert.equal(score.confidence('2025/12/31',day('2026-02-28')),1);
+    assert.equal(score.confidence('2025/12/31',day('2026-03-01')),.7);
+    assert.equal(score.confidence('2023/12/31',day('2024-02-29')),1);
+    assert.equal(score.confidence('2026/02/30',day('2026-03-01')),0);
+    assert.equal(score.confidence('2026/09/05',day('2026-09-04')),0);
+    assert.equal(score.confidence(null),0);
+});
+
+test('confidence scales only valuation and never adds an independent freshness bonus', () => {
+    const options = {cap:100, trend:'up', now:day('2026-09-04')};
+    near(score.calculate({...stock,forecastUpdatedAt:'2026/06/04'},options).total,67.7);
+    near(score.calculate({...stock,forecastUpdatedAt:'2026/04/04'},options).total,59.8);
+    near(score.calculate({...stock,forecastUpdatedAt:'2026/03/03'},options).total,40);
+    near(score.calculate({...stock,forecastUpdatedAt:null},options).total,40);
+    near(score.calculate({...stock,highPE:100,highPS:100},options).total,40);
+    near(score.calculate({...stock,forecastUpdatedAt:'2026/01/01'}, {...options,trend:'down'}).total,0);
 });
 
 test('legacy date ignores tags, notes and multiple-only edits; explicit date remains authoritative', () => {
