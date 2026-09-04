@@ -236,6 +236,21 @@
         .tag-picker-chip.active { background: #007bff; color: white; border-color: #007bff; }
         .tag-picker-count { font-size: 11px; opacity: 0.75; margin-left: 4px; }
         @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        .watchlist-bar { display:flex; flex-wrap:wrap; align-items:center; gap:8px; background:#fff; padding:10px; border-radius:8px; margin-bottom:10px; flex-shrink:0; }
+        .watchlist-bar label { margin:0; font-weight:600; }
+        .watchlist-bar select { min-width:130px; max-width:250px; padding:6px; border:1px solid #ced4da; border-radius:4px; }
+        .watchlist-hint { color:#777; font-size:12px; }
+        .watchlist-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:16px; }
+        #btn-manage-watchlist, #btn-clear-selection { background:#e9ecef; color:#495057; }
+        #watchlist-name { width:100%; box-sizing:border-box; }
+        button:disabled { opacity:.45; cursor:default; transform:none; box-shadow:none; }
+        @media (max-width:768px) {
+            .watchlist-bar { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); }
+            .watchlist-bar label { grid-column:1; grid-row:1; }
+            .watchlist-bar select { grid-column:2 / 4; grid-row:1; width:100%; min-width:0; max-width:none; }
+            .watchlist-bar button { justify-content:center; }
+            .watchlist-hint { grid-column:1 / -1; }
+        }
     </style>
 </head>
 <body>
@@ -404,7 +419,35 @@
     <div id="hist-banner" style="display:none; background:#fff3cd; border:1px solid #ffc107; color:#856404; padding:8px 15px; border-radius:6px; margin-bottom:10px; font-size:12px;">
         📅 当前展示 <b id="hist-banner-date"></b> 收盘截面估算市值与空间（假设股数不变，按当日收盘价与最新价比例换算），涨跌幅与趋势箭头也已切换为「以该日为基准」的口径 — <a href="#" onclick="resetHistoricalDate();return false;" style="color:#856404;text-decoration:underline;">恢复最新数据</a>
     </div>
+    <div class="watchlist-bar">
+        <label for="watchlist-select">⭐ 自选组合</label>
+        <select id="watchlist-select" onchange="selectWatchlist(this.value)"><option value="">全部股票</option></select>
+        <button class="btn-add" id="btn-save-watchlist" onclick="openWatchlistModal('new')" disabled>保存选中</button>
+        <button id="btn-manage-watchlist" onclick="openWatchlistModal('manage')" disabled>管理</button>
+        <button id="btn-clear-selection" onclick="clearStockSelection()" disabled>清空勾选</button>
+        <span class="watchlist-hint" id="watchlist-hint" role="status"></span>
+    </div>
     <div id="result"></div>
+
+    <div id="watchlist-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="watchlist-title">
+        <div class="modal-content">
+            <button class="close-btn" aria-label="关闭" onclick="closeWatchlistModal()">&times;</button>
+            <h3 id="watchlist-title">保存自选组合</h3>
+            <p id="watchlist-summary"></p>
+            <label for="watchlist-name">组合名称</label>
+            <input id="watchlist-name" maxlength="40" placeholder="例如：自选股1、长期关注">
+            <div class="watchlist-actions" id="watchlist-create-actions">
+                <button class="btn-add" onclick="createWatchlist()">保存组合</button>
+            </div>
+            <div class="watchlist-actions" id="watchlist-manage-actions">
+                <button onclick="renameWatchlist()">保存名称</button>
+                <button id="btn-watchlist-append" onclick="changeWatchlistMembers(true)">追加选中</button>
+                <button id="btn-watchlist-remove" onclick="changeWatchlistMembers(false)">移除选中</button>
+                <button class="btn-delete" onclick="deleteWatchlist()">删除组合</button>
+            </div>
+            <p class="settings-tip">自动保存在本机；点击「保存到 GitHub」后，其他设备拉取数据即可使用。移除最后一只股票后，空组合会自动删除。</p>
+        </div>
+    </div>
 
     <div id="filter-menu"><h4 id="filter-title">筛选</h4><div class="filter-row" id="filter-row-numeric"><select id="filter-op"><option value=">">></option><option value="<"><</option><option value=">=">≥</option><option value="<=">≤</option><option value="=">=</option></select><input type="number" id="filter-val" placeholder="数值"></div><div class="filter-row" id="filter-row-text" style="display:none;"><input type="text" id="filter-text-val" placeholder="内容..."></div><div class="filter-actions"><button class="btn-cancel" onclick="clearCurrentFilter()">清空</button><button class="btn-add" onclick="confirmFilter()">确定</button></div><input type="hidden" id="filter-col-key"></div>
     <div id="log-modal" class="modal"><div class="modal-content"><span class="close-btn" onclick="closeLogModal()">&times;</span><h3 id="modal-title" style="margin-top:0; border-bottom:2px solid #eee; padding-bottom:15px;">日志</h3><div id="modal-body"></div></div></div>
@@ -454,6 +497,8 @@
         let intervalId = null, sortState = { key: 'pe_up', dir: 'desc' }, isPanelOpen = false, pendingDeleteCode = null, pendingLogIndex = null, pendingSyncData = null, cachedMarketData = {}, selectedCodes = new Set(), columnFilters = {}, onlySelectedMode = false;
         
         let stickySearchVal = "";
+        let activeWatchlist = APP_STORAGE.getItem('stock_sys_active_watchlist') || '';
+        let editingWatchlist = '';
         let stickyTagVal = "";
         let tagClickCounts = JSON.parse(APP_STORAGE.getItem('stock_sys_tag_click_counts') || '{}');
         // 市场筛选状态：默认全选 (true)
@@ -804,6 +849,7 @@
         function setLocalChanges(isDirty) {
             APP_STORAGE.setItem('stock_sys_unsaved', isDirty);
             checkUnsavedStatus();
+            renderWatchlistControls();
         }
 
         async function uploadToGithub() {
@@ -819,13 +865,16 @@
             
             try {
                 const url = `https://api.github.com/repos/${cfg.username}/${cfg.repo}/contents/${cfg.path}`;
-                const get = await fetch(url, { headers: { "Authorization": `token ${cfg.token}` }, cache: "no-store" });
+                const snapshot = JSON.stringify(stocks, null, 2);
+                const get = await fetch(`${url}?ref=${encodeURIComponent(cfg.branch)}`, { headers: { "Authorization": `token ${cfg.token}` }, cache: "no-store" });
+                if (!get.ok && get.status !== 404) throw new Error(`读取 GitHub 失败 (${get.status})`);
                 let sha = null; if (get.ok) sha = (await get.json()).sha;
-                const put = await fetch(url, { method: "PUT", headers: { "Authorization": `token ${cfg.token}` }, body: JSON.stringify({ message: "Update", content: utf8_to_b64(JSON.stringify(stocks,null,2)), sha, branch: cfg.branch }) });
+                const put = await fetch(url, { method: "PUT", headers: { "Authorization": `token ${cfg.token}` }, body: JSON.stringify({ message: "Update", content: utf8_to_b64(snapshot), sha, branch: cfg.branch }) });
                 if (put.ok) {
                     alert("✅ 成功"); 
-                    setLocalChanges(false); 
-                    updateStatus('online', '已同步');
+                    const changedDuringUpload = JSON.stringify(stocks, null, 2) !== snapshot;
+                    setLocalChanges(changedDuringUpload);
+                    updateStatus('online', changedDuringUpload ? '仍有新修改待同步' : '已同步');
                 } else throw new Error((await put.json()).message);
             } catch (e) { 
                 if(e.message.includes("401") || e.message.includes("Not Found")){
@@ -858,7 +907,7 @@
                 const headers = { "Accept": "application/vnd.github.v3+json" }; 
                 if(cfg.token) headers["Authorization"] = `token ${cfg.token}`;
                 
-                let res = await fetch(url, { headers, cache: "no-store" }), data;
+                let res = await fetch(`${url}?ref=${encodeURIComponent(cfg.branch)}`, { headers, cache: "no-store" }), data;
                 if (res.ok) {
                     data = JSON.parse(b64_to_utf8((await res.json()).content));
                 } else { 
@@ -1230,8 +1279,9 @@
 
         async function updateTable(skipFetch = false) {
             const el = document.getElementById('result');
+            renderWatchlistControls();
             
-            if (stocks.length === 0) { el.innerHTML = '<div style="padding:40px;text-align:center;color:#999;">📭 列表为空</div>'; return; }
+            if (stocks.length === 0) { currentVisibleStocks = []; el.innerHTML = '<div style="padding:40px;text-align:center;color:#999;">📭 列表为空</div>'; return; }
             ensureReportDates();
             
             if (!skipFetch) {
@@ -1306,6 +1356,7 @@
 
         function renderTable(data) {
             let rows = data.filter(i => {
+                if (activeWatchlist && !getStockWatchlists(i).includes(activeWatchlist)) return false;
                 if (onlySelectedMode && !selectedCodes.has(i.code)) return false;
                 
                 // 市场过滤逻辑 (并集显示，未选中的剔除)
@@ -1426,10 +1477,131 @@
             document.getElementById('result').innerHTML = html + '</tbody></table>';
         }
 
-        function toggleSelectRow(c) { if(selectedCodes.has(c))selectedCodes.delete(c);else selectedCodes.add(c); updateTable(); }
-        function toggleSelectAll() { if(currentVisibleStocks.length===0)return; const all=currentVisibleStocks.every(i=>selectedCodes.has(i.code)); currentVisibleStocks.forEach(i=>all?selectedCodes.delete(i.code):selectedCodes.add(i.code)); updateTable(); }
+        // Membership lives on each stock so the existing private data.json sync remains compatible.
+        function getStockWatchlists(stock) {
+            return Array.isArray(stock.watchlists) ? [...new Set(stock.watchlists.filter(n => typeof n === 'string' && n.trim()))] : [];
+        }
+
+        function getWatchlistCounts() {
+            const counts = new Map();
+            stocks.forEach(stock => getStockWatchlists(stock).forEach(name => counts.set(name, (counts.get(name) || 0) + 1)));
+            return counts;
+        }
+
+        function renderWatchlistControls() {
+            const counts = getWatchlistCounts();
+            if (activeWatchlist && !counts.has(activeWatchlist)) activeWatchlist = '';
+            APP_STORAGE.setItem('stock_sys_active_watchlist', activeWatchlist);
+            const select = document.getElementById('watchlist-select');
+            const options = [new Option('全部股票', '')];
+            [...counts.keys()].sort((a,b) => a.localeCompare(b, 'zh-CN')).forEach(name => options.push(new Option(`${name} (${counts.get(name)})`, name)));
+            select.replaceChildren(...options);
+            select.value = activeWatchlist;
+            const validCodes = new Set(stocks.map(s => s.code));
+            selectedCodes.forEach(code => { if (!validCodes.has(code)) selectedCodes.delete(code); });
+            document.getElementById('btn-save-watchlist').disabled = selectedCodes.size === 0;
+            document.getElementById('btn-clear-selection').disabled = selectedCodes.size === 0;
+            document.getElementById('btn-manage-watchlist').disabled = !activeWatchlist;
+            document.getElementById('watchlist-hint').textContent = `已勾选 ${selectedCodes.size} 只 · ` + (APP_STORAGE.getItem('stock_sys_unsaved') === 'true' ? '本机已保存，待同步 GitHub' : '勾选股票后可保存为组合');
+            updateCompareBtn();
+        }
+
+        function resetWatchlistFilters() {
+            columnFilters = {}; stickySearchVal = ''; stickyTagVal = ''; onlySelectedMode = false;
+            for (const [id, placeholder] of [['findInput', '代码/名称'], ['findTags', '属性/赛道']]) {
+                document.getElementById(id).value = '';
+                document.getElementById(id).placeholder = placeholder;
+            }
+            marketFilters = { A:true, HK:true, US:true };
+            ['a', 'hk', 'us'].forEach(m => document.getElementById('mkt-' + m).classList.add('active'));
+            document.getElementById('btn-compare').classList.remove('active');
+            hideTagDropdown(); renderTagPicker(); updateCompareBtn();
+        }
+
+        function selectWatchlist(name) {
+            activeWatchlist = name;
+            // Open the complete group in one step, even after a market/search filter.
+            resetWatchlistFilters();
+            updateTable(true);
+        }
+
+        function clearStockSelection() {
+            selectedCodes.clear(); onlySelectedMode = false;
+            document.getElementById('btn-compare').classList.remove('active');
+            updateTable(true);
+        }
+
+        function openWatchlistModal(mode) {
+            if (mode === 'new' && !selectedCodes.size) return;
+            if (mode === 'manage' && !activeWatchlist) return;
+            editingWatchlist = mode === 'manage' ? activeWatchlist : '';
+            document.getElementById('watchlist-title').textContent = editingWatchlist ? '管理自选组合' : '保存自选组合';
+            document.getElementById('watchlist-name').value = editingWatchlist;
+            document.getElementById('watchlist-summary').textContent = editingWatchlist
+                ? `${editingWatchlist}：${getWatchlistCounts().get(editingWatchlist)} 只；当前勾选 ${selectedCodes.size} 只（包括其他筛选中勾选的股票）。`
+                : `将当前勾选的 ${selectedCodes.size} 只股票保存为新组合（包括其他筛选中勾选的股票）。`;
+            document.getElementById('watchlist-create-actions').style.display = editingWatchlist ? 'none' : 'flex';
+            document.getElementById('watchlist-manage-actions').style.display = editingWatchlist ? 'flex' : 'none';
+            document.getElementById('btn-watchlist-append').disabled = !stocks.some(s => selectedCodes.has(s.code) && !getStockWatchlists(s).includes(editingWatchlist));
+            document.getElementById('btn-watchlist-remove').disabled = !stocks.some(s => selectedCodes.has(s.code) && getStockWatchlists(s).includes(editingWatchlist));
+            document.getElementById('watchlist-modal').style.display = 'flex';
+            document.getElementById('watchlist-name').focus();
+        }
+
+        function closeWatchlistModal() { document.getElementById('watchlist-modal').style.display = 'none'; }
+
+        function readWatchlistName() {
+            const name = document.getElementById('watchlist-name').value.trim();
+            if (!name || name.length > 40) { alert('请输入 1–40 个字符的组合名称'); return null; }
+            if (name !== editingWatchlist && getWatchlistCounts().has(name)) { alert('这个组合名称已存在，请换个名称，或在「管理」中追加选中股票。'); return null; }
+            return name;
+        }
+
+        function persistWatchlistChanges() {
+            saveStorage(); setLocalChanges(true); closeWatchlistModal(); updateTable(true);
+        }
+
+        function createWatchlist() {
+            const name = readWatchlistName();
+            if (!name || !selectedCodes.size) return;
+            stocks.forEach(s => { if (selectedCodes.has(s.code)) s.watchlists = [...new Set([...getStockWatchlists(s), name])]; });
+            activeWatchlist = name;
+            resetWatchlistFilters();
+            persistWatchlistChanges();
+        }
+
+        function renameWatchlist() {
+            if (!editingWatchlist) return;
+            const name = readWatchlistName();
+            if (!name) return;
+            stocks.forEach(s => { if (getStockWatchlists(s).includes(editingWatchlist)) s.watchlists = getStockWatchlists(s).map(n => n === editingWatchlist ? name : n); });
+            activeWatchlist = name;
+            persistWatchlistChanges();
+        }
+
+        function changeWatchlistMembers(append) {
+            if (!editingWatchlist || !selectedCodes.size) return;
+            const affected = stocks.filter(s => selectedCodes.has(s.code) && getStockWatchlists(s).includes(editingWatchlist) !== append);
+            if (!affected.length) return;
+            if (!append && !confirm(`从「${editingWatchlist}」移除 ${affected.length} 只股票？股票仍保留在股票池中。`)) return;
+            affected.forEach(s => {
+                s.watchlists = append ? [...getStockWatchlists(s), editingWatchlist] : getStockWatchlists(s).filter(n => n !== editingWatchlist);
+            });
+            persistWatchlistChanges();
+        }
+
+        function deleteWatchlist() {
+            if (!editingWatchlist || !confirm(`删除组合「${editingWatchlist}」？股票仍保留在股票池中。`)) return;
+            stocks.forEach(s => { if (getStockWatchlists(s).includes(editingWatchlist)) s.watchlists = getStockWatchlists(s).filter(n => n !== editingWatchlist); });
+            activeWatchlist = '';
+            persistWatchlistChanges();
+        }
+
+        function toggleSelectRow(c) { if(selectedCodes.has(c))selectedCodes.delete(c);else selectedCodes.add(c); updateTable(true); }
+        function toggleSelectAll() { if(currentVisibleStocks.length===0)return; const all=currentVisibleStocks.every(i=>selectedCodes.has(i.code)); currentVisibleStocks.forEach(i=>all?selectedCodes.delete(i.code):selectedCodes.add(i.code)); updateTable(true); }
         
         function clearAllFilters() { 
+            activeWatchlist = '';
             columnFilters={}; 
             stickySearchVal = ""; 
             stickyTagVal = "";
@@ -1502,6 +1674,7 @@
             }
 
             const s = { 
+                ...(idx >= 0 ? stocks[idx] : {}),
                 code, name, tags, profit, lowPE, highPE, revenue, lowPS, highPS, 
                 logs: (idx >= 0 ? stocks[idx].logs : []) 
             };
@@ -1653,6 +1826,10 @@
         updateStatus('paused', '准备就绪');
         
         (async function autoSyncFromGithub() {
+            if (APP_STORAGE.getItem('stock_sys_unsaved') === 'true') {
+                updateStatus('paused', '本机修改待同步');
+                return;
+            }
             const cfg = getGbConfig();
             if (!cfg.username || !cfg.repo) return; 
             if (!cfg.token) { 
@@ -1667,7 +1844,7 @@
                 const headers = { "Accept": "application/vnd.github.v3+json" };
                 if (cfg.token) headers["Authorization"] = `token ${cfg.token}`;
 
-                let res = await fetch(url, { headers, cache: "no-store" });
+                let res = await fetch(`${url}?ref=${encodeURIComponent(cfg.branch)}`, { headers, cache: "no-store" });
                 
                 let data;
                 if (res.ok) data = JSON.parse(b64_to_utf8((await res.json()).content));
@@ -1676,6 +1853,11 @@
                 }
 
                 if (Array.isArray(data)) {
+                    // A group may have been edited while the initial request was in flight.
+                    if (APP_STORAGE.getItem('stock_sys_unsaved') === 'true') {
+                        updateStatus('paused', '本机修改待同步');
+                        return;
+                    }
                     stocks = data;
                     saveStorage();
                     setLocalChanges(false); 
@@ -1695,6 +1877,9 @@
         document.addEventListener('click', (event) => {
             const wrap = document.getElementById('tag-filter-wrap');
             if (wrap && !wrap.contains(event.target)) hideTagDropdown();
+        });
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') closeWatchlistModal();
         });
     </script>
 </body>
