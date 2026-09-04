@@ -119,23 +119,33 @@ const ScoreBacktest = (() => {
                         if((asset.currency==='USD'?'US':'ASIA')!==session) continue;
                         if(bar && positive(bar.open) && positive(bar.volume) && r) opens.set(code,{price:bar.open,fx:r});
                     }
-                    // Orders persist until that market can trade or the next scheduled rebalance supersedes them.
+                    // Freeze the share target on its first tradable open. Cash-limited orders
+                    // must survive later-market sales without turning into daily rebalancing.
+                    for(const [code,quote] of opens) {
+                        const target=targets.get(code);
+                        target.quantity ??= target.value/(quote.price*quote.fx);
+                    }
+                    // Orders persist until filled or the next scheduled rebalance supersedes them.
                     for(const [code,qty] of [...positions]) {
                         if(!targets.has(code)) continue;
                         const quote=opens.get(code); if(!quote) continue;
-                        const target=targets.get(code), wanted=target ? target.value/(quote.price*quote.fx) : 0;
+                        const target=targets.get(code), wanted=target.quantity;
                         if(qty>wanted) fill(code,qty-wanted,quote.price,quote.fx,date,'sell',target?.score);
                     }
                     const buys=[];
                     for(const [code,target] of targets) {
                         const quote=opens.get(code); if(!quote) continue;
-                        const qty=Math.max(0,target.value/(quote.price*quote.fx)-(positions.get(code)||0));
+                        const qty=Math.max(0,target.quantity-(positions.get(code)||0));
                         if(qty>1e-10) buys.push({code,qty,...quote,score:target.score});
                     }
                     const required=buys.reduce((sum,b)=>sum+b.qty*b.price*b.fx*(1+cost),0), scale=required>0 ? Math.min(1,Math.max(0,cash)/required) : 0;
                     buys.forEach(b=>fill(b.code,b.qty*scale,b.price,b.fx,date,'buy',b.score));
-                    // Do not rebalance already filled markets every day between scheduled decisions.
-                    for(const code of opens.keys()) targets.delete(code);
+                    // Remove completed orders only; late proceeds fund remaining shares
+                    // at a subsequent open, never retroactively at an earlier market's open.
+                    for(const code of opens.keys()) {
+                        const wanted=targets.get(code).quantity, held=positions.get(code)||0;
+                        if(Math.abs(wanted-held)<=Math.max(1e-8,Math.abs(wanted)*1e-10)) targets.delete(code);
+                    }
                 }
                 if(!targets.size) targets=null;
             }

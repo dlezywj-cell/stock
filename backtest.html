@@ -42,7 +42,7 @@
             <p>Score＝估值分×预测置信系数×60%＋趋势分×40%。估值分内，上行空间占60%、赔率占40%；上行100%、赔率4倍满分。PE/PS等权，单一方法打八折；置信系数按2/4/6个月分为1/0.7/0.5/0。</p>
             <p>假设：历史 Score 较高的标的，通过等权配置与定期调仓，可形成有价值的组合筛选信号。此页面用于检验该假设。</p>
             <p>每日以UTC 00:00之前保存的预测、此前收盘价及20日均线评分。首次及每个调仓周期的首个可用交易日下单，按信号收盘后的下一可交易日开盘价模拟成交。同分按代码排序，未满目标数量的名额留现金。</p>
-            <p>跨市场按亚洲、美股开盘先后执行，资金不足时按比例缩减买入；无开盘价或成交量时订单顺延至下次可交易日，下一次调仓会替换未完成订单。采用碎股等权、人民币记账；成交汇率用此前可用收盘汇率，持仓每日按最新已知汇率估值。</p>
+            <p>跨市场按亚洲、美股开盘先后执行，资金不足时先按可用资金买入，未成交份额保留，待资金可用后在后续开盘补齐；无开盘价或成交量时顺延。目标份额在首次可交易开盘确定，下一次调仓替换未完成订单。采用碎股等权、人民币记账；成交汇率用此前可用收盘汇率，持仓每日按最新已知汇率估值。</p>
             <p>复权价格近似包含现金分红再投资；暂不模拟整手、涨跌停封单、交易额度、流动性冲击、精确税费或盘中汇率。期末按收盘价估值，不强制平仓。年化波动与夏普按252天、无风险利率0计算。</p>
             <p>历史预测仅覆盖已保存的日期；临时修改但未上传的数据不会进入历史。数据文件和运行结果只在本机处理；导出的数据可能包含私人预测，请自行保管。</p>
         </details>
@@ -56,6 +56,6 @@
             <details class="card"><summary id="coverage-title">数据覆盖</summary><p id="coverage-summary"></p><ul id="failures"></ul><p id="sources" class="muted"></p></details>
         </section>
     </main>
-    <script src="score.js?v=2"></script><script src="backtest-engine.js?v=1"></script><script src="backtest-data.js?v=1"></script><script src="backtest-ui.js?v=1"></script>
+    <script src="score.js?v=2"></script><script src="backtest-engine.js?v=2"></script><script src="backtest-data.js?v=1"></script><script src="backtest-ui.js?v=2"></script>
 </body>
 </html>

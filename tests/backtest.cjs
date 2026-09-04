@@ -51,6 +51,31 @@ test('later US proceeds cannot fund earlier Asian buys',()=>{
  assert.equal(r.trades.find(t=>t.side==='sell').date,'2026-01-23');
  assert.equal(r.trades.find(t=>t.code==='1.600001').date,'2026-01-24');
 });
+test('monthly cash-limited buy survives a later US sale and fills next day',()=>{
+ const d=fixture(),a=d.snapshots[0].stocks[0],b=d.snapshots[0].stocks[1];
+ d.assets[0].currency='USD';d.fx.USD=d.assets[0].bars.map(b=>({date:b.date,close:1}));
+ d.snapshots[0].stocks=[a];d.snapshots.push({at:'2026-01-31T10:00:00Z',sha:'switch',stocks:[b]});
+ const r=engine.run(d,{...opts,end:'2026-02-05',frequency:'monthly'});
+ assert.deepEqual(r.trades.map(t=>[t.side,t.code,t.date]),[['buy',a.code,'2026-01-22'],['sell',a.code,'2026-02-01'],['buy',b.code,'2026-02-02']]);
+ near(r.curve.find(p=>p.date==='2026-02-01').cash,10000);
+ near(r.curve.find(p=>p.date==='2026-02-02').cash,0);
+});
+test('partially filled orders retain shares, without daily notional rebalancing',()=>{
+ const d=fixture(),a=d.snapshots[0].stocks[0],b=d.snapshots[0].stocks[1];
+ const us={...structuredClone(d.assets[0]),code:'105.TEST',currency:'USD'};d.assets.push(us);
+ d.fx.USD=us.bars.map(b=>({date:b.date,close:1}));
+ d.snapshots[0].stocks=[a,{...a,code:us.code}];
+ d.snapshots.push({at:'2026-01-31T10:00:00Z',sha:'switch',stocks:[a,b]});
+ d.assets[0].bars.find(b=>b.date==='2026-02-01').open=140;
+ d.assets[1].bars.find(b=>b.date==='2026-02-02').open=80;
+ d.assets[1].bars.find(b=>b.date==='2026-02-03').open=120;
+ const r=engine.run(d,{...opts,end:'2026-02-05',frequency:'monthly',topN:2});
+ const buys=r.trades.filter(t=>t.code===b.code);
+ assert.equal(buys.length,2);assert.equal(buys[0].date,'2026-02-01');near(buys[0].quantity,20);
+ assert.equal(buys[1].date,'2026-02-02');near(buys[1].quantity,30);
+ near(r.finalHoldings.find(h=>h.code===b.code).quantity,50);
+ assert.ok(r.curve.every(p=>p.cash>=0));
+});
 test('FX uses prior date for fills, current close for NAV',()=>{
  const d=fixture();d.assets=d.assets.slice(0,1);d.assets[0].currency='USD';d.fx.USD=d.assets[0].bars.map(b=>({date:b.date,close:b.date<opts.start?7:8}));
  const r=engine.run(d,opts);near(r.trades[0].fx,7);near(r.curve[0].equity,10000*8/7);
