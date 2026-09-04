@@ -1082,6 +1082,14 @@
             return ((last - prev) / prev * 100).toFixed(2);
         }
 
+        // Price change from the selected historical close to the latest available quote.
+        function getIntervalChangePct(series, latestPrice) {
+            const start = getHistSpotPrice(series);
+            if (!Number.isFinite(start) || start <= 0 || !Number.isFinite(latestPrice) || latestPrice <= 0) return null;
+            const change = (latestPrice / start - 1) * 100;
+            return Number.isFinite(change) ? change : null;
+        }
+
         // 以历史日期为基准计算均线趋势（不依赖实时价）
         function getHistoricalTrendIcon(series) {
             return renderTrendIcon(StockScore.trend(series));
@@ -1121,16 +1129,19 @@
             document.getElementById('btn-reset-hist').style.display = 'inline-flex';
             updateHistoricalIndicator();
             updateTable(true);
+            await updateTable(); // Refresh the interval endpoint even when realtime is paused.
         }
 
         function resetHistoricalDate() {
             historicalMode = false;
             historicalDateStr = null;
+            if (sortState.key === 'intervalChange') sortState = { key:'score', dir:'desc' };
             const inp = document.getElementById('histDate');
             if (inp) inp.value = '';
             const resetBtn = document.getElementById('btn-reset-hist');
             if (resetBtn) resetBtn.style.display = 'none';
             updateHistoricalIndicator();
+            updateTable(true); // Hide the historical-only column immediately.
             updateTable();
         }
 
@@ -1310,7 +1321,8 @@
                 let cap=0, chg="0.00", valid=false, currentPrice=0;
                 if (m.f12) { 
                     let p=parseFloat(m.f2)||parseFloat(m.f18), mc=parseFloat(m.f20); 
-                    if(p>0 && mc>0){ cap=mc/100000000; chg=parseFloat(m.f3).toFixed(2); valid=true; currentPrice=p; }
+                    if(Number.isFinite(p) && p>0) currentPrice=p;
+                    if(currentPrice>0 && Number.isFinite(mc) && mc>0){ cap=mc/100000000; chg=parseFloat(m.f3).toFixed(2); valid=true; }
                 }
 
                 // 历史截面模式：市值 = 最新市值 × (历史收盘价 / 最新价)，等价于「最新股数 × 历史收盘价」
@@ -1348,7 +1360,8 @@
                     : StockScore.trend(historyCache[s.code], currentPrice);
                 const trend = renderTrendIcon(trendState);
                 const score = StockScore.calculate(s, { cap:dataValid ? displayCap : null, trend:trendState });
-                return { ...s, cap: displayCap, chg: displayChg, valid: dataValid, peRes:pe, psRes:ps, trend, score, reportDateInfo: getReportDateInfo(s.code) };
+                const intervalChange = historicalMode ? getIntervalChangePct(histSeries, currentPrice) : null;
+                return { ...s, cap: displayCap, chg: displayChg, valid: dataValid, peRes:pe, psRes:ps, trend, score, intervalChange, reportDateInfo: getReportDateInfo(s.code) };
             });
             
             if(missingHistory > 0) updateProgress(stocks.length - missingHistory, stocks.length);
@@ -1403,8 +1416,9 @@
             
             if (sortState.key) {
                 rows.sort((a, b) => {
-                    if (sortState.key === 'score') {
-                        const x = a.score.total, y = b.score.total;
+                    if (sortState.key === 'score' || sortState.key === 'intervalChange') {
+                        const x = sortState.key === 'score' ? a.score.total : a.intervalChange;
+                        const y = sortState.key === 'score' ? b.score.total : b.intervalChange;
                         if (x === null) return y === null ? 0 : 1;
                         if (y === null) return -1;
                         return sortState.dir === 'desc' ? y - x : x - y;
@@ -1449,7 +1463,7 @@
             const allSel = rows.length>0 && rows.every(i=>selectedCodes.has(i.code));
 
             let html = `<table><thead><tr>
-                <th class="th-basic" colspan="${4 + (viewSettings.showCode?1:0) + (viewSettings.showTags?1:0) + (viewSettings.showCap?1:0) + (viewSettings.showReport?1:0)}">📊 基础行情</th>
+                <th class="th-basic" colspan="${4 + (historicalMode?1:0) + (viewSettings.showCode?1:0) + (viewSettings.showTags?1:0) + (viewSettings.showCap?1:0) + (viewSettings.showReport?1:0)}">📊 基础行情</th>
                 <th class="th-pe" colspan="4">💰 PE (利润)</th><th class="th-ps" colspan="4">🚀 PS (营收)</th>
                 <th rowspan="2" class="sortable ${show('update')} ${sk('last_update')}" onclick="setSort('last_update')" style="width:70px">📅 ${getSortIcon('last_update')}</th>
                 <th class="th-basic ${show('action')}" rowspan="2">⚙️</th>
@@ -1459,13 +1473,14 @@
                 <th>名称</th><th class="${show('code')}">代码</th><th class="${show('tags')}">属性 ${icon('tags')}</th>
                 <th onclick="setSort('chg')" class="sortable ${sk('chg')}">涨跌 ${getSortIcon('chg')}</th>
                 <th onclick="setSort('score')" class="sortable ${sk('score')}" title="点击按得分排序">Score ${getSortIcon('score')}</th>
+                ${historicalMode ? `<th onclick="setSort('intervalChange')" class="sortable ${sk('intervalChange')}" title="${historicalDateStr}收盘至最新价；非交易日取此前最近交易日，不含现金分红">区间涨跌幅 ${getSortIcon('intervalChange')}</th>` : ''}
                 <th onclick="setSort('cap')" class="sortable ${show('cap')} ${sk('cap')}">市值 ${getSortIcon('cap')}</th>
                 <th onclick="setSort('report_date')" class="sortable ${show('report')} ${sk('report_date')}">财报日 ${getSortIcon('report_date')}</th>
                 <th onclick="setSort('profit')" class="sortable ${sk('profit')}">净利 ${getSortIcon('profit')}</th><th>合理PE</th><th onclick="setSort('pe_down')" class="sortable ${sk('pe_down')}">下% ${icon('pe_down')}</th><th onclick="setSort('pe_up')" class="sortable ${sk('pe_up')}">上% ${icon('pe_up')}</th>
                 <th onclick="setSort('revenue')" class="sortable ${sk('revenue')}">营收 ${getSortIcon('revenue')}</th><th>合理PS</th><th onclick="setSort('ps_down')" class="sortable ${sk('ps_down')}">下% ${icon('ps_down')}</th><th onclick="setSort('ps_up')" class="sortable ${sk('ps_up')}">上% ${icon('ps_up')}</th>
             </tr></thead><tbody>`;
 
-            if(rows.length===0) html+=`<tr><td colspan="${13 + ['code','tags','cap','report','update','action'].filter(k=>viewSettings['show'+k.charAt(0).toUpperCase()+k.slice(1)]).length}" style="text-align:center;padding:20px;color:#ccc">无数据</td></tr>`;
+            if(rows.length===0) html+=`<tr><td colspan="${13 + (historicalMode?1:0) + ['code','tags','cap','report','update','action'].filter(k=>viewSettings['show'+k.charAt(0).toUpperCase()+k.slice(1)]).length}" style="text-align:center;padding:20px;color:#ccc">无数据</td></tr>`;
             else rows.forEach((i, rowIndex) => {
                 const p = (v) => `<span style="color:${parseFloat(v)>=0?'#d32f2f':'#2e7d32'};font-weight:${Math.abs(v)>30?'800':'bold'}">${v==='-'?'-':v+'%'}</span>`;
                 const u = i.logs?.[0]?.date ? `<span style="font-size:11px;color:#666;display:block;line-height:1.2">${i.logs[0].date.split(' ')[0]}<br><span style="color:#999;font-size:10px">${i.logs[0].date.split(' ')[1] || ''}</span></span>` : '-';
@@ -1476,6 +1491,7 @@
                     <td class="${show('tags')}" style="text-align:left">${(i.tags||"").split(' ').map(t=>t?`<span class="tag-badge">${t}</span>`:'').join('')}</td>
                     <td style="font-weight:bold;color:${parseFloat(i.chg)>=0?'#d32f2f':'#2e7d32'}">${i.chg==='-'?'-':i.chg+'%'}</td>
                     <td><button class="score-button" onclick="showScoreDetails(${rowIndex})" title="查看评分明细">${i.score.total === null ? '—' : i.score.total.toFixed(1)}</button></td>
+                    ${historicalMode ? `<td class="interval-change" style="font-weight:bold;color:${i.intervalChange === null ? '#888' : i.intervalChange >= 0 ? '#d32f2f' : '#2e7d32'}">${i.intervalChange === null ? '—' : (Math.round(i.intervalChange * 100) / 100).toFixed(2) + '%'}</td>` : ''}
                     <td class="${show('cap')}" style="font-family:monospace">${i.cap?i.cap.toFixed(2):'-'}</td>
                     <td class="${show('report')}">${formatReportDateCell(i.reportDateInfo)}</td>
                     <td>${i.profit||'-'}</td><td style="font-size:12px">${i.lowPE||'-'}~${i.highPE||'-'}</td><td>${p(i.peRes.down)}</td><td>${p(i.peRes.up)}</td>

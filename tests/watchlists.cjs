@@ -11,7 +11,7 @@ const encode = data => Buffer.from(JSON.stringify(data)).toString('base64');
 (async () => {
     const browser = await chromium.launch({headless:true, channel:'chrome'});
     try {
-        let cloud = structuredClone(fixture), uploadCount = 0, githubReads = 0, beforeRead = null, beforeUploadResponse = null;
+        let cloud = structuredClone(fixture), uploadCount = 0, githubReads = 0, beforeRead = null, beforeUploadResponse = null, marketQuotes = null;
         const context = await browser.newContext({viewport:{width:1440,height:900}});
         const errors = [];
         const page = await context.newPage();
@@ -20,6 +20,7 @@ const encode = data => Buffer.from(JSON.stringify(data)).toString('base64');
         await context.route('**/*', async route => {
             if (route.request().url() === 'http://watchlists.test/') return route.fulfill({contentType:'text/html',body:html});
             if (new URL(route.request().url()).pathname === '/score.js') return route.fulfill({contentType:'text/javascript',body:fs.readFileSync(path.join(__dirname,'../score.js'),'utf8')});
+            if (marketQuotes && route.request().url().includes('ulist.np')) return route.fulfill({json:{data:{diff:marketQuotes}}});
             if (route.request().url().includes('api.github.com')) {
                 if (route.request().method() === 'PUT') {
                     const body = route.request().postDataJSON();
@@ -189,7 +190,52 @@ const encode = data => Buffer.from(JSON.stringify(data)).toString('base64');
         await page.locator('.score-button').first().click();
         assert.equal(await page.locator('#score-modal').isVisible(),true);
         await page.screenshot({animations:'disabled',path:'/tmp/stock-score-mobile.png'});
+        // Interval change is historical-only, uses the latest price, and is independent of market cap.
+        await page.getByRole('button',{name:'关闭评分明细'}).click();
+        await page.setViewportSize({width:1440,height:900});
+        await page.evaluate(() => { document.getElementById('top-area').style.display='block'; });
+        assert.equal(await page.getByRole('columnheader',{name:/^区间涨跌幅/}).count(),0);
+        marketQuotes = ['000001','00700','TEST'].map(f12=>({f12,f2:21,f20:1e10,f3:1}));
+        await page.evaluate(() => {
+            historicalSeriesCache[stocks[0].code + '_2026-08-01'] = [16,20];
+            historicalSeriesCache[stocks[1].code + '_2026-08-01'] = [25,28];
+            historicalSeriesCache[stocks[2].code + '_2026-08-01'] = null;
+            cachedMarketData['000001'].f2 = 10; // Historical query must refresh this stale endpoint.
+            document.getElementById('histDate').value = '2026-08-01';
+        });
+        await page.evaluate(() => applyHistoricalDate());
+        const historyHeadings = await page.locator('#result thead tr').nth(1).locator('th').allTextContents();
+        assert.equal(historyHeadings.findIndex(h=>h.startsWith('区间涨跌幅')),historyHeadings.findIndex(h=>h.startsWith('Score'))+1);
+        assert.deepEqual(await page.locator('.interval-change').allTextContents(),['5.00%','-25.00%','—']);
+        assert.equal(await page.evaluate(() => currentVisibleStocks[0].chg),'25.00');
+        await page.getByRole('columnheader',{name:/^区间涨跌幅/}).click();
+        await page.getByRole('columnheader',{name:/^区间涨跌幅/}).click();
+        assert.deepEqual(await page.locator('.interval-change').allTextContents(),['-25.00%','5.00%','—']);
+        assert.deepEqual(await page.evaluate(() => [
+            getIntervalChangePct([21],21), getIntervalChangePct([0],21),
+            getIntervalChangePct(null,21), getIntervalChangePct([21],0),
+            getIntervalChangePct([21],NaN), getIntervalChangePct([Infinity],21)
+        ]),[0,null,null,null,null,null]);
+        await page.evaluate(() => { cachedMarketData['000001'].f20=0; updateTable(true); });
+        assert.equal(await page.evaluate(() => currentVisibleStocks.find(s=>s.code==='0.000001').intervalChange.toFixed(2)),'5.00');
+        await page.evaluate(() => {
+            historicalSeriesCache[stocks[0].code + '_2026-08-15'] = [20,21];
+            historicalSeriesCache[stocks[1].code + '_2026-08-15'] = [12,14];
+            historicalSeriesCache[stocks[2].code + '_2026-08-15'] = null;
+            document.getElementById('histDate').value='2026-08-15';
+        });
+        await page.evaluate(() => applyHistoricalDate());
+        assert.deepEqual(await page.locator('.interval-change').allTextContents(),['0.00%','50.00%','—']);
+        await page.screenshot({animations:'disabled',path:'/tmp/stock-interval-desktop.png'});
+        await page.setViewportSize({width:390,height:844});
+        await page.evaluate(() => toggleMobileMenu(false));
+        await page.locator('.interval-change').first().scrollIntoViewIfNeeded();
+        await page.screenshot({animations:'disabled',path:'/tmp/stock-interval-mobile.png'});
+        await page.evaluate(() => resetHistoricalDate());
+        assert.equal(await page.getByRole('columnheader',{name:/^区间涨跌幅/}).count(),0);
+        assert.equal(await page.locator('.interval-change').count(),0);
+        assert.equal(await page.evaluate(() => sortState.key),'score');
         assert.deepEqual(errors, []);
-        console.log('PASS: create, overlapping groups, invalid names, reload protection, filter reset, append, rename, stock edits, removal, mocked GitHub round trip, mobile layout, empty-group cleanup, deletion, sync/upload race protection.');
+        console.log('PASS: watchlist/sync regression, Score and forecast dates, historical interval returns, latest quote refresh, sorting, mobile layout and latest-mode column removal.');
     } finally { await browser.close(); }
 })().catch(e => { console.error(e); process.exitCode = 1; });
