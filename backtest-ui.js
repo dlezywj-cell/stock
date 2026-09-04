@@ -21,7 +21,7 @@
     function execute(data,opts,stress,signal) {
         return new Promise((resolve,reject)=>{
             if(signal.aborted) return reject(new DOMException('已取消','AbortError'));
-            worker=new Worker('backtest-worker.js?v=2');
+            worker=new Worker('backtest-worker.js?v=3');
             const cancel=()=>{worker?.terminate();worker=null;reject(new DOMException('已取消','AbortError'));};
             signal.addEventListener('abort',cancel,{once:true});
             const finish=()=>{signal.removeEventListener('abort',cancel);worker?.terminate();worker=null;};
@@ -72,7 +72,7 @@
     function render() {
         $('results').hidden=false;
         const o=result.options, m=result.metrics;
-        $('result-caption').textContent=`${o.start} → ${o.end} · 前${o.topN}只等权 · ${({daily:'每日',weekly:'每周',monthly:'每月'})[o.frequency]}调仓 · 单边${o.costBps}基点`;
+        $('result-caption').textContent=`${o.start} → ${o.end} · 目标${o.topN}只 · 条件退出、等权调仓 · ${({daily:'每日',weekly:'每周',monthly:'每月'})[o.frequency]}调仓 · 单边${o.costBps}基点`;
         const metrics=[['期末资产',money(m.final)],['累计收益',pct(m.totalReturn)],['年化收益',pct(m.cagr)],['最大回撤',pct(m.maxDrawdown)],['年化波动',pct(m.volatility)],['夏普（无风险利率0）',m.sharpe===null?'—':m.sharpe.toFixed(2)],['综合成本',money(m.fees)],['调仓 / 成交',`${m.rebalanceCount} / ${m.tradeCount}`]];
         $('metrics').replaceChildren(...metrics.map(([label,value])=>{const el=document.createElement('div');el.className='metric';const title=document.createElement('span'),number=document.createElement('strong');title.textContent=label;number.textContent=value;el.append(title,number);return el;}));
         renderCharts();
@@ -91,8 +91,8 @@
     function renderRebalance() {
         if(!result) return;
         const row=result.rebalances[Number($('rebalance-date').value) || 0];
-        $('rebalance-summary').textContent=`可评分 ${row.eligible} 只 · 选中 ${row.selected.length} 只 · 调仓前资产 ${money(row.equity)} · 预测保存于 ${row.snapshotAt}。排除：`+Object.entries(row.exclusions).map(([k,v])=>`${k}${v}`).join('，');
-        $('ranked').replaceChildren(...row.selected.map((s,i)=>{const tr=document.createElement('tr');[i+1,s.name,s.code,s.score.toFixed(1),s.confidence,s.signalDate].forEach(v=>{const td=document.createElement('td');td.textContent=String(v);tr.append(td);});return tr;}));
+        $('rebalance-summary').textContent=`可评分 ${row.eligible} 只 · 续持 ${row.retainedCount} 只 · 新增 ${row.addedCount} 只 · 清仓 ${row.exits.length} 只 · 调仓前资产 ${money(row.equity)} · 预测保存于 ${row.snapshotAt}。排除：`+Object.entries(row.exclusions).map(([k,v])=>`${k}${v}`).join('，');
+        $('ranked').replaceChildren(...[...row.selected,...row.exits].map((s,i)=>{const tr=document.createElement('tr');tr.title=s.reason;[i<row.selected.length?i+1:'—',s.name,s.code,s.decision,({up:'上涨',sideways:'震荡',down:'下跌'})[s.trend] || '—',Number.isFinite(s.score)?s.score.toFixed(1):'—',s.confidence ?? '—',s.signalDate].forEach(v=>{const td=document.createElement('td');td.textContent=String(v);tr.append(td);});return tr;}));
     }
     $('rebalance-date').onchange=renderRebalance;
     const ns='http://www.w3.org/2000/svg';

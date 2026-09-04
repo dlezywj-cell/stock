@@ -25,17 +25,23 @@ const ScoreBacktest = (() => {
         if(options.start<data.start || options.end>data.end) throw Error(`数据范围为 ${data.start} 至 ${data.end}，请重新加载所需区间`);
         if(!data.snapshots.some(s=>Date.parse(s.at)<epoch(options.start))) throw Error('开始日期前没有已保存的股票池，请选择更晚的开始日期');
     }
+    const canonical = code => code.endsWith('.SH') ? '1.'+code.slice(0,-3) : code.endsWith('.SZ') ? '0.'+code.slice(0,-3) : code.endsWith('.HK') ? '116.'+code.slice(0,-3).padStart(5,'0') : code;
+    const shouldExit = signal => signal?.trend==='down' && Number.isFinite(signal.score) && signal.score<50;
     function run(data, options, progress = () => {}) {
-        options={market:'ALL',...options};
+        options={market:'ALL',...options,strategy:'retain-unless-down-below-50'};
         validate(data, options);
-        const cost=options.costBps/10000, snapshots=[...data.snapshots].sort((a,b)=>Date.parse(a.at)-Date.parse(b.at));
+        const cost=options.costBps/10000, snapshots=data.snapshots.map(s=>({...s,stocks:[...new Map(s.stocks.map(stock=>[canonical(stock.code),{...stock,code:canonical(stock.code)}])).values()]})).sort((a,b)=>Date.parse(a.at)-Date.parse(b.at));
         const assets=new Map(), fx=data.fx || {}, warnings=new Set(data.warnings || []);
-        for(const asset of data.assets) {
+        for(const original of data.assets) {
+            const asset={...original,code:canonical(original.code)};
             if(options.market!=='ALL' && asset.currency!==options.market) continue;
-            if(assets.has(asset.code)) throw Error('行情数据包含重复代码：'+asset.code);
+            if(assets.has(asset.code)) {
+                if(asset.code!==original.code || assets.get(asset.code).originalCode!==original.code) continue;
+                throw Error('行情数据包含重复代码：'+asset.code);
+            }
             const bars=asset.bars.filter(b=>positive(b.close)).map(b=>({...b})).sort((a,b)=>a.date.localeCompare(b.date));
             if(bars.some((b,i)=>i && b.date===bars[i-1].date)) throw Error('行情日期重复：'+asset.code);
-            assets.set(asset.code,{...asset,bars,byDate:new Map(bars.map(b=>[b.date,b]))});
+            assets.set(asset.code,{...asset,originalCode:original.code,bars,byDate:new Map(bars.map(b=>[b.date,b]))});
         }
         for(const rows of Object.values(fx)) rows.sort((a,b)=>a.date.localeCompare(b.date));
         const days=[...new Set([...assets.values()].flatMap(a=>a.bars.map(b=>b.date)))].filter(d=>d>=options.start && d<=options.end).sort();
@@ -98,17 +104,28 @@ const ScoreBacktest = (() => {
                     const cap=positive(bar.marketCap) ? bar.marketCap/1e8 : positive(asset.anchorCap) && positive(asset.anchorClose) ? asset.anchorCap*bar.rawClose/asset.anchorClose/1e8 : null;
                     const result=scoring.calculate(stock,{cap,trend:state,now:localDay(date)});
                     if(result.total===null) { exclusions.估值缺失++; continue; }
-                    ranked.push({code:stock.code,name:stock.name,score:result.total,confidence:result.confidence,signalDate:bar.date});
+                    ranked.push({code:stock.code,name:stock.name,score:result.total,confidence:result.confidence,signalDate:bar.date,trend:state});
                 }
                 ranked.sort((a,b)=>b.score-a.score || a.code.localeCompare(b.code));
-                const selected=ranked.slice(0,options.topN), equity=nav(date,false);
+                const signals=new Map(ranked.map(s=>[s.code,s])), retained=[], exits=[];
+                for(const code of positions.keys()) {
+                    const signal=signals.get(code);
+                    if(shouldExit(signal)) exits.push({...signal,decision:'清仓',reason:'下跌且Score＜50'});
+                    else retained.push({...signal,code,name:signal?.name || assets.get(code).name,score:signal?.score ?? null,confidence:signal?.confidence ?? null,signalDate:signal?.signalDate ?? '—',trend:signal?.trend ?? null,decision:'续持',reason:signal?'未同时满足退出条件':'数据不足，保留持仓'});
+                }
+                // Existing holdings have priority, regardless of rank. Do not rebuy an
+                // exit candidate on the same rebalance, including an unfilled prior exit.
+                const heldCodes=new Set(positions.keys());
+                const additions=ranked.filter(s=>!heldCodes.has(s.code)).slice(0,Math.max(0,options.topN-retained.length)).map(s=>({...s,decision:'新增',reason:'Score排名补位'}));
+                const selected=[...retained,...additions], equity=nav(date,false);
+                selected.sort((a,b)=>(b.score ?? -Infinity)-(a.score ?? -Infinity) || a.code.localeCompare(b.code));
                 hadCandidate ||= selected.length>0;
                 unavailableValuations+=Object.values(exclusions).reduce((a,b)=>a+b,0);
                 // Missing slots stay in cash; each valid slot targets 1/topN of pre-trade NAV.
-                const slot=equity/options.topN;
+                const slot=equity/Math.max(options.topN,selected.length);
                 targets=new Map(selected.map(s=>[s.code,{value:slot,score:s.score}]));
                 for(const code of positions.keys()) if(!targets.has(code)) targets.set(code,{value:0,score:null});
-                rebalances.push({date,snapshotAt:snapshot.at,snapshotSha:snapshot.sha,equity,selected,eligible:ranked.length,exclusions});
+                rebalances.push({date,snapshotAt:snapshot.at,snapshotSha:snapshot.sha,equity,selected,exits,retainedCount:retained.length,addedCount:additions.length,eligible:ranked.length,exclusions});
             }
             if(targets) {
                 // Asian markets open before US markets; later sales cannot finance earlier buys.
@@ -168,6 +185,6 @@ const ScoreBacktest = (() => {
         const finalHoldings=[...positions].map(([code,quantity])=>({code,name:assets.get(code).name,quantity,value:quantity*lastPrice(assets.get(code),days.at(-1),true).close*rate(assets.get(code).currency,days.at(-1),true)}));
         return {options,curve,trades,rebalances,finalHoldings,warnings:[...warnings],diagnostics:{unavailableValuations,staleHeldDays},metrics:{initial:options.capital,final,totalReturn:final/options.capital-1,cagr:(final/options.capital)**(1/years)-1,maxDrawdown,volatility:Math.sqrt(variance*252),sharpe:variance>0 ? mean/Math.sqrt(variance)*Math.sqrt(252) : null,fees,turnover:turnover/(curve.reduce((s,p)=>s+p.equity,0)/curve.length),tradeCount:trades.length,rebalanceCount:rebalances.length},source:data.source,generatedAt:new Date().toISOString()};
     }
-    return {run,prior,bucket};
+    return {run,prior,bucket,shouldExit};
 })();
 if(typeof module!=='undefined' && module.exports) module.exports=ScoreBacktest;
