@@ -249,6 +249,18 @@
         #btn-manage-watchlist, #btn-clear-selection { background:#e9ecef; color:#495057; }
         #watchlist-name { width:100%; box-sizing:border-box; }
         button:disabled { opacity:.45; cursor:default; transform:none; box-shadow:none; }
+        @media (min-width:769px) {
+            .header-bar { justify-content:space-between; gap:8px; padding:10px 12px; }
+            .header-bar .tool-group { gap:6px; flex-shrink:0; }
+            .history-tools { margin-left:0; }
+            .cloud-tools, .watchlist-bar { flex-wrap:nowrap; }
+            .header-bar button { height:30px; padding:6px 9px; box-sizing:border-box; }
+            .watchlist-bar select { width:116px; height:30px; padding:4px 6px; box-sizing:border-box; }
+            .header-bar #histDate { width:126px !important; height:30px; box-sizing:border-box; }
+            .header-bar .divider { margin:0; }
+            .header-bar .sync-info { gap:6px; margin-left:0; padding-left:8px; white-space:nowrap; }
+            .header-bar #progress-bar-container { order:3; flex-basis:100%; margin:0; }
+        }
         @media (max-width:768px) {
             .watchlist-bar { grid-column:1 / -1; display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); }
             .watchlist-bar label { grid-column:1; grid-row:1; }
@@ -289,7 +301,7 @@
                 <div id="progress-text">准备中...</div>
             </div>
             <div class="tool-group history-tools">
-                <button class="btn-refresh-trend desktop-only" onclick="forceRefreshTrends()" title="清空缓存并重新拉取所有趋势数据" style="padding:6px 12px; border-radius:4px; background:#17a2b8; color:white; border:none; cursor:pointer;">🔄 刷新趋势</button>
+                <button class="btn-refresh-trend desktop-only" onclick="forceRefreshTrends()" title="清空缓存并重新拉取所有趋势数据" style="border-radius:4px; background:#17a2b8; color:white; border:none; cursor:pointer;">🔄 刷新趋势</button>
                 <div class="divider"></div>
                 <div class="history-query-row">
                     <input type="date" id="histDate" style="width:135px; padding:6px 8px; border:1px solid #ced4da; border-radius:4px;">
