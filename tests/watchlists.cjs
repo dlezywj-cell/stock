@@ -19,6 +19,7 @@ const encode = data => Buffer.from(JSON.stringify(data)).toString('base64');
         page.on('dialog', dialog => dialog.accept());
         await context.route('**/*', async route => {
             if (route.request().url() === 'http://watchlists.test/') return route.fulfill({contentType:'text/html',body:html});
+            if (route.request().url() === 'http://watchlists.test/score.js') return route.fulfill({contentType:'text/javascript',body:fs.readFileSync(path.join(__dirname,'../score.js'),'utf8')});
             if (route.request().url().includes('api.github.com')) {
                 if (route.request().method() === 'PUT') {
                     const body = route.request().postDataJSON();
@@ -145,6 +146,49 @@ const encode = data => Buffer.from(JSON.stringify(data)).toString('base64');
         assert.equal((await state()).dirty, 'true');
         assert.equal(cloud[0].watchlists.includes('上传期间新增'), false);
         assert.equal((await state()).stocks[0].watchlists.includes('上传期间新增'), true);
+        // Score integration: column position, sorting (unknowns last), details and forecast dates.
+        await page.setViewportSize({width:1440,height:900});
+        await page.evaluate(() => {
+            document.getElementById('top-area').style.display = 'block';
+            stocks = ['0.000001','116.00700','105.TEST'].map((code,i) => ({
+                code, name:['示例A','示例港股','示例美股'][i], tags:'科技',
+                profit:1,lowPE:80,highPE:160,revenue:1,lowPS:80,highPS:160,
+                logs:[{date:i === 0 ? getNowStr() : '2000/01/01',content:'首次创建'}]
+            }));
+            stocks.forEach((s,i) => {
+                cachedMarketData[s.code.split('.')[1]] = {f12:s.code.split('.')[1],f2:21,f20:1e10,f3:1};
+                historyCache[s.code] = i === 2 ? null : Array.from({length:20},(_,j)=>j+1);
+            });
+            selectWatchlist(''); clearStockSelection();
+        });
+        const scores = () => page.evaluate(() => currentVisibleStocks.map(s=>s.score.total));
+        assert.deepEqual(await scores(),[86.4,56.4,null]);
+        const headings = await page.locator('#result thead tr').nth(1).locator('th').allTextContents();
+        assert.equal(headings.findIndex(h=>h.startsWith('Score')),headings.findIndex(h=>h.startsWith('涨跌'))+1);
+        await page.getByRole('columnheader',{name:/^Score/}).click();
+        assert.deepEqual(await scores(),[86.4,56.4,null]);
+        await page.getByRole('columnheader',{name:/^Score/}).click();
+        assert.deepEqual(await scores(),[56.4,86.4,null]);
+        await page.locator('.score-button').first().click();
+        assert.match(await page.locator('#score-details').textContent(),/更新 0×30%/);
+        await page.getByRole('button',{name:'关闭评分明细'}).click();
+        const oldest = () => page.evaluate(() => stocks[1].forecastUpdatedAt);
+        await page.evaluate(() => { editStock(stocks[1].code); document.getElementById('inNote').value='普通备注'; saveStock(); });
+        assert.equal(await oldest(),'2000/01/01');
+        await page.evaluate(() => { editStock(stocks[1].code); document.getElementById('inHighPE').value='170'; saveStock(); });
+        assert.equal(await oldest(),'2000/01/01');
+        await page.evaluate(() => { editStock(stocks[1].code); document.getElementById('inConfirmForecast').checked=true; saveStock(); });
+        assert.notEqual(await oldest(),'2000/01/01');
+        assert.equal(await page.locator('#inConfirmForecast').isChecked(),false);
+        await page.evaluate(() => { editStock(stocks[0].code); document.getElementById('inProfit').value='2'; saveStock(); });
+        assert.equal(await page.evaluate(() => Boolean(stocks[0].forecastUpdatedAt)),true);
+        await page.evaluate(() => { document.getElementById('input-container').style.display='none'; setSort('score'); });
+        await page.screenshot({animations:'disabled',path:'/tmp/stock-score-desktop.png'});
+        await page.setViewportSize({width:390,height:844});
+        await page.evaluate(() => toggleMobileMenu(false));
+        await page.locator('.score-button').first().click();
+        assert.equal(await page.locator('#score-modal').isVisible(),true);
+        await page.screenshot({animations:'disabled',path:'/tmp/stock-score-mobile.png'});
         assert.deepEqual(errors, []);
         console.log('PASS: create, overlapping groups, invalid names, reload protection, filter reset, append, rename, stock edits, removal, mocked GitHub round trip, mobile layout, empty-group cleanup, deletion, sync/upload race protection.');
     } finally { await browser.close(); }

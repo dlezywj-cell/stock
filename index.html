@@ -243,6 +243,9 @@
         .watchlist-bar label { margin:0; font-weight:600; }
         .watchlist-bar select { width:130px; max-width:180px; padding:6px; border:1px solid #ced4da; border-radius:4px; }
         .watchlist-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:16px; }
+        .score-button { padding:2px 5px; background:transparent; color:#334e7d; font-variant-numeric:tabular-nums; font-weight:700; }
+        #score-details { white-space:pre-line; line-height:1.8; }
+        #score-modal .modal-content { box-sizing:border-box; width:min(500px, calc(100vw - 32px)); }
         #btn-manage-watchlist, #btn-clear-selection { background:#e9ecef; color:#495057; }
         #watchlist-name { width:100%; box-sizing:border-box; }
         button:disabled { opacity:.45; cursor:default; transform:none; box-shadow:none; }
@@ -417,6 +420,9 @@
                 </div>
 
                 <div style="text-align:center; margin-top:10px;">
+                    <label style="display:inline-flex;align-items:center;gap:4px;margin-right:12px;" title="已复核业绩预测，数值不变也更新预测日期">
+                        <input type="checkbox" id="inConfirmForecast" style="width:auto;">确认预测
+                    </label>
                     <button class="btn-add" onclick="saveStock()" id="btn-save-text" style="padding:8px 30px; font-size:14px;">💾 保存</button>
                     <button onclick="clearInput()" style="padding:8px 20px; margin-left:10px;">重置</button>
                 </div>
@@ -428,6 +434,14 @@
         📅 当前展示 <b id="hist-banner-date"></b> 收盘截面估算市值与空间（假设股数不变，按当日收盘价与最新价比例换算），涨跌幅与趋势箭头也已切换为「以该日为基准」的口径 — <a href="#" onclick="resetHistoricalDate();return false;" style="color:#856404;text-decoration:underline;">恢复最新数据</a>
     </div>
     <div id="result"></div>
+
+    <div id="score-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="score-title">
+        <div class="modal-content">
+            <button class="close-btn" aria-label="关闭评分明细" onclick="closeScoreDetails()">&times;</button>
+            <h3 id="score-title">Score</h3>
+            <div id="score-details"></div>
+        </div>
+    </div>
 
     <div id="watchlist-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="watchlist-title">
         <div class="modal-content">
@@ -484,6 +498,7 @@
         </div>
     </div>
 
+    <script src="score.js"></script>
     <script>
         const APP_STORAGE = localStorage; 
 
@@ -1004,17 +1019,13 @@
         }
 
         function getTrendIcon(history, currentPrice, code) {
-            if (!history || history.length < 19) return "";
-            const data = [...history.slice(-19), currentPrice];
-            const avg = (arr) => arr.reduce((a,b)=>a+b,0) / arr.length;
-            const ma5 = avg(data.slice(-5));
-            const ma10 = avg(data.slice(-10));
-            const ma20 = avg(data.slice(-20));
-            
-            if (ma5 > ma10 && ma10 > ma20) return '<span style="color:#e53935 !important;font-weight:900 !important;font-size:18px;">↑</span>';
-            if (ma5 < ma10 && ma10 < ma20) return '<span style="color:#43a047 !important;font-weight:900 !important;font-size:18px;">↓</span>';
-            
-            return ""; 
+            return renderTrendIcon(StockScore.trend(history, currentPrice));
+        }
+
+        function renderTrendIcon(state) {
+            if (state === 'up') return '<span style="color:#e53935 !important;font-weight:900 !important;font-size:18px;">↑</span>';
+            if (state === 'down') return '<span style="color:#43a047 !important;font-weight:900 !important;font-size:18px;">↓</span>';
+            return '';
         }
         
         function forceRefreshTrends() {
@@ -1073,17 +1084,7 @@
 
         // 以历史日期为基准计算均线趋势（不依赖实时价）
         function getHistoricalTrendIcon(series) {
-            if (!series || series.length < 20) return "";
-            const data = series.slice(-20);
-            const avg = (arr) => arr.reduce((a,b)=>a+b,0) / arr.length;
-            const ma5 = avg(data.slice(-5));
-            const ma10 = avg(data.slice(-10));
-            const ma20 = avg(data.slice(-20));
-
-            if (ma5 > ma10 && ma10 > ma20) return '<span style="color:#e53935 !important;font-weight:900 !important;font-size:18px;">↑</span>';
-            if (ma5 < ma10 && ma10 < ma20) return '<span style="color:#43a047 !important;font-weight:900 !important;font-size:18px;">↓</span>';
-
-            return "";
+            return renderTrendIcon(StockScore.trend(series));
         }
 
         async function applyHistoricalDate() {
@@ -1342,10 +1343,12 @@
                     missingHistory++;
                 }
                 
-                const trend = historicalMode
-                    ? getHistoricalTrendIcon(histSeries)
-                    : getTrendIcon(historyCache[s.code], currentPrice, s.code);
-                return { ...s, cap: displayCap, chg: displayChg, valid: dataValid, peRes:pe, psRes:ps, trend, reportDateInfo: getReportDateInfo(s.code) };
+                const trendState = historicalMode
+                    ? StockScore.trend(histSeries)
+                    : StockScore.trend(historyCache[s.code], currentPrice);
+                const trend = renderTrendIcon(trendState);
+                const score = StockScore.calculate(s, { cap:dataValid ? displayCap : null, trend:trendState });
+                return { ...s, cap: displayCap, chg: displayChg, valid: dataValid, peRes:pe, psRes:ps, trend, score, reportDateInfo: getReportDateInfo(s.code) };
             });
             
             if(missingHistory > 0) updateProgress(stocks.length - missingHistory, stocks.length);
@@ -1400,6 +1403,12 @@
             
             if (sortState.key) {
                 rows.sort((a, b) => {
+                    if (sortState.key === 'score') {
+                        const x = a.score.total, y = b.score.total;
+                        if (x === null) return y === null ? 0 : 1;
+                        if (y === null) return -1;
+                        return sortState.dir === 'desc' ? y - x : x - y;
+                    }
                     if (sortState.key === 'last_update') {
                         const dA = a.logs?.[0]?.date || "";
                         const dB = b.logs?.[0]?.date || "";
@@ -1440,7 +1449,7 @@
             const allSel = rows.length>0 && rows.every(i=>selectedCodes.has(i.code));
 
             let html = `<table><thead><tr>
-                <th class="th-basic" colspan="${3 + (viewSettings.showCode?1:0) + (viewSettings.showTags?1:0) + (viewSettings.showCap?1:0) + (viewSettings.showReport?1:0)}">📊 基础行情</th>
+                <th class="th-basic" colspan="${4 + (viewSettings.showCode?1:0) + (viewSettings.showTags?1:0) + (viewSettings.showCap?1:0) + (viewSettings.showReport?1:0)}">📊 基础行情</th>
                 <th class="th-pe" colspan="4">💰 PE (利润)</th><th class="th-ps" colspan="4">🚀 PS (营收)</th>
                 <th rowspan="2" class="sortable ${show('update')} ${sk('last_update')}" onclick="setSort('last_update')" style="width:70px">📅 ${getSortIcon('last_update')}</th>
                 <th class="th-basic ${show('action')}" rowspan="2">⚙️</th>
@@ -1449,22 +1458,24 @@
                 <th onclick="setSort('trend')" class="sortable ${sk('trend')}" style="width:30px">趋势 ${getSortIcon('trend')}</th>
                 <th>名称</th><th class="${show('code')}">代码</th><th class="${show('tags')}">属性 ${icon('tags')}</th>
                 <th onclick="setSort('chg')" class="sortable ${sk('chg')}">涨跌 ${getSortIcon('chg')}</th>
+                <th onclick="setSort('score')" class="sortable ${sk('score')}" title="点击按得分排序">Score ${getSortIcon('score')}</th>
                 <th onclick="setSort('cap')" class="sortable ${show('cap')} ${sk('cap')}">市值 ${getSortIcon('cap')}</th>
                 <th onclick="setSort('report_date')" class="sortable ${show('report')} ${sk('report_date')}">财报日 ${getSortIcon('report_date')}</th>
                 <th onclick="setSort('profit')" class="sortable ${sk('profit')}">净利 ${getSortIcon('profit')}</th><th>合理PE</th><th onclick="setSort('pe_down')" class="sortable ${sk('pe_down')}">下% ${icon('pe_down')}</th><th onclick="setSort('pe_up')" class="sortable ${sk('pe_up')}">上% ${icon('pe_up')}</th>
                 <th onclick="setSort('revenue')" class="sortable ${sk('revenue')}">营收 ${getSortIcon('revenue')}</th><th>合理PS</th><th onclick="setSort('ps_down')" class="sortable ${sk('ps_down')}">下% ${icon('ps_down')}</th><th onclick="setSort('ps_up')" class="sortable ${sk('ps_up')}">上% ${icon('ps_up')}</th>
             </tr></thead><tbody>`;
 
-            if(rows.length===0) html+=`<tr><td colspan="21" style="text-align:center;padding:20px;color:#ccc">无数据</td></tr>`;
-            else rows.forEach(i => {
+            if(rows.length===0) html+=`<tr><td colspan="${13 + ['code','tags','cap','report','update','action'].filter(k=>viewSettings['show'+k.charAt(0).toUpperCase()+k.slice(1)]).length}" style="text-align:center;padding:20px;color:#ccc">无数据</td></tr>`;
+            else rows.forEach((i, rowIndex) => {
                 const p = (v) => `<span style="color:${parseFloat(v)>=0?'#d32f2f':'#2e7d32'};font-weight:${Math.abs(v)>30?'800':'bold'}">${v==='-'?'-':v+'%'}</span>`;
-                const u = i.logs?.[0]?.date ? `<span style="font-size:11px;color:#666;display:block;line-height:1.2">${i.logs[0].date.split(' ')[0]}<br><span style="color:#999;font-size:10px">${i.logs[0].date.split(' ')[1]}</span></span>` : '-';
+                const u = i.logs?.[0]?.date ? `<span style="font-size:11px;color:#666;display:block;line-height:1.2">${i.logs[0].date.split(' ')[0]}<br><span style="color:#999;font-size:10px">${i.logs[0].date.split(' ')[1] || ''}</span></span>` : '-';
                 
                 html += `<tr class="${selectedCodes.has(i.code)?'row-selected':''}">
                     <td style="text-align:center;">${i.trend}</td>
                     <td style="font-weight:600">${i.name}</td><td class="${show('code')}" style="color:#888;font-size:12px">${i.code}</td>
                     <td class="${show('tags')}" style="text-align:left">${(i.tags||"").split(' ').map(t=>t?`<span class="tag-badge">${t}</span>`:'').join('')}</td>
                     <td style="font-weight:bold;color:${parseFloat(i.chg)>=0?'#d32f2f':'#2e7d32'}">${i.chg==='-'?'-':i.chg+'%'}</td>
+                    <td><button class="score-button" onclick="showScoreDetails(${rowIndex})" title="查看评分明细">${i.score.total === null ? '—' : i.score.total.toFixed(1)}</button></td>
                     <td class="${show('cap')}" style="font-family:monospace">${i.cap?i.cap.toFixed(2):'-'}</td>
                     <td class="${show('report')}">${formatReportDateCell(i.reportDateInfo)}</td>
                     <td>${i.profit||'-'}</td><td style="font-size:12px">${i.lowPE||'-'}~${i.highPE||'-'}</td><td>${p(i.peRes.down)}</td><td>${p(i.peRes.up)}</td>
@@ -1476,6 +1487,31 @@
             });
             document.getElementById('result').innerHTML = html + '</tbody></table>';
         }
+
+        function showScoreDetails(rowIndex) {
+            const stock = currentVisibleStocks[rowIndex];
+            if (!stock) return;
+            const s = stock.score, f = value => value === null ? '—' : value.toFixed(1);
+            const describeMethod = (name, value) => !value ? `${name}：无有效数据` :
+                `${name}：上行 ${(value.up * 100).toFixed(1)}% · 下限空间 ${(value.down * 100).toFixed(1)}%\n` +
+                `上行分 ${f(value.upside)} · 赔率 ${value.ratio === Infinity ? '下限不低于现价' : f(value.ratio) + '倍'}（${f(value.odds)}分）\n` +
+                `${name} 估值分 ${f(value.total)} = 上行分×60% + 赔率分×40%`;
+            document.getElementById('score-title').textContent = `${stock.name} · Score ${f(s.total)}`;
+            document.getElementById('score-details').textContent = [
+                s.reasons.join('；'),
+                `总分 = 估值 ${f(s.valuation)}×40% + 趋势 ${f(s.trendScore)}×30% + 更新 ${s.update}×30%`,
+                describeMethod('PE', s.pe), describeMethod('PS', s.ps),
+                s.methodCount === 1 ? '仅一种估值有效：估值分×80%' : s.methodCount === 2 ? 'PE、PS 估值分取平均' : '',
+                `趋势：${({up:'上涨',sideways:'震荡',down:'下跌'})[s.trend] || '数据不足'}`,
+                `预测日期：${s.updatedAt || '无记录'}\n更新分：≤2个月100，＞2至4个月60，＞4个月0；日期缺失或异常计0`,
+                '上行100%满分；赔率4倍满分；无上行空间计0。',
+                historicalMode ? '当前为历史截面：使用截面价格和趋势、现有业绩预测，更新分按今天计算。' : ''
+            ].filter(Boolean).join('\n\n');
+            document.getElementById('score-modal').style.display = 'flex';
+            document.querySelector('#score-modal .close-btn').focus();
+        }
+
+        function closeScoreDetails() { document.getElementById('score-modal').style.display = 'none'; }
 
         // Membership lives on each stock so the existing private data.json sync remains compatible.
         function getStockWatchlists(stock) {
@@ -1642,6 +1678,8 @@
 
             const idx = stocks.findIndex(i=>i.code===code);
             const now = getNowStr();
+            const confirmForecast = document.getElementById('inConfirmForecast').checked;
+            const forecastChanged = idx < 0 || Number(stocks[idx].profit || 0) !== profit || Number(stocks[idx].revenue || 0) !== revenue;
             let logContent = "";
 
             if(idx >= 0) {
@@ -1675,9 +1713,11 @@
             const s = { 
                 ...(idx >= 0 ? stocks[idx] : {}),
                 code, name, tags, profit, lowPE, highPE, revenue, lowPS, highPS, 
-                logs: (idx >= 0 ? stocks[idx].logs : []) 
+                forecastUpdatedAt: forecastChanged || confirmForecast ? now : StockScore.forecastDate(stocks[idx]),
+                logs: (idx >= 0 ? stocks[idx].logs || [] : [])
             };
 
+            if (confirmForecast) logContent = logContent === '无参数变更' ? '确认预测' : logContent + '; 确认预测';
             if(logContent !== "无参数变更" || note) {
                 s.logs.unshift({
                     date: now,
@@ -1728,6 +1768,7 @@
             document.getElementById('input-container').scrollIntoView({ behavior: 'smooth', block: 'start' });
             document.getElementById('input-container').style.display='block';
             const s=stocks.find(i=>i.code===c); if(!s)return;
+            document.getElementById('inConfirmForecast').checked = false;
             document.getElementById('inName').value=s.name; document.getElementById('inCode').value=s.code; document.getElementById('inTags').value=s.tags||''; 
             document.getElementById('inProfit').value=s.profit||''; document.getElementById('inLowPE').value=s.lowPE||''; document.getElementById('inHighPE').value=s.highPE||'';
             document.getElementById('inRevenue').value=s.revenue||''; document.getElementById('inLowPS').value=s.lowPS||''; document.getElementById('inHighPS').value=s.highPS||''; 
@@ -1735,7 +1776,7 @@
         }
 
         function toggleInputPanel() { const c=document.getElementById('input-container'); isPanelOpen=!isPanelOpen; c.style.display=isPanelOpen?'block':'none'; document.getElementById('toggle-btn').innerText=isPanelOpen?'🔼 收起':'➕ 录入/管理'; }
-        function clearInput() { document.querySelectorAll('#input-panel input').forEach(i=>i.value=''); document.getElementById('btn-save-text').innerText="💾 保存"; }
+        function clearInput() { document.querySelectorAll('#input-panel input').forEach(i=> { if(i.type === 'checkbox') i.checked = false; else i.value=''; }); document.getElementById('btn-save-text').innerText="💾 保存"; }
         function showLogs(c) { const s=stocks.find(i=>i.code===c); document.getElementById('modal-body').innerHTML=s?.logs?.map((l,i)=>`<div class="log-entry"><div style="display:flex;justify-content:space-between"><span class="log-time">${l.date}</span><span class="log-del-btn" onclick="deleteLog('${c}',${i})">🗑️</span></div><div style="font-weight:600">${l.content}</div>${l.note?`<div class="log-note">${l.note}</div>`:''}</div>`).join('')||'无'; document.getElementById('log-modal').style.display='flex'; }
         function deleteLog(c,i) { pendingDeleteCode=c; pendingLogIndex=i; document.getElementById('delete-msg').innerText="删日志?"; document.getElementById('delete-modal').style.display='flex'; }
         window.openDeleteModal=function(c){pendingDeleteCode=c;pendingLogIndex=null;document.getElementById('delete-msg').innerText=`删 ${c}?`;document.getElementById('delete-modal').style.display='flex';};
@@ -1806,7 +1847,7 @@
             updateControlBtns(false);
         }
 
-        function setSort(k) { if(sortState.key===k) sortState.dir=sortState.dir==='desc'?'asc':'desc'; else {sortState.key=k; sortState.dir=k==='report_date'?'asc':'desc';} updateTable(); }
+        function setSort(k) { if(sortState.key===k) sortState.dir=sortState.dir==='desc'?'asc':'desc'; else {sortState.key=k; sortState.dir=k==='report_date'?'asc':'desc';} updateTable(true); }
         function getSortIcon(k) { return sortState.key!==k?'':(sortState.dir==='desc'?'⬇':'⬆'); }
         function saveStorage() { APP_STORAGE.setItem('stock_sys_data', JSON.stringify(stocks)); }
         window.onclick=function(e){if(e.target.className==='modal')e.target.style.display='none';}
@@ -1878,7 +1919,7 @@
             if (wrap && !wrap.contains(event.target)) hideTagDropdown();
         });
         document.addEventListener('keydown', (event) => {
-            if (event.key === 'Escape') closeWatchlistModal();
+            if (event.key === 'Escape') { closeWatchlistModal(); closeScoreDetails(); }
         });
     </script>
 </body>
