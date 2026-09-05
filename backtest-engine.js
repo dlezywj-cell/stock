@@ -27,7 +27,7 @@ const ScoreBacktest = (() => {
     }
     const canonical = code => code.endsWith('.SH') ? '1.'+code.slice(0,-3) : code.endsWith('.SZ') ? '0.'+code.slice(0,-3) : code.endsWith('.HK') ? '116.'+code.slice(0,-3).padStart(5,'0') : code;
     const shouldExit = signal => signal?.trend==='down' && Number.isFinite(signal.score) && signal.score<50;
-    const shouldReplace = (signal,cycle,tradingDays) => tradingDays>=10 && cycle?.MFE<0.10 && Number.isFinite(signal?.score) && signal.score<60;
+    const shouldReplace = (signal,cycle,tradingDays,currentReturn) => tradingDays>=10 && cycle?.MFE<0.05 && currentReturn<0 && Number.isFinite(cycle?.EntryScore) && Number.isFinite(signal?.score) && cycle.EntryScore-signal.score>=30 && Number.isFinite(cycle?.EntryRank) && Number.isFinite(signal?.rank) && signal.rank-cycle.EntryRank>=20;
     function run(data, options, progress = () => {}) {
         options={market:'ALL',...options,strategy:'retain-unless-down-below-50-or-stalled-10d'};
         validate(data, options);
@@ -153,8 +153,8 @@ const ScoreBacktest = (() => {
                 ranked.forEach((s,i)=>s.rank=i+1);
                 const signals=new Map(ranked.map(s=>[s.code,s])), retained=[], exits=[];
                 for(const code of positions.keys()) {
-                    const signal=signals.get(code), cycle=holdingCycles.get(code), tradingDays=completedTradingDays(code,date);
-                    const reason=shouldExit(signal) ? '下跌且Score＜50' : shouldReplace(signal,cycle,tradingDays) ? '持有≥10日且MFE＜10%且Score＜60' : null;
+                    const signal=signals.get(code), cycle=holdingCycles.get(code), tradingDays=completedTradingDays(code,date), currentPerformance=holdingPerformance(code,date);
+                    const reason=shouldExit(signal) ? '下跌且Score＜50' : shouldReplace(signal,cycle,tradingDays,currentPerformance?.returnRate) ? '10日未兑现且Score降≥30、排名降≥20' : null;
                     if(reason) exits.push({...signal,tradingDays,MFE:cycle.MFE,decision:'清仓',reason});
                     else retained.push({...signal,code,name:signal?.name || assets.get(code).name,score:signal?.score ?? null,confidence:signal?.confidence ?? null,signalDate:signal?.signalDate ?? '—',trend:signal?.trend ?? null,decision:'续持',reason:signal?'未同时满足退出条件':'数据不足，保留持仓'});
                 }
