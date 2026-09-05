@@ -137,6 +137,39 @@ test('historical ticker-format changes refer to the same holding',()=>{
  d.snapshots.push({at:'2026-01-22T10:00:00Z',sha:'format-only',stocks:[d.snapshots[0].stocks[0],{...d.snapshots[0].stocks[0],code:'0.000001'}]});
  const r=engine.run(d,{...opts,frequency:'daily'});assert.equal(r.trades.length,1);assert.equal(r.finalHoldings.length,1);assert.ok(r.rebalances.every(x=>x.selected.length===1));
 });
+test('holding returns are pre-trade; exits and reentries form separate cycles',()=>{
+ const d=fixture(),a=d.snapshots[0].stocks[0];d.snapshots[0].stocks=[a];
+ const low={...a,lowPE:1,highPE:2,lowPS:1,highPS:2};
+ d.snapshots.push({at:'2026-01-22T10:00:00Z',stocks:[low]},{at:'2026-01-23T10:00:00Z',stocks:[a]},{at:'2026-01-24T10:00:00Z',stocks:[low]});
+ d.assets[0].bars.forEach((b,i)=>{b.rawClose=200-i;});
+ d.assets[0].bars.find(b=>b.date==='2026-01-22').close=110;
+ d.assets[0].bars.find(b=>b.date==='2026-01-23').open=120;
+ d.assets[0].bars.find(b=>b.date==='2026-01-24').close=90;
+ d.assets[0].bars.find(b=>b.date==='2026-01-25').open=80;
+ const r=engine.run(d,{...opts,frequency:'daily'});
+ assert.equal(r.rebalances[0].selected[0].performance,null);
+ near(r.rebalances[1].exits[0].performance.returnRate,.1);
+ assert.equal(r.closedPositions.length,2);assert.equal(r.openPositions.length,0);
+ const [first,second]=r.closedPositions;
+ assert.equal(first.openedAt,'2026-01-22');assert.equal(first.closedAt,'2026-01-23');near(first.pnl,2000);near(first.returnRate,.2);
+ assert.equal(second.openedAt,'2026-01-24');assert.equal(second.closedAt,'2026-01-25');near(second.pnl,-2400);near(second.returnRate,-.2);
+ assert.notEqual(first.id,second.id);near(first.pnl+second.pnl,r.metrics.final-r.metrics.initial);
+ // Later fills cannot mutate the historical snapshot of the first cycle.
+ near(r.rebalances[1].exits[0].performance.sellAmount,0);
+});
+test('partial sales stay in the open cycle and PnL reconciles including fees',()=>{
+ const d=fixture();d.assets[0].bars.find(b=>b.date==='2026-01-23').open=200;
+ const r=engine.run(d,{...opts,frequency:'daily',topN:2,costBps:10});
+ assert.equal(r.closedPositions.length,0);assert.equal(r.openPositions.length,2);
+ for(const p of r.openPositions){const ts=r.trades.filter(t=>t.code===p.code);const buys=ts.filter(t=>t.side==='buy').reduce((s,t)=>s+t.notional+t.fee,0),sells=ts.filter(t=>t.side==='sell').reduce((s,t)=>s+t.notional-t.fee,0);near(p.invested,buys);near(p.pnl,p.value+sells-buys);near(p.returnRate,p.pnl/buys);}
+ near(r.openPositions.reduce((s,p)=>s+p.pnl,0),r.metrics.final-r.metrics.initial);
+});
+test('foreign holding return includes CNY exchange-rate movement',()=>{
+ const d=fixture();d.assets[0].currency='USD';d.snapshots[0].stocks=d.snapshots[0].stocks.slice(0,1);
+ d.fx.USD=d.assets[0].bars.map(b=>({date:b.date,close:b.date<opts.start?7:8}));
+ const r=engine.run(d,{...opts,frequency:'daily'});
+ near(r.rebalances[1].selected[0].performance.returnRate,8/7-1);
+});
 test('quote adapter adjusts open, keeps raw close, dates by exchange timezone',()=>{
  const d={chart:{result:[{meta:{exchangeTimezoneName:'America/New_York',currency:'USD'},timestamp:[Date.parse('2026-01-22T01:00:00Z')/1000],indicators:{quote:[{close:[100],open:[80],volume:[20]}],adjclose:[{adjclose:[50]}]}}]}};
  const parsed=loader.parseChart(d);assert.equal(parsed.currency,'USD');assert.deepEqual(parsed.bars,[{date:'2026-01-21',rawClose:100,close:50,open:40,volume:20}]);

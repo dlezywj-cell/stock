@@ -21,7 +21,7 @@
     function execute(data,opts,stress,signal) {
         return new Promise((resolve,reject)=>{
             if(signal.aborted) return reject(new DOMException('已取消','AbortError'));
-            worker=new Worker('backtest-worker.js?v=3');
+            worker=new Worker('backtest-worker.js?v=4');
             const cancel=()=>{worker?.terminate();worker=null;reject(new DOMException('已取消','AbortError'));};
             signal.addEventListener('abort',cancel,{once:true});
             const finish=()=>{signal.removeEventListener('abort',cancel);worker?.terminate();worker=null;};
@@ -80,7 +80,7 @@
         $('stress-result').textContent=stressed ? `成本翻倍：累计收益 ${pct(stressed.metrics.totalReturn)}，最大回撤 ${pct(stressed.metrics.maxDrawdown)}。` : '';
         $('warnings').replaceChildren(...result.warnings.map(w=>{const p=document.createElement('p');p.textContent=w;return p;}));
         $('warnings').hidden=!result.warnings.length;
-        $('rebalance-date').replaceChildren(...result.rebalances.map((r,i)=>new Option(r.date,String(i))));renderRebalance();
+        $('rebalance-date').replaceChildren(...result.rebalances.map((r,i)=>new Option(r.date,String(i))));renderRebalance();renderClosed();showRecordPage();
         const failures=dataset.failures || [];
         $('coverage-title').textContent=`数据覆盖 · ${dataset.assets.length}/${dataset.universeCount || dataset.assets.length}只`;
         $('coverage-summary').textContent=`${dataset.snapshots.length} 份历史股票池记录；${failures.length} 只数据缺失；${result.diagnostics.staleHeldDays} 次持仓估值使用超过10天未更新的价格。`;
@@ -92,7 +92,23 @@
         if(!result) return;
         const row=result.rebalances[Number($('rebalance-date').value) || 0];
         $('rebalance-summary').textContent=`可评分 ${row.eligible} 只 · 续持 ${row.retainedCount} 只 · 新增 ${row.addedCount} 只 · 清仓 ${row.exits.length} 只 · 调仓前资产 ${money(row.equity)} · 预测保存于 ${row.snapshotAt}。排除：`+Object.entries(row.exclusions).map(([k,v])=>`${k}${v}`).join('，');
-        $('ranked').replaceChildren(...[...row.selected,...row.exits].map((s,i)=>{const tr=document.createElement('tr');tr.title=s.reason;[i<row.selected.length?i+1:'—',s.name,s.code,s.decision,({up:'上涨',sideways:'震荡',down:'下跌'})[s.trend] || '—',Number.isFinite(s.score)?s.score.toFixed(1):'—',s.confidence ?? '—',s.signalDate].forEach(v=>{const td=document.createElement('td');td.textContent=String(v);tr.append(td);});return tr;}));
+        $('ranked').replaceChildren(...[...row.selected,...row.exits].map((s,i)=>{const tr=document.createElement('tr');tr.title=s.reason;[i<row.selected.length?i+1:'—',s.name,s.code,s.decision,({up:'上涨',sideways:'震荡',down:'下跌'})[s.trend] || '—',Number.isFinite(s.score)?s.score.toFixed(1):'—',pct(s.performance?.returnRate),s.confidence ?? '—',s.signalDate].forEach(v=>{const td=document.createElement('td');td.textContent=String(v);if(tr.children.length===6 && s.performance) {td.className=s.performance.pnl>0?'positive':s.performance.pnl<0?'negative':'';td.title=`本轮始于 ${s.performance.openedAt}；净盈亏 ${money(s.performance.pnl)}；累计投入 ${money(s.performance.invested)}；估值行情日 ${s.performance.priceDate}`;}tr.append(td);});return tr;}));
+    }
+    function showRecordPage() {
+        const closed=location.hash==='#closed';
+        $('rebalance-page').hidden=closed;$('closed-page').hidden=!closed;
+        $('show-rebalances').setAttribute('aria-pressed',String(!closed));$('show-closed').setAttribute('aria-pressed',String(closed));
+    }
+    $('show-rebalances').onclick=()=>{location.hash='rebalances';};
+    $('show-closed').onclick=()=>{location.hash='closed';};
+    window.addEventListener('hashchange',showRecordPage);
+    function closedRows() {return [...result.closedPositions].sort((a,b)=>b.closedAt.localeCompare(a.closedAt)||b.id-a.id);}
+    function renderClosed() {
+        const rows=closedRows(), pnl=rows.reduce((s,r)=>s+r.pnl,0);
+        $('show-closed').textContent=`已清仓（${rows.length}）`;
+        $('closed-summary').textContent=`${rows.length} 段已结束持仓 · 净盈亏 ${money(pnl)}`;
+        $('closed-empty').hidden=rows.length>0;$('export-closed').disabled=!rows.length;
+        $('closed-rows').replaceChildren(...rows.map(r=>{const tr=document.createElement('tr');[r.name,r.code,r.openedAt,r.closedAt,r.holdingDays,money(r.invested),money(r.pnl),pct(r.returnRate)].forEach((v,i)=>{const td=document.createElement('td');td.textContent=String(v);if(i>=6)td.className=r.pnl>0?'positive':r.pnl<0?'negative':'';tr.append(td);});return tr;}));
     }
     $('rebalance-date').onchange=renderRebalance;
     const ns='http://www.w3.org/2000/svg';
@@ -122,5 +138,6 @@
     const csv=rows=>'\uFEFF'+rows.map(row=>row.map(value=>{let s=value==null?'':String(value);if(typeof value==='string' && /^[=+\-@\t\r]/.test(s)) s="'"+s;return '"'+s.replace(/"/g,'""')+'"';}).join(',')).join('\r\n');
     $('export-nav').onclick=()=>{if(result) download('Score净值.csv',csv([['日期','资产人民币','现金人民币','回撤','持仓数'],...result.curve.map(p=>[p.date,p.equity,p.cash,p.drawdown,p.holdings])]),'text/csv;charset=utf-8');};
     $('export-trades').onclick=()=>{if(result) download('Score成交.csv',csv([['日期','代码','名称','方向','模拟份额','复权成交价','折人民币汇率','成交额人民币','成本人民币','Score'],...result.trades.map(t=>[t.date,t.code,t.name,t.side==='buy'?'买入':'卖出',t.quantity,t.price,t.fx,t.notional,t.fee,t.score])]),'text/csv;charset=utf-8');};
+    $('export-closed').onclick=()=>{if(result) download('Score已清仓.csv',csv([['股票','代码','首次买入','实际清仓','持有天数','累计投入人民币含费用','累计卖出人民币扣费用','净盈亏人民币','收益率'],...closedRows().map(r=>[r.name,r.code,r.openedAt,r.closedAt,r.holdingDays,r.invested,r.sellAmount-r.sellFees,r.pnl,r.returnRate])]),'text/csv;charset=utf-8');};
     $('export-data').onclick=()=>{if(dataset) {const {imported,...data}=dataset;download('Score回测数据.json',JSON.stringify(data),'application/json');}};
 })();

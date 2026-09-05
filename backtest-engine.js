@@ -57,6 +57,19 @@ const ScoreBacktest = (() => {
             return i>=0 ? asset.bars[i] : null;
         }
         const positions=new Map(), trades=[], curve=[], rebalances=[];
+        const holdingCycles=new Map(), closedPositions=[];
+        let cycleSequence=0;
+        function performance(cycle,value) {
+            const invested=cycle.buyAmount+cycle.buyFees, pnl=value+cycle.sellAmount-cycle.sellFees-invested;
+            return {...cycle,value,invested,pnl,returnRate:invested>0 ? pnl/invested : null};
+        }
+        function holdingPerformance(code,date) {
+            const cycle=holdingCycles.get(code);
+            if(!cycle) return null;
+            const asset=assets.get(code), bar=lastPrice(asset,date,false), fxRate=rate(asset.currency,date);
+            if(!bar || !fxRate) return null;
+            return {...performance(cycle,(positions.get(code)||0)*bar.close*fxRate),asOf:date,priceDate:bar.date};
+        }
         let cash=options.capital, fees=0, turnover=0, peak=options.capital, maxDrawdown=0, currentBucket=null, targets=null, snapshotIndex=-1, hadCandidate=false;
         let unavailableValuations=0, staleHeldDays=0;
         function nav(date,inclusive) {
@@ -75,6 +88,17 @@ const ScoreBacktest = (() => {
             cash+=(side==='sell' ? notional-fee : -notional-fee);
             const held=(positions.get(code)||0)+(side==='sell' ? -qty : qty);
             if(held<1e-8) positions.delete(code); else positions.set(code,held);
+            let cycle=holdingCycles.get(code);
+            if(!cycle) {
+                cycle={id:++cycleSequence,code,name:assets.get(code).name,openedAt:date,buyAmount:0,buyFees:0,sellAmount:0,sellFees:0};
+                holdingCycles.set(code,cycle);
+            }
+            if(side==='buy') {cycle.buyAmount+=notional;cycle.buyFees+=fee;}
+            else {cycle.sellAmount+=notional;cycle.sellFees+=fee;}
+            if(!positions.has(code)) {
+                closedPositions.push({...performance(cycle,0),closedAt:date,holdingDays:age(date,cycle.openedAt)});
+                holdingCycles.delete(code);
+            }
             fees+=fee; turnover+=notional;
             trades.push({date,code,name:assets.get(code).name,side,quantity:qty,price,fx:fxRate,notional,fee,score:score ?? null});
         }
@@ -119,6 +143,8 @@ const ScoreBacktest = (() => {
                 const additions=ranked.filter(s=>!heldCodes.has(s.code)).slice(0,Math.max(0,options.topN-retained.length)).map(s=>({...s,decision:'新增',reason:'Score排名补位'}));
                 const selected=[...retained,...additions], equity=nav(date,false);
                 selected.sort((a,b)=>(b.score ?? -Infinity)-(a.score ?? -Infinity) || a.code.localeCompare(b.code));
+                // Capture pre-trade performance now, never using future fills or prices.
+                for(const row of [...selected,...exits]) row.performance=holdingPerformance(row.code,date);
                 hadCandidate ||= selected.length>0;
                 unavailableValuations+=Object.values(exclusions).reduce((a,b)=>a+b,0);
                 // Missing slots stay in cash; each valid slot targets 1/topN of pre-trade NAV.
@@ -183,7 +209,8 @@ const ScoreBacktest = (() => {
         if(trades.length<30) warnings.add('成交记录少于30笔，样本较少');
         if(rebalances.some(r=>r.selected.length<options.topN)) warnings.add('部分调仓日不足目标持仓数，空缺仓位保留现金');
         const finalHoldings=[...positions].map(([code,quantity])=>({code,name:assets.get(code).name,quantity,value:quantity*lastPrice(assets.get(code),days.at(-1),true).close*rate(assets.get(code).currency,days.at(-1),true)}));
-        return {options,curve,trades,rebalances,finalHoldings,warnings:[...warnings],diagnostics:{unavailableValuations,staleHeldDays},metrics:{initial:options.capital,final,totalReturn:final/options.capital-1,cagr:(final/options.capital)**(1/years)-1,maxDrawdown,volatility:Math.sqrt(variance*252),sharpe:variance>0 ? mean/Math.sqrt(variance)*Math.sqrt(252) : null,fees,turnover:turnover/(curve.reduce((s,p)=>s+p.equity,0)/curve.length),tradeCount:trades.length,rebalanceCount:rebalances.length},source:data.source,generatedAt:new Date().toISOString()};
+        const openPositions=finalHoldings.map(h=>performance(holdingCycles.get(h.code),h.value));
+        return {options,curve,trades,rebalances,finalHoldings,openPositions,closedPositions,warnings:[...warnings],diagnostics:{unavailableValuations,staleHeldDays},metrics:{initial:options.capital,final,totalReturn:final/options.capital-1,cagr:(final/options.capital)**(1/years)-1,maxDrawdown,volatility:Math.sqrt(variance*252),sharpe:variance>0 ? mean/Math.sqrt(variance)*Math.sqrt(252) : null,fees,turnover:turnover/(curve.reduce((s,p)=>s+p.equity,0)/curve.length),tradeCount:trades.length,rebalanceCount:rebalances.length},source:data.source,generatedAt:new Date().toISOString()};
     }
     return {run,prior,bucket,shouldExit};
 })();

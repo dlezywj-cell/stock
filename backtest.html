@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Score 策略回测 · 股票池</title>
-    <link rel="stylesheet" href="backtest.css?v=1">
+    <link rel="stylesheet" href="backtest.css?v=2">
 </head>
 <body>
     <main>
@@ -52,10 +52,14 @@
             <section class="card chart-card"><div class="chart-header"><h3>组合净值</h3><div class="legend"><span>● 基准成本</span><span id="stress-legend">● 成本翻倍</span></div></div><svg id="chart" viewBox="0 0 1000 300" role="img" aria-label="组合净值曲线"></svg><p id="stress-result" class="muted"></p></section>
             <section class="card"><div class="chart-header"><h3>回撤</h3><span class="muted">相对此前净值高点</span></div><svg id="drawdown" viewBox="0 0 1000 180" role="img" aria-label="组合回撤曲线"></svg></section>
             <div id="warnings" class="notice"></div>
-            <section class="card"><div class="chart-header"><h3>调仓记录</h3><label class="inline">日期<select id="rebalance-date"></select></label></div><p id="rebalance-summary" class="muted"></p><div class="table-wrap"><table><thead><tr><th>排名</th><th>股票</th><th>代码</th><th>调整</th><th>趋势</th><th>Score</th><th>置信系数</th><th>信号行情日</th></tr></thead><tbody id="ranked"></tbody></table></div></section>
+            <section class="card">
+                <nav class="record-tabs" aria-label="持仓记录"><button id="show-rebalances" type="button" aria-pressed="true">调仓记录</button><button id="show-closed" type="button" aria-pressed="false">已清仓</button></nav>
+                <div id="rebalance-page"><div class="chart-header"><h3>调仓记录</h3><label class="inline">日期<select id="rebalance-date"></select></label></div><p id="rebalance-summary" class="muted"></p><div class="table-wrap"><table><thead><tr><th>排名</th><th>股票</th><th>代码</th><th>调整</th><th>趋势</th><th>Score</th><th>持仓收益率</th><th>置信系数</th><th>信号行情日</th></tr></thead><tbody id="ranked"></tbody></table></div><p class="muted">收益截至调仓前，含本轮持仓的已实现盈亏与浮盈亏；本次新增尚未买入，显示 —。</p></div>
+                <div id="closed-page" hidden><div class="chart-header"><h3>已清仓股票</h3><button id="export-closed" type="button">导出清仓</button></div><p id="closed-summary" class="muted"></p><div class="table-wrap"><table><thead><tr><th>股票</th><th>代码</th><th>首次买入</th><th>实际清仓</th><th>持有天数</th><th>累计投入</th><th>净盈亏</th><th>收益率</th></tr></thead><tbody id="closed-rows"></tbody></table></div><p id="closed-empty" class="muted" hidden>本次回测暂无已清仓记录。</p><p class="muted">收益率＝（累计卖出净回款－累计买入投入）÷累计买入投入。按人民币计算并计入费用；同股清仓后再买入，单独记录。部分减仓不算清仓。</p></div>
+            </section>
             <details class="card"><summary id="coverage-title">数据覆盖</summary><p id="coverage-summary"></p><ul id="failures"></ul><p id="sources" class="muted"></p></details>
         </section>
     </main>
-    <script src="score.js?v=2"></script><script src="backtest-engine.js?v=3"></script><script src="backtest-data.js?v=1"></script><script src="backtest-ui.js?v=3"></script>
+    <script src="score.js?v=2"></script><script src="backtest-engine.js?v=4"></script><script src="backtest-data.js?v=1"></script><script src="backtest-ui.js?v=4"></script>
 </body>
 </html>
