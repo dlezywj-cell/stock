@@ -40,6 +40,7 @@ const {fixture}=require('./backtest.cjs');
   await page.locator('#run').click();await page.waitForFunction(()=>document.querySelector('#status').textContent==='回测完成');
   assert.ok(gitReads>=3);assert.ok(proxyReads>=4);assert.equal(quoteAttempts,4);
   assert.equal(await page.locator('#metrics .metric').count(),8);assert.equal(await page.locator('#chart path').count(),2);assert.equal(await page.locator('#ranked tr').count(),2);
+  for(const [selector,label] of [['#chart','基准成本'],['#drawdown','回撤']]) {await page.locator(selector).scrollIntoViewIfNeeded();const box=await page.locator(selector).boundingBox();await page.mouse.move(box.x+box.width/2,box.y+box.height/2);assert.equal(await page.locator(selector+' .chart-hover').getAttribute('visibility'),'visible');const tip=await page.locator(selector+' .chart-tooltip').textContent();assert.match(tip,/2026-/);assert.ok(tip.includes(label));assert.equal(await page.locator(selector+' .chart-crosshair').count(),2);await page.mouse.move(1,1);assert.equal(await page.locator(selector+' .chart-hover').getAttribute('visibility'),'hidden');}
   assert.equal(await page.locator('#rebalance-date option').count(),5);
   assert.equal(await page.locator('#error').isVisible(),false);
   const exported=page.waitForEvent('download');await page.locator('#export-data').click();const download=await exported;

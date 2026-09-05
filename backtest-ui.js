@@ -21,7 +21,7 @@
     function execute(data,opts,stress,signal) {
         return new Promise((resolve,reject)=>{
             if(signal.aborted) return reject(new DOMException('已取消','AbortError'));
-            worker=new Worker('backtest-worker.js?v=8');
+            worker=new Worker('backtest-worker.js?v=9');
             const cancel=()=>{worker?.terminate();worker=null;reject(new DOMException('已取消','AbortError'));};
             signal.addEventListener('abort',cancel,{once:true});
             const finish=()=>{signal.removeEventListener('abort',cancel);worker?.terminate();worker=null;};
@@ -123,15 +123,33 @@
         for(let i=0;i<=4;i++) {const v=low+(high-low)*i/4,yy=y(v);svg.append(svgNode('line',{x1:left,y1:yy,x2:width-right,y2:yy,class:'chart-grid'}),svgNode('text',{x:left-8,y:yy+4,'text-anchor':'end',class:'chart-axis'},format(v)));}
         series.forEach(s=>svg.append(svgNode('path',{d:s.values.map((v,i)=>`${i?'L':'M'}${x(i).toFixed(2)},${y(v).toFixed(2)}`).join(' '),fill:'none',stroke:s.color,'stroke-width':2,'stroke-linejoin':'round'})));
         svg.append(svgNode('text',{x:left,y:height-5,class:'chart-axis'},dates[0]),svgNode('text',{x:width-right,y:height-5,'text-anchor':'end',class:'chart-axis'},dates.at(-1)));
+        const hit=svgNode('rect',{x:left,y:top,width:width-left-right,height:height-top-bottom,class:'chart-hit'});
+        const vertical=svgNode('line',{class:'chart-crosshair'}), horizontal=svgNode('line',{class:'chart-crosshair'});
+        const tooltip=svgNode('g',{class:'chart-tooltip'}), hover=svgNode('g',{class:'chart-hover',visibility:'hidden'});
+        hover.append(vertical,horizontal,tooltip);svg.append(hit,hover);
+        svg.onpointermove=event=>{
+            const rect=svg.getBoundingClientRect();if(!rect.width || !rect.height) return;
+            const px=(event.clientX-rect.left)*width/rect.width, py=(event.clientY-rect.top)*height/rect.height;
+            if(px<left || px>width-right || py<top || py>height-bottom) {hover.setAttribute('visibility','hidden');return;}
+            const index=Math.max(0,Math.min(dates.length-1,Math.round((px-left)/(width-left-right)*Math.max(1,dates.length-1))));
+            const xx=x(index), value=series[0].values[index], yy=y(value);
+            vertical.setAttribute('x1',xx);vertical.setAttribute('x2',xx);vertical.setAttribute('y1',top);vertical.setAttribute('y2',height-bottom);
+            horizontal.setAttribute('x1',left);horizontal.setAttribute('x2',width-right);horizontal.setAttribute('y1',yy);horizontal.setAttribute('y2',yy);
+            const lines=[dates[index],...series.map(s=>`${s.label}：${format(s.values[index])}`)], boxWidth=176, boxHeight=12+lines.length*18;
+            const tx=xx+12+boxWidth>width-right ? xx-boxWidth-12 : xx+12, ty=Math.max(top,Math.min(yy+12,height-bottom-boxHeight));
+            tooltip.replaceChildren(svgNode('rect',{x:tx,y:ty,width:boxWidth,height:boxHeight,rx:6,class:'chart-tooltip-bg'}),...lines.map((line,i)=>svgNode('text',{x:tx+10,y:ty+18+i*18,class:i?'chart-tooltip-value':'chart-tooltip-date'},line)));
+            hover.setAttribute('visibility','visible');
+        };
+        svg.onpointerleave=()=>hover.setAttribute('visibility','hidden');
     }
     function renderCharts() {
         if(!result) return;
         const dates=[result.options.start,...result.curve.map(p=>p.date)];
-        const series=[{values:[1,...result.curve.map(p=>p.equity/result.options.capital)],color:'#2563b0'}];
-        if(stressed) series.push({values:[1,...stressed.curve.map(p=>p.equity/result.options.capital)],color:'#ba8b36'});
+        const series=[{label:'基准成本',values:[1,...result.curve.map(p=>p.equity/result.options.capital)],color:'#2563b0'}];
+        if(stressed) series.push({label:'成本翻倍',values:[1,...stressed.curve.map(p=>p.equity/result.options.capital)],color:'#ba8b36'});
         const values=series.flatMap(s=>s.values), digits=Math.max(...values)-Math.min(...values)<.02?4:2;
         plot('chart',series,dates,v=>v.toFixed(digits),280);
-        plot('drawdown',[{values:[0,...result.curve.map(p=>p.drawdown)],color:'#b85955'}],dates,pct,185);
+        plot('drawdown',[{label:'回撤',values:[0,...result.curve.map(p=>p.drawdown)],color:'#b85955'}],dates,pct,185);
     }
     let resizeFrame;window.addEventListener('resize',()=>{cancelAnimationFrame(resizeFrame);resizeFrame=requestAnimationFrame(renderCharts);});
     function download(name,content,type) {const url=URL.createObjectURL(new Blob([content],{type})),a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}

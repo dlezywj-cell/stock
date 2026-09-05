@@ -116,11 +116,10 @@ test('bad ranges, missing baseline, duplicate bars reject explicitly',()=>{
 test('exit requires both downtrend and strictly below 50, unknown stays',()=>{
  for(const [trend,score,expected] of [['down',49.9,true],['down',50,false],['down',60,false],['up',20,false],['sideways',20,false],[null,20,false],['down',null,false]]) assert.equal(engine.shouldExit({trend,score}),expected);
 });
-test('stalled replacement requires all relative deterioration boundaries',()=>{
- const signal={score:50,rank:25},cycle={MFE:.049,EntryScore:80,EntryRank:5};
- const cases=[[10,.049,-.001,80,50,5,25,true],[9,.049,-.001,80,50,5,25,false],[10,.05,-.001,80,50,5,25,false],[10,.049,0,80,50,5,25,false],[10,.049,-.001,80,50.01,5,25,false],[10,.049,-.001,80,50,5,24,false]];
- for(const [days,MFE,currentReturn,EntryScore,score,EntryRank,rank,expected] of cases) {
-  assert.equal(engine.shouldReplace({score,rank},{MFE,EntryScore,EntryRank},days,currentReturn),expected);
+test('stalled replacement requires 10 sessions and MFE below 5%, then score decay or rank drop',()=>{
+ const cases=[[10,.049,80,50,5,5,true],[10,.049,80,79,5,25,true],[10,.049,80,50,5,25,true],[9,.049,80,50,5,25,false],[10,.05,80,50,5,25,false],[10,.049,80,50.01,5,24,false],[10,.049,null,50,5,25,true],[10,.049,80,50,null,5,true]];
+ for(const [days,MFE,EntryScore,score,EntryRank,rank,expected] of cases) {
+  assert.equal(engine.shouldReplace({score,rank},{MFE,EntryScore,EntryRank},days),expected);
  }
 });
 test('stalled holding exits only after 10 completed trading sessions using prior MFE',()=>{
@@ -129,9 +128,9 @@ test('stalled holding exits only after 10 completed trading sessions using prior
  d.snapshots.push({at:'2026-01-22T10:00:00Z',sha:'weak',stocks:[{...a,highPE:80,highPS:80},...competitors]});
  d.assets.push(...competitors.map(s=>({...structuredClone(d.assets[0]),code:s.code,name:s.name})));
  d.assets[0].bars.filter(b=>b.date>=opts.start).forEach(b=>b.close=90);
- const r=engine.run(d,{...opts,end:'2026-02-02',frequency:'daily'}),sell=r.trades.find(t=>t.ExitReason==='10日未兑现且Score降≥30、排名降≥20');
+ const r=engine.run(d,{...opts,end:'2026-02-02',frequency:'daily'}),sell=r.trades.find(t=>t.ExitReason==='10日MFE＜5%且Score降≥30或排名降≥20');
  assert.equal(sell.date,'2026-02-01');assert.equal(sell.decisionDate,'2026-02-01');
- assert.equal(sell.ExitReason,'10日未兑现且Score降≥30、排名降≥20');
+ assert.equal(sell.ExitReason,'10日MFE＜5%且Score降≥30或排名降≥20');
  assert.equal(r.rebalances.find(x=>x.date==='2026-01-31').selected[0].decision,'续持');
  const exit=r.rebalances.find(x=>x.date==='2026-02-01').exits[0];assert.equal(exit.tradingDays,10);
  assert.ok(sell.EntryScore-sell.ExitScore>=30);assert.ok(sell.ExitRank-sell.EntryRank>=20);
