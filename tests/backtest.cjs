@@ -69,6 +69,7 @@ test('monthly cash-limited buy survives a later US sale and fills next day',()=>
  assert.deepEqual(r.trades.map(t=>[t.side,t.code,t.date]),[['buy',a.code,'2026-01-22'],['sell',a.code,'2026-02-01'],['buy',b.code,'2026-02-02']]);
  near(r.curve.find(p=>p.date==='2026-02-01').cash,10000);
  near(r.curve.find(p=>p.date==='2026-02-02').cash,0);
+ assert.equal(r.trades.at(-1).decisionDate,'2026-02-01');assert.equal(r.trades.at(-1).EntrySignalDate,'2026-02-01');assert.equal(r.trades.at(-1).EntryRank,r.rebalances[1].selected[0].rank);
 });
 test('partially filled orders retain shares, without daily notional rebalancing',()=>{
  const d=fixture(),a=d.snapshots[0].stocks[0],b=d.snapshots[0].stocks[1];
@@ -153,7 +154,7 @@ test('holding returns are pre-trade; exits and reentries form separate cycles',(
  const [first,second]=r.closedPositions;
  assert.equal(first.openedAt,'2026-01-22');assert.equal(first.closedAt,'2026-01-23');near(first.pnl,2000);near(first.returnRate,.2);
  assert.equal(second.openedAt,'2026-01-24');assert.equal(second.closedAt,'2026-01-25');near(second.pnl,-2400);near(second.returnRate,-.2);
- assert.notEqual(first.id,second.id);near(first.pnl+second.pnl,r.metrics.final-r.metrics.initial);
+ assert.notEqual(first.id,second.id);near(first.MFE,.2);near(second.MFE,0);near(second.MAE,-.2);assert.equal(first.ExitReason,'下跌且Score＜50');near(first.pnl+second.pnl,r.metrics.final-r.metrics.initial);
  // Later fills cannot mutate the historical snapshot of the first cycle.
  near(r.rebalances[1].exits[0].performance.sellAmount,0);
 });
@@ -169,6 +170,37 @@ test('foreign holding return includes CNY exchange-rate movement',()=>{
  d.fx.USD=d.assets[0].bars.map(b=>({date:b.date,close:b.date<opts.start?7:8}));
  const r=engine.run(d,{...opts,frequency:'daily'});
  near(r.rebalances[1].selected[0].performance.returnRate,8/7-1);
+});
+test('trade metadata freezes entry signal and full-cycle excursions exclude future prices',()=>{
+ const d=fixture(),a=d.snapshots[0].stocks[0];d.snapshots[0].stocks=[a];
+ d.snapshots.push({at:'2026-01-31T10:00:00Z',sha:'exit',stocks:[]});exitSignal(d,a.code,'2026-01-31T10:00:00Z');
+ for(const [date,close] of [['2026-01-22',80],['2026-01-23',140],['2026-01-24',110]])d.assets[0].bars.find(b=>b.date===date).close=close;
+ d.assets[0].bars.find(b=>b.date==='2026-02-01').open=130;
+ d.assets[0].bars.find(b=>b.date==='2026-02-01').close=1000;
+ const r=engine.run(d,{...opts,end:'2026-02-02',frequency:'monthly'}),[buy,sell]=r.trades,cycle=r.closedPositions[0];
+ assert.equal(buy.EntryScore,r.rebalances[0].selected[0].score);assert.equal(buy.EntryRank,1);assert.equal(buy.ExitScore,null);assert.equal(buy.ExitRank,null);assert.equal(buy.ExitReason,null);
+ near(buy.MAE,0);near(buy.MFE,0);assert.equal(sell.cycleId,buy.cycleId);assert.equal(sell.EntryScore,buy.EntryScore);
+ assert.equal(sell.ExitScore,r.rebalances[1].exits[0].score);assert.equal(sell.ExitRank,r.rebalances[1].exits[0].rank);assert.equal(sell.ExitReason,'下跌且Score＜50');
+ near(sell.MAE,-.2);near(sell.MFE,.4);near(cycle.MAE,-.2);near(cycle.MFE,.4);
+ assert.equal(cycle.ExitScore,sell.ExitScore);assert.equal(cycle.EntryRank,buy.EntryRank);
+});
+test('add/trim excursion uses moving remaining cost and includes FX and buy fees',()=>{
+ const d=fixture();d.assets[0].currency='USD';d.fx.USD=d.assets[0].bars.map(b=>({date:b.date,close:b.date<opts.start?7:8}));
+ d.assets[0].bars.find(b=>b.date==='2026-01-23').open=200;
+ const r=engine.run(d,{...opts,frequency:'daily',topN:2,costBps:10});
+ const qty=new Map(),basis=new Map(),extrema=new Map();let ti=0;
+ const mark=(code,value)=>{const x=extrema.get(code),v=value/basis.get(code)-1;x.min=Math.min(x.min,v);x.max=Math.max(x.max,v);};
+ for(const point of r.curve){
+  while(ti<r.trades.length && r.trades[ti].date===point.date){const t=r.trades[ti++],q=qty.get(t.code)||0;
+   if(!extrema.has(t.code))extrema.set(t.code,{min:0,max:0});
+   if(q>0)mark(t.code,q*t.price*t.fx);
+   if(t.side==='buy'){basis.set(t.code,(basis.get(t.code)||0)+t.notional+t.fee);qty.set(t.code,q+t.quantity);}
+   else{assert.equal(t.ExitReason,'等权减仓');basis.set(t.code,basis.get(t.code)*(q-t.quantity)/q);qty.set(t.code,q-t.quantity);}
+   mark(t.code,qty.get(t.code)*t.price*t.fx);near(t.MAE,extrema.get(t.code).min);near(t.MFE,extrema.get(t.code).max);
+  }
+  for(const [code,q] of qty){const a=d.assets.find(a=>a.code===code),b=a.bars.find(b=>b.date===point.date);mark(code,q*b.close*(a.currency==='USD'?8:1));}
+ }
+ for(const p of r.openPositions){near(p.remainingCost,basis.get(p.code));near(p.MAE,extrema.get(p.code).min);near(p.MFE,extrema.get(p.code).max);assert.equal(p.ExitReason,null);}
 });
 test('quote adapter adjusts open, keeps raw close, dates by exchange timezone',()=>{
  const d={chart:{result:[{meta:{exchangeTimezoneName:'America/New_York',currency:'USD'},timestamp:[Date.parse('2026-01-22T01:00:00Z')/1000],indicators:{quote:[{close:[100],open:[80],volume:[20]}],adjclose:[{adjclose:[50]}]}}]}};

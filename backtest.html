@@ -47,7 +47,7 @@
             <p>历史预测仅覆盖已保存的日期；临时修改但未上传的数据不会进入历史。数据文件和运行结果只在本机处理；导出的数据可能包含私人预测，请自行保管。</p>
         </details>
         <section id="results" hidden aria-label="回测结果">
-            <div class="results-heading"><div><h2>回测结果</h2><p id="result-caption" class="muted"></p></div><div class="actions"><button id="export-nav">导出净值</button><button id="export-trades">导出成交</button><button id="export-data">导出数据</button></div></div>
+            <div class="results-heading"><div><h2>回测结果</h2><p id="result-caption" class="muted"></p></div><div class="actions"><button id="export-nav">导出净值</button><button id="export-trades">导出成交</button><button id="export-data">导出数据</button><button id="export-result">保存结果</button></div></div>
             <div id="metrics" class="metrics"></div>
             <section class="card chart-card"><div class="chart-header"><h3>组合净值</h3><div class="legend"><span>● 基准成本</span><span id="stress-legend">● 成本翻倍</span></div></div><svg id="chart" viewBox="0 0 1000 300" role="img" aria-label="组合净值曲线"></svg><p id="stress-result" class="muted"></p></section>
             <section class="card"><div class="chart-header"><h3>回撤</h3><span class="muted">相对此前净值高点</span></div><svg id="drawdown" viewBox="0 0 1000 180" role="img" aria-label="组合回撤曲线"></svg></section>
@@ -55,11 +55,11 @@
             <section class="card">
                 <nav class="record-tabs" aria-label="持仓记录"><button id="show-rebalances" type="button" aria-pressed="true">调仓记录</button><button id="show-closed" type="button" aria-pressed="false">已清仓</button></nav>
                 <div id="rebalance-page"><div class="chart-header"><h3>调仓记录</h3><label class="inline">日期<select id="rebalance-date"></select></label></div><p id="rebalance-summary" class="muted"></p><div class="table-wrap"><table><thead><tr><th>排名</th><th>股票</th><th>代码</th><th>调整</th><th>趋势</th><th>Score</th><th>持仓收益率</th><th>置信系数</th><th>信号行情日</th></tr></thead><tbody id="ranked"></tbody></table></div><p class="muted">收益截至调仓前，含本轮持仓的已实现盈亏与浮盈亏；本次新增尚未买入，显示 —。</p></div>
-                <div id="closed-page" hidden><div class="chart-header"><h3>已清仓股票</h3><button id="export-closed" type="button">导出清仓</button></div><p id="closed-summary" class="muted"></p><div class="table-wrap"><table><thead><tr><th>股票</th><th>代码</th><th>首次买入</th><th>实际清仓</th><th>持有天数</th><th>累计投入</th><th>净盈亏</th><th>收益率</th></tr></thead><tbody id="closed-rows"></tbody></table></div><p id="closed-empty" class="muted" hidden>本次回测暂无已清仓记录。</p><p class="muted">收益率＝（累计卖出净回款－累计买入投入）÷累计买入投入。按人民币计算并计入费用；同股清仓后再买入，单独记录。部分减仓不算清仓。</p></div>
+                <div id="closed-page" hidden><div class="chart-header"><h3>已清仓股票</h3><button id="export-closed" type="button">导出清仓</button></div><p id="closed-summary" class="muted"></p><div class="table-wrap"><table><thead><tr><th>股票</th><th>代码</th><th>首次买入</th><th>实际清仓</th><th>持有天数</th><th>累计投入</th><th>净盈亏</th><th>收益率</th><th>EntryScore</th><th>EntryRank</th><th>ExitScore</th><th>ExitRank</th><th>ExitReason</th><th>MAE</th><th>MFE</th></tr></thead><tbody id="closed-rows"></tbody></table></div><p id="closed-empty" class="muted" hidden>本次回测暂无已清仓记录。</p><p class="muted">收益率＝（累计卖出净回款－累计买入投入）÷累计买入投入。按人民币计算并计入费用；同股清仓后再买入，单独记录。部分减仓不算清仓。</p><p class="muted">MAE≤0、MFE≥0：以剩余持仓的人民币加权买入成本（含买入费用）计算最大浮亏／浮盈，采样每日收盘与实际成交价，不含盘中高低点。加减仓前后均采样；排名为下单决策时、所选市场股票池内的完整Score排名。</p></div>
             </section>
             <details class="card"><summary id="coverage-title">数据覆盖</summary><p id="coverage-summary"></p><ul id="failures"></ul><p id="sources" class="muted"></p></details>
         </section>
     </main>
-    <script src="score.js?v=2"></script><script src="backtest-engine.js?v=4"></script><script src="backtest-data.js?v=1"></script><script src="backtest-ui.js?v=4"></script>
+    <script src="score.js?v=2"></script><script src="backtest-engine.js?v=5"></script><script src="backtest-data.js?v=1"></script><script src="backtest-ui.js?v=5"></script>
 </body>
 </html>

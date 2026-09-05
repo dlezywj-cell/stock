@@ -63,6 +63,12 @@ const ScoreBacktest = (() => {
             const invested=cycle.buyAmount+cycle.buyFees, pnl=value+cycle.sellAmount-cycle.sellFees-invested;
             return {...cycle,value,invested,pnl,returnRate:invested>0 ? pnl/invested : null};
         }
+        function markExcursion(cycle,value) {
+            if(!(cycle.remainingCost>0)) return;
+            const floatingReturn=value/cycle.remainingCost-1;
+            cycle.MAE=Math.min(cycle.MAE,floatingReturn);
+            cycle.MFE=Math.max(cycle.MFE,floatingReturn);
+        }
         function holdingPerformance(code,date) {
             const cycle=holdingCycles.get(code);
             if(!cycle) return null;
@@ -82,25 +88,31 @@ const ScoreBacktest = (() => {
             }
             return result;
         }
-        function fill(code,qty,price,fxRate,date,side,score) {
+        function fill(code,qty,price,fxRate,date,side,signal) {
             if(qty<=1e-10) return;
             const notional=qty*price*fxRate, fee=notional*cost;
             cash+=(side==='sell' ? notional-fee : -notional-fee);
-            const held=(positions.get(code)||0)+(side==='sell' ? -qty : qty);
+            const beforeQty=positions.get(code)||0;
+            const held=beforeQty+(side==='sell' ? -qty : qty);
             if(held<1e-8) positions.delete(code); else positions.set(code,held);
             let cycle=holdingCycles.get(code);
             if(!cycle) {
-                cycle={id:++cycleSequence,code,name:assets.get(code).name,openedAt:date,buyAmount:0,buyFees:0,sellAmount:0,sellFees:0};
+                cycle={id:++cycleSequence,code,name:assets.get(code).name,openedAt:date,buyAmount:0,buyFees:0,sellAmount:0,sellFees:0,remainingCost:0,EntryScore:signal.score ?? null,EntryRank:signal.rank ?? null,EntrySignalDate:signal.decisionDate,ExitScore:null,ExitRank:null,ExitReason:null,ExitSignalDate:null,MAE:0,MFE:0};
                 holdingCycles.set(code,cycle);
             }
-            if(side==='buy') {cycle.buyAmount+=notional;cycle.buyFees+=fee;}
-            else {cycle.sellAmount+=notional;cycle.sellFees+=fee;}
+            // Mark before an add/trim so changing the cost basis cannot hide an excursion.
+            if(beforeQty>0) markExcursion(cycle,beforeQty*price*fxRate);
+            if(side==='buy') {cycle.buyAmount+=notional;cycle.buyFees+=fee;cycle.remainingCost+=notional+fee;}
+            else {cycle.sellAmount+=notional;cycle.sellFees+=fee;cycle.remainingCost*=Math.max(0,held)/beforeQty;}
+            if(positions.has(code)) markExcursion(cycle,held*price*fxRate);
+            const exitReason=side==='sell' ? signal.exitReason : null;
+            if(!positions.has(code)) Object.assign(cycle,{ExitScore:signal.score ?? null,ExitRank:signal.rank ?? null,ExitReason:exitReason,ExitSignalDate:signal.decisionDate});
             if(!positions.has(code)) {
                 closedPositions.push({...performance(cycle,0),closedAt:date,holdingDays:age(date,cycle.openedAt)});
                 holdingCycles.delete(code);
             }
             fees+=fee; turnover+=notional;
-            trades.push({date,code,name:assets.get(code).name,side,quantity:qty,price,fx:fxRate,notional,fee,score:score ?? null});
+            trades.push({date,code,name:assets.get(code).name,side,quantity:qty,price,fx:fxRate,notional,fee,score:signal.score ?? null,rank:signal.rank ?? null,decisionDate:signal.decisionDate,cycleId:cycle.id,EntryScore:cycle.EntryScore,EntryRank:cycle.EntryRank,EntrySignalDate:cycle.EntrySignalDate,ExitScore:side==='sell'?signal.score ?? null:null,ExitRank:side==='sell'?signal.rank ?? null:null,ExitReason:exitReason,MAE:cycle.MAE,MFE:cycle.MFE});
         }
         days.forEach((date,dayIndex)=>{
             const cutoff=epoch(date);
@@ -131,6 +143,7 @@ const ScoreBacktest = (() => {
                     ranked.push({code:stock.code,name:stock.name,score:result.total,confidence:result.confidence,signalDate:bar.date,trend:state});
                 }
                 ranked.sort((a,b)=>b.score-a.score || a.code.localeCompare(b.code));
+                ranked.forEach((s,i)=>s.rank=i+1);
                 const signals=new Map(ranked.map(s=>[s.code,s])), retained=[], exits=[];
                 for(const code of positions.keys()) {
                     const signal=signals.get(code);
@@ -149,8 +162,8 @@ const ScoreBacktest = (() => {
                 unavailableValuations+=Object.values(exclusions).reduce((a,b)=>a+b,0);
                 // Missing slots stay in cash; each valid slot targets 1/topN of pre-trade NAV.
                 const slot=equity/Math.max(options.topN,selected.length);
-                targets=new Map(selected.map(s=>[s.code,{value:slot,score:s.score}]));
-                for(const code of positions.keys()) if(!targets.has(code)) targets.set(code,{value:0,score:null});
+                targets=new Map(selected.map(s=>[s.code,{value:slot,score:s.score,rank:s.rank ?? null,decisionDate:date,exitReason:'等权减仓'}]));
+                for(const s of exits) targets.set(s.code,{value:0,score:s.score,rank:s.rank,decisionDate:date,exitReason:'下跌且Score＜50'});
                 rebalances.push({date,snapshotAt:snapshot.at,snapshotSha:snapshot.sha,equity,selected,exits,retainedCount:retained.length,addedCount:additions.length,eligible:ranked.length,exclusions});
             }
             if(targets) {
@@ -173,16 +186,16 @@ const ScoreBacktest = (() => {
                         if(!targets.has(code)) continue;
                         const quote=opens.get(code); if(!quote) continue;
                         const target=targets.get(code), wanted=target.quantity;
-                        if(qty>wanted) fill(code,qty-wanted,quote.price,quote.fx,date,'sell',target?.score);
+                        if(qty>wanted) fill(code,qty-wanted,quote.price,quote.fx,date,'sell',target);
                     }
                     const buys=[];
                     for(const [code,target] of targets) {
                         const quote=opens.get(code); if(!quote) continue;
                         const qty=Math.max(0,target.quantity-(positions.get(code)||0));
-                        if(qty>1e-10) buys.push({code,qty,...quote,score:target.score});
+                        if(qty>1e-10) buys.push({code,qty,...quote,signal:target});
                     }
                     const required=buys.reduce((sum,b)=>sum+b.qty*b.price*b.fx*(1+cost),0), scale=required>0 ? Math.min(1,Math.max(0,cash)/required) : 0;
-                    buys.forEach(b=>fill(b.code,b.qty*scale,b.price,b.fx,date,'buy',b.score));
+                    buys.forEach(b=>fill(b.code,b.qty*scale,b.price,b.fx,date,'buy',b.signal));
                     // Remove completed orders only; late proceeds fund remaining shares
                     // at a subsequent open, never retroactively at an earlier market's open.
                     for(const code of opens.keys()) {
@@ -195,6 +208,10 @@ const ScoreBacktest = (() => {
             if(cash < -1e-5) throw Error('资金核算异常：现金为负');
             cash=Math.max(0,cash);
             const equity=nav(date,true); peak=Math.max(peak,equity);
+            for(const [code,qty] of positions) {
+                const asset=assets.get(code),bar=lastPrice(asset,date,true);
+                markExcursion(holdingCycles.get(code),qty*bar.close*rate(asset.currency,date,true));
+            }
             const drawdown=equity/peak-1; maxDrawdown=Math.min(maxDrawdown,drawdown);
             curve.push({date,equity,cash,drawdown,holdings:positions.size});
             if(dayIndex%20===0) progress(dayIndex/days.length);
@@ -210,7 +227,7 @@ const ScoreBacktest = (() => {
         if(rebalances.some(r=>r.selected.length<options.topN)) warnings.add('部分调仓日不足目标持仓数，空缺仓位保留现金');
         const finalHoldings=[...positions].map(([code,quantity])=>({code,name:assets.get(code).name,quantity,value:quantity*lastPrice(assets.get(code),days.at(-1),true).close*rate(assets.get(code).currency,days.at(-1),true)}));
         const openPositions=finalHoldings.map(h=>performance(holdingCycles.get(h.code),h.value));
-        return {options,curve,trades,rebalances,finalHoldings,openPositions,closedPositions,warnings:[...warnings],diagnostics:{unavailableValuations,staleHeldDays},metrics:{initial:options.capital,final,totalReturn:final/options.capital-1,cagr:(final/options.capital)**(1/years)-1,maxDrawdown,volatility:Math.sqrt(variance*252),sharpe:variance>0 ? mean/Math.sqrt(variance)*Math.sqrt(252) : null,fees,turnover:turnover/(curve.reduce((s,p)=>s+p.equity,0)/curve.length),tradeCount:trades.length,rebalanceCount:rebalances.length},source:data.source,generatedAt:new Date().toISOString()};
+        return {tradeRecordVersion:1,excursionBasis:"CNY remaining weighted buy cost including buy fees; close and execution marks; MAE<=0, MFE>=0; no intraday high/low or sell fees",options,curve,trades,rebalances,finalHoldings,openPositions,closedPositions,warnings:[...warnings],diagnostics:{unavailableValuations,staleHeldDays},metrics:{initial:options.capital,final,totalReturn:final/options.capital-1,cagr:(final/options.capital)**(1/years)-1,maxDrawdown,volatility:Math.sqrt(variance*252),sharpe:variance>0 ? mean/Math.sqrt(variance)*Math.sqrt(252) : null,fees,turnover:turnover/(curve.reduce((s,p)=>s+p.equity,0)/curve.length),tradeCount:trades.length,rebalanceCount:rebalances.length},source:data.source,generatedAt:new Date().toISOString()};
     }
     return {run,prior,bucket,shouldExit};
 })();
