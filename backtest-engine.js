@@ -32,6 +32,7 @@ const ScoreBacktest = (() => {
         const rankDrop=Number.isFinite(cycle?.EntryRank) && Number.isFinite(signal?.rank) && signal.rank-cycle.EntryRank>=20;
         return tradingDays>=10 && cycle?.MFE<0.05 && (scoreDecay || rankDrop);
     };
+    const shouldExitWinner = (signal,cycle,drawdownFromPeak) => cycle?.MFE>=0.40 && Number.isFinite(drawdownFromPeak) && drawdownFromPeak<=-0.15 && Number.isFinite(signal?.score) && signal.score<40;
     function run(data, options, progress = () => {}) {
         options={market:'ALL',...options,strategy:'retain-unless-down-below-50-or-stalled-10d'};
         validate(data, options);
@@ -68,7 +69,8 @@ const ScoreBacktest = (() => {
             const invested=cycle.buyAmount+cycle.buyFees, pnl=value+cycle.sellAmount-cycle.sellFees-invested;
             return {...cycle,value,invested,pnl,returnRate:invested>0 ? pnl/invested : null};
         }
-        function markExcursion(cycle,value) {
+        function markExcursion(cycle,value,price) {
+            if(positive(price)) cycle.HighestPriceSinceEntry=Math.max(cycle.HighestPriceSinceEntry || 0,price);
             if(!(cycle.remainingCost>0)) return;
             const floatingReturn=value/cycle.remainingCost-1;
             cycle.MAE=Math.min(cycle.MAE,floatingReturn);
@@ -108,22 +110,22 @@ const ScoreBacktest = (() => {
             if(held<1e-8) positions.delete(code); else positions.set(code,held);
             let cycle=holdingCycles.get(code);
             if(!cycle) {
-                cycle={id:++cycleSequence,code,name:assets.get(code).name,openedAt:date,buyAmount:0,buyFees:0,sellAmount:0,sellFees:0,remainingCost:0,EntryScore:signal.score ?? null,EntryRank:signal.rank ?? null,EntrySignalDate:signal.decisionDate,ExitScore:null,ExitRank:null,ExitReason:null,ExitSignalDate:null,MAE:0,MFE:0};
+                cycle={id:++cycleSequence,code,name:assets.get(code).name,openedAt:date,buyAmount:0,buyFees:0,sellAmount:0,sellFees:0,remainingCost:0,EntryScore:signal.score ?? null,EntryRank:signal.rank ?? null,EntrySignalDate:signal.decisionDate,ExitScore:null,ExitRank:null,ExitReason:null,ExitSignalDate:null,HighestPriceSinceEntry:0,DrawdownFromPeak:null,MAE:0,MFE:0};
                 holdingCycles.set(code,cycle);
             }
             // Mark before an add/trim so changing the cost basis cannot hide an excursion.
-            if(beforeQty>0) markExcursion(cycle,beforeQty*price*fxRate);
+            if(beforeQty>0) markExcursion(cycle,beforeQty*price*fxRate,price);
             if(side==='buy') {cycle.buyAmount+=notional;cycle.buyFees+=fee;cycle.remainingCost+=notional+fee;}
             else {cycle.sellAmount+=notional;cycle.sellFees+=fee;cycle.remainingCost*=Math.max(0,held)/beforeQty;}
-            if(positions.has(code)) markExcursion(cycle,held*price*fxRate);
+            if(positions.has(code)) markExcursion(cycle,held*price*fxRate,price);
             const exitReason=side==='sell' ? signal.exitReason : null;
-            if(!positions.has(code)) Object.assign(cycle,{ExitScore:signal.score ?? null,ExitRank:signal.rank ?? null,ExitReason:exitReason,ExitSignalDate:signal.decisionDate});
+            if(!positions.has(code)) Object.assign(cycle,{ExitScore:signal.score ?? null,ExitRank:signal.rank ?? null,ExitReason:exitReason,ExitSignalDate:signal.decisionDate,DrawdownFromPeak:signal.drawdownFromPeak ?? null});
             if(!positions.has(code)) {
                 closedPositions.push({...performance(cycle,0),closedAt:date,holdingDays:age(date,cycle.openedAt)});
                 holdingCycles.delete(code);
             }
             fees+=fee; turnover+=notional;
-            trades.push({date,code,name:assets.get(code).name,side,quantity:qty,price,fx:fxRate,notional,fee,score:signal.score ?? null,rank:signal.rank ?? null,decisionDate:signal.decisionDate,cycleId:cycle.id,EntryScore:cycle.EntryScore,EntryRank:cycle.EntryRank,EntrySignalDate:cycle.EntrySignalDate,ExitScore:side==='sell'?signal.score ?? null:null,ExitRank:side==='sell'?signal.rank ?? null:null,ExitReason:exitReason,MAE:cycle.MAE,MFE:cycle.MFE});
+            trades.push({date,code,name:assets.get(code).name,side,quantity:qty,price,fx:fxRate,notional,fee,score:signal.score ?? null,rank:signal.rank ?? null,decisionDate:signal.decisionDate,cycleId:cycle.id,EntryScore:cycle.EntryScore,EntryRank:cycle.EntryRank,EntrySignalDate:cycle.EntrySignalDate,ExitScore:side==='sell'?signal.score ?? null:null,ExitRank:side==='sell'?signal.rank ?? null:null,ExitReason:exitReason,DrawdownFromPeak:side==='sell'?signal.drawdownFromPeak ?? null:null,MAE:cycle.MAE,MFE:cycle.MFE});
         }
         days.forEach((date,dayIndex)=>{
             const cutoff=epoch(date);
@@ -158,8 +160,9 @@ const ScoreBacktest = (() => {
                 const signals=new Map(ranked.map(s=>[s.code,s])), retained=[], exits=[];
                 for(const code of positions.keys()) {
                     const signal=signals.get(code), cycle=holdingCycles.get(code), tradingDays=completedTradingDays(code,date);
-                    const reason=shouldExit(signal) ? '下跌且Score＜50' : shouldReplace(signal,cycle,tradingDays) ? '10日MFE＜5%且Score降≥30或排名降≥20' : null;
-                    if(reason) exits.push({...signal,tradingDays,MFE:cycle.MFE,decision:'清仓',reason});
+                    const currentBar=lastPrice(assets.get(code),date,false), drawdownFromPeak=positive(cycle.HighestPriceSinceEntry) && currentBar ? currentBar.close/cycle.HighestPriceSinceEntry-1 : null;
+                    const reason=shouldExit(signal) ? '下跌且Score＜50' : shouldReplace(signal,cycle,tradingDays) ? '10日MFE＜5%且Score降≥30或排名降≥20' : shouldExitWinner(signal,cycle,drawdownFromPeak) ? 'MFE≥40%且高点回撤≥15%且Score＜40' : null;
+                    if(reason) exits.push({...signal,tradingDays,MFE:cycle.MFE,drawdownFromPeak,decision:'清仓',reason});
                     else retained.push({...signal,code,name:signal?.name || assets.get(code).name,score:signal?.score ?? null,confidence:signal?.confidence ?? null,signalDate:signal?.signalDate ?? '—',trend:signal?.trend ?? null,decision:'续持',reason:signal?'未同时满足退出条件':'数据不足，保留持仓'});
                 }
                 // Existing holdings have priority, regardless of rank. Do not rebuy an
@@ -175,7 +178,7 @@ const ScoreBacktest = (() => {
                 // Missing slots stay in cash; each valid slot targets 1/topN of pre-trade NAV.
                 const slot=equity/Math.max(options.topN,selected.length);
                 targets=new Map(selected.map(s=>[s.code,{value:slot,score:s.score,rank:s.rank ?? null,decisionDate:date,exitReason:'等权减仓'}]));
-                for(const s of exits) targets.set(s.code,{value:0,score:s.score,rank:s.rank,decisionDate:date,exitReason:s.reason});
+                for(const s of exits) targets.set(s.code,{value:0,score:s.score,rank:s.rank,decisionDate:date,exitReason:s.reason,drawdownFromPeak:s.drawdownFromPeak});
                 rebalances.push({date,snapshotAt:snapshot.at,snapshotSha:snapshot.sha,equity,selected,exits,retainedCount:retained.length,addedCount:additions.length,eligible:ranked.length,exclusions});
             }
             if(targets) {
@@ -222,7 +225,7 @@ const ScoreBacktest = (() => {
             const equity=nav(date,true); peak=Math.max(peak,equity);
             for(const [code,qty] of positions) {
                 const asset=assets.get(code),bar=lastPrice(asset,date,true);
-                markExcursion(holdingCycles.get(code),qty*bar.close*rate(asset.currency,date,true));
+                markExcursion(holdingCycles.get(code),qty*bar.close*rate(asset.currency,date,true),bar.close);
             }
             const drawdown=equity/peak-1; maxDrawdown=Math.min(maxDrawdown,drawdown);
             curve.push({date,equity,cash,drawdown,holdings:positions.size});
@@ -241,6 +244,6 @@ const ScoreBacktest = (() => {
         const openPositions=finalHoldings.map(h=>performance(holdingCycles.get(h.code),h.value));
         return {tradeRecordVersion:1,excursionBasis:"CNY remaining weighted buy cost including buy fees; close and execution marks; MAE<=0, MFE>=0; no intraday high/low or sell fees",options,curve,trades,rebalances,finalHoldings,openPositions,closedPositions,warnings:[...warnings],diagnostics:{unavailableValuations,staleHeldDays},metrics:{initial:options.capital,final,totalReturn:final/options.capital-1,cagr:(final/options.capital)**(1/years)-1,maxDrawdown,volatility:Math.sqrt(variance*252),sharpe:variance>0 ? mean/Math.sqrt(variance)*Math.sqrt(252) : null,fees,turnover:turnover/(curve.reduce((s,p)=>s+p.equity,0)/curve.length),tradeCount:trades.length,rebalanceCount:rebalances.length},source:data.source,generatedAt:new Date().toISOString()};
     }
-    return {run,prior,bucket,shouldExit,shouldReplace};
+    return {run,prior,bucket,shouldExit,shouldReplace,shouldExitWinner};
 })();
 if(typeof module!=='undefined' && module.exports) module.exports=ScoreBacktest;

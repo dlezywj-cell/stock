@@ -40,7 +40,7 @@
         <div class="method-note"><strong>模型口径</strong> 历史预测取自 GitHub 当时保存的记录；市值按最新股本近似。股本变动和行情缺失会影响结果。</div>
         <details class="card rules"><summary>评分与交易规则</summary>
             <p>Score＝估值分×预测置信系数×60%＋趋势分×40%。估值分内，上行空间占60%、赔率占40%；上行100%、赔率4倍满分。PE/PS等权，单一方法打八折；置信系数按2/4/6个月分为1/0.7/0.5/0。</p>
-            <p>首次按 Score 选入前N只。此后每逢调仓日，清仓同时满足「MA5＜MA10＜MA20」且「Score＜50」的持仓；持有满10个交易日且RunningMFE＜5%后，ScoreDecay≥30或RankDrop≥20任一成立时，也允许清仓替换。其他持仓继续保留，缺少有效评分或趋势数据时也保留。</p>
+            <p>首次按 Score 选入前N只。此后每逢调仓日，清仓同时满足「MA5＜MA10＜MA20」且「Score＜50」的持仓；持有满10个交易日且RunningMFE＜5%后，ScoreDecay≥30或RankDrop≥20任一成立时，也允许清仓替换。RunningMFE≥40%、从入场后最高价回撤≥15%且CurrentScore＜40三项同时满足时，清仓已有较大盈利后明显转弱的持仓。其他持仓继续保留，缺少有效评分或趋势数据时也保留。</p>
             <p>每日以UTC 00:00之前保存的预测、此前收盘价及20日均线评分。首次及每个调仓周期的首个可用交易日下单，按信号收盘后的下一可交易日开盘价模拟成交。续持标的优先占位，再按 Score 从高到低补足N只；本次清仓标的不在同次调仓买回。同分按代码排序，未满目标数量的名额留现金。续持与新增组合统一等权，续持可能因恢复等权而小幅加减仓。</p>
             <p>跨市场按亚洲、美股开盘先后执行，资金不足时先按可用资金买入，未成交份额保留，待资金可用后在后续开盘补齐；无开盘价或成交量时顺延。目标份额在首次可交易开盘确定，下一次调仓替换未完成订单。采用碎股等权、人民币记账；成交汇率用此前可用收盘汇率，持仓每日按最新已知汇率估值。</p>
             <p>复权价格近似包含现金分红再投资；暂不模拟整手、涨跌停封单、交易额度、流动性冲击、精确税费或盘中汇率。期末按收盘价估值，不强制平仓。年化波动与夏普按252天、无风险利率0计算。</p>
@@ -60,6 +60,6 @@
             <details class="card"><summary id="coverage-title">数据覆盖</summary><p id="coverage-summary"></p><ul id="failures"></ul><p id="sources" class="muted"></p></details>
         </section>
     </main>
-    <script src="score.js?v=2"></script><script src="backtest-engine.js?v=9"></script><script src="backtest-data.js?v=1"></script><script src="backtest-ui.js?v=9"></script>
+    <script src="score.js?v=2"></script><script src="backtest-engine.js?v=10"></script><script src="backtest-data.js?v=1"></script><script src="backtest-ui.js?v=10"></script>
 </body>
 </html>

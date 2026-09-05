@@ -21,7 +21,7 @@
     function execute(data,opts,stress,signal) {
         return new Promise((resolve,reject)=>{
             if(signal.aborted) return reject(new DOMException('已取消','AbortError'));
-            worker=new Worker('backtest-worker.js?v=9');
+            worker=new Worker('backtest-worker.js?v=10');
             const cancel=()=>{worker?.terminate();worker=null;reject(new DOMException('已取消','AbortError'));};
             signal.addEventListener('abort',cancel,{once:true});
             const finish=()=>{signal.removeEventListener('abort',cancel);worker?.terminate();worker=null;};
@@ -155,7 +155,7 @@
     function download(name,content,type) {const url=URL.createObjectURL(new Blob([content],{type})),a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
     const csv=rows=>'\uFEFF'+rows.map(row=>row.map(value=>{let s=value==null?'':String(value);if(typeof value==='string' && /^[=+\-@\t\r]/.test(s)) s="'"+s;return '"'+s.replace(/"/g,'""')+'"';}).join(',')).join('\r\n');
     $('export-nav').onclick=()=>{if(result) download('Score净值.csv',csv([['日期','资产人民币','现金人民币','回撤','持仓数'],...result.curve.map(p=>[p.date,p.equity,p.cash,p.drawdown,p.holdings])]),'text/csv;charset=utf-8');};
-    const tradeFields=['EntryScore','EntryRank','ExitScore','ExitRank','ExitReason','MAE','MFE'];
+    const tradeFields=['EntryScore','EntryRank','ExitScore','ExitRank','ExitReason','MAE','MFE','DrawdownFromPeak'];
     $('export-result').onclick=()=>{if(result) download('Score回测结果.json',JSON.stringify(result),'application/json');};
     $('export-trades').onclick=()=>{if(result) download('Score成交.csv',csv([['日期','代码','名称','方向','模拟份额','复权成交价','折人民币汇率','成交额人民币','成本人民币','Score','SignalRank','CycleID','DecisionDate','EntrySignalDate',...tradeFields],...result.trades.map(t=>[t.date,t.code,t.name,t.side==='buy'?'买入':'卖出',t.quantity,t.price,t.fx,t.notional,t.fee,t.score,t.rank,t.cycleId,t.decisionDate,t.EntrySignalDate,...tradeFields.map(k=>t[k])])]),'text/csv;charset=utf-8');};
     $('export-closed').onclick=()=>{if(result) download('Score已清仓.csv',csv([['股票','代码','首次买入','实际清仓','持有天数','累计投入人民币含费用','累计卖出人民币扣费用','净盈亏人民币','收益率','CycleID',...tradeFields],...closedRows().map(r=>[r.name,r.code,r.openedAt,r.closedAt,r.holdingDays,r.invested,r.sellAmount-r.sellFees,r.pnl,r.returnRate,r.id,...tradeFields.map(k=>r[k])])]),'text/csv;charset=utf-8');};

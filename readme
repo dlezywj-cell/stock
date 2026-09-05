@@ -105,6 +105,7 @@ node tests/watchlists.cjs
 历史代码如000001.SZ与0.000001统一识别，避免代码格式变化造成重复持仓。
 调仓表显示续持、新增、清仓及当时趋势；结果options.strategy记录策略版本。
 除「下跌且Score＜50」外，持仓满10个已完成交易日且持仓周期RunningMFE低于5%后，ScoreDecay（EntryScore−CurrentScore）≥30或RankDrop（CurrentRank−EntryRank）≥20任一成立时，也允许清仓并由高分股票补位。
+另设赢家回撤退出：RunningMFE≥40%、DrawdownFromPeak≤−15%且CurrentScore＜40三项必须同时满足，不使用Rank。DrawdownFromPeak=当前复权价/入场后最高复权价−1；最高价与当前价只采用调仓日前已完成的复权收盘和实际成交时点。
 交易日按该股票实际存在行情的日期计算，从首次实际买入日开始；退出判断只使用调仓日前已经完成的行情和MFE，避免未来数据泄漏。
 
 持仓收益与已清仓记录
@@ -118,10 +119,10 @@ node tests/watchlists.cjs
 结果closedPositions保存已结束周期，openPositions保存期末未结束周期；全部周期净盈亏之和等于组合总净利润。
 
 交易研究字段
-每笔成交增加EntryScore、EntryRank、ExitScore、ExitRank、ExitReason、MAE、MFE，以及cycleId、decisionDate、EntrySignalDate。
+每笔成交增加EntryScore、EntryRank、ExitScore、ExitRank、ExitReason、MAE、MFE、DrawdownFromPeak，以及cycleId、decisionDate、EntrySignalDate。
 EntryScore/EntryRank固定为本轮持仓首次实际买入所对应的下单决策评分和完整股票池排名，加仓不会覆盖。
 每笔成交原有score及新增rank仍记录该笔交易的下单决策评分/排名，便于单独分析加仓；下单顺延时不偷用之后的新信号。
-卖出成交ExitScore/ExitRank记录该次下单决策数据；ExitReason区分「下跌且Score＜50」「10日MFE＜5%且Score降≥30或排名降≥20」与「等权减仓」。买入的Exit字段为空。
+卖出成交ExitScore/ExitRank记录该次下单决策数据；ExitReason区分「下跌且Score＜50」「10日MFE＜5%且Score降≥30或排名降≥20」「MFE≥40%且高点回撤≥15%且Score＜40」与「等权减仓」。买入的Exit字段为空。
 清仓周期的Exit字段只记录最终清仓，不把期间减仓当作周期结束。排名基于当次所选市场、全体可评分股票，而非组合内名次。
 MAE为最小浮动收益率（≤0），MFE为最大浮动收益率（≥0）；无对应亏损/盈利时为0，以小数储存，界面显示百分比。
 浮动收益率=剩余持仓市值/剩余持仓人民币买入成本-1。成本含买入费用，按移动加权法管理；卖出按份额比例移除成本。
