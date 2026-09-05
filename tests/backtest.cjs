@@ -116,6 +116,27 @@ test('bad ranges, missing baseline, duplicate bars reject explicitly',()=>{
 test('exit requires both downtrend and strictly below 50, unknown stays',()=>{
  for(const [trend,score,expected] of [['down',49.9,true],['down',50,false],['down',60,false],['up',20,false],['sideways',20,false],[null,20,false],['down',null,false]]) assert.equal(engine.shouldExit({trend,score}),expected);
 });
+test('stalled holding replacement requires 10 sessions, MFE below 5%, and Score below 60',()=>{
+ for(const [days,MFE,score,expected] of [[9,0,59,false],[10,.049,59,true],[10,.05,59,false],[10,0,60,false],[10,0,null,false]]) {
+  assert.equal(engine.shouldReplace({score},{MFE},days),expected);
+ }
+});
+test('stalled holding exits only after 10 completed trading sessions using prior MFE',()=>{
+ const d=fixture(),a=d.snapshots[0].stocks[0];d.snapshots[0].stocks=[a];
+ d.snapshots.push({at:'2026-01-22T10:00:00Z',sha:'weak',stocks:[{...a,highPE:90,highPS:90}]});
+ const r=engine.run(d,{...opts,end:'2026-02-02',frequency:'daily'}),sell=r.trades.find(t=>t.side==='sell');
+ assert.equal(sell.date,'2026-02-01');assert.equal(sell.decisionDate,'2026-02-01');
+ assert.equal(sell.ExitReason,'持有≥10日且MFE＜5%且Score＜60');
+ assert.equal(r.rebalances.find(x=>x.date==='2026-01-31').selected[0].decision,'续持');
+ assert.equal(r.rebalances.find(x=>x.date==='2026-02-01').exits[0].tradingDays,10);
+});
+test('a holding that reached 5% MFE is not replaced by the stalled rule',()=>{
+ const d=fixture(),a=d.snapshots[0].stocks[0];d.snapshots[0].stocks=[a];
+ d.snapshots.push({at:'2026-01-22T10:00:00Z',sha:'weak',stocks:[{...a,highPE:90,highPS:90}]});
+ d.assets[0].bars.find(b=>b.date==='2026-01-22').close=106;
+ const r=engine.run(d,{...opts,end:'2026-02-02',frequency:'daily'});
+ assert.equal(r.trades.filter(t=>t.side==='sell').length,0);assert.ok(r.openPositions[0].MFE>=.05);
+});
 test('strong holdings survive rank changes and missing snapshot membership',()=>{
  const d=fixture();
  d.snapshots.push({at:'2026-01-22T10:00:00Z',sha:'higher-rank',stocks:[{...d.snapshots[0].stocks[0],highPE:100,highPS:100},{...d.snapshots[0].stocks[1],highPE:400,highPS:400}]});

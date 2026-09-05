@@ -27,8 +27,9 @@ const ScoreBacktest = (() => {
     }
     const canonical = code => code.endsWith('.SH') ? '1.'+code.slice(0,-3) : code.endsWith('.SZ') ? '0.'+code.slice(0,-3) : code.endsWith('.HK') ? '116.'+code.slice(0,-3).padStart(5,'0') : code;
     const shouldExit = signal => signal?.trend==='down' && Number.isFinite(signal.score) && signal.score<50;
+    const shouldReplace = (signal,cycle,tradingDays) => tradingDays>=10 && cycle?.MFE<0.05 && Number.isFinite(signal?.score) && signal.score<60;
     function run(data, options, progress = () => {}) {
-        options={market:'ALL',...options,strategy:'retain-unless-down-below-50'};
+        options={market:'ALL',...options,strategy:'retain-unless-down-below-50-or-stalled-10d'};
         validate(data, options);
         const cost=options.costBps/10000, snapshots=data.snapshots.map(s=>({...s,stocks:[...new Map(s.stocks.map(stock=>[canonical(stock.code),{...stock,code:canonical(stock.code)}])).values()]})).sort((a,b)=>Date.parse(a.at)-Date.parse(b.at));
         const assets=new Map(), fx=data.fx || {}, warnings=new Set(data.warnings || []);
@@ -75,6 +76,12 @@ const ScoreBacktest = (() => {
             const asset=assets.get(code), bar=lastPrice(asset,date,false), fxRate=rate(asset.currency,date);
             if(!bar || !fxRate) return null;
             return {...performance(cycle,(positions.get(code)||0)*bar.close*fxRate),asOf:date,priceDate:bar.date};
+        }
+        function completedTradingDays(code,date) {
+            const cycle=holdingCycles.get(code), asset=assets.get(code);
+            if(!cycle || !asset) return 0;
+            const first=prior(asset.bars,cycle.openedAt)+1, last=prior(asset.bars,date);
+            return Math.max(0,last-first+1);
         }
         let cash=options.capital, fees=0, turnover=0, peak=options.capital, maxDrawdown=0, currentBucket=null, targets=null, snapshotIndex=-1, hadCandidate=false;
         let unavailableValuations=0, staleHeldDays=0;
@@ -146,8 +153,9 @@ const ScoreBacktest = (() => {
                 ranked.forEach((s,i)=>s.rank=i+1);
                 const signals=new Map(ranked.map(s=>[s.code,s])), retained=[], exits=[];
                 for(const code of positions.keys()) {
-                    const signal=signals.get(code);
-                    if(shouldExit(signal)) exits.push({...signal,decision:'清仓',reason:'下跌且Score＜50'});
+                    const signal=signals.get(code), cycle=holdingCycles.get(code), tradingDays=completedTradingDays(code,date);
+                    const reason=shouldExit(signal) ? '下跌且Score＜50' : shouldReplace(signal,cycle,tradingDays) ? '持有≥10日且MFE＜5%且Score＜60' : null;
+                    if(reason) exits.push({...signal,tradingDays,MFE:cycle.MFE,decision:'清仓',reason});
                     else retained.push({...signal,code,name:signal?.name || assets.get(code).name,score:signal?.score ?? null,confidence:signal?.confidence ?? null,signalDate:signal?.signalDate ?? '—',trend:signal?.trend ?? null,decision:'续持',reason:signal?'未同时满足退出条件':'数据不足，保留持仓'});
                 }
                 // Existing holdings have priority, regardless of rank. Do not rebuy an
@@ -163,7 +171,7 @@ const ScoreBacktest = (() => {
                 // Missing slots stay in cash; each valid slot targets 1/topN of pre-trade NAV.
                 const slot=equity/Math.max(options.topN,selected.length);
                 targets=new Map(selected.map(s=>[s.code,{value:slot,score:s.score,rank:s.rank ?? null,decisionDate:date,exitReason:'等权减仓'}]));
-                for(const s of exits) targets.set(s.code,{value:0,score:s.score,rank:s.rank,decisionDate:date,exitReason:'下跌且Score＜50'});
+                for(const s of exits) targets.set(s.code,{value:0,score:s.score,rank:s.rank,decisionDate:date,exitReason:s.reason});
                 rebalances.push({date,snapshotAt:snapshot.at,snapshotSha:snapshot.sha,equity,selected,exits,retainedCount:retained.length,addedCount:additions.length,eligible:ranked.length,exclusions});
             }
             if(targets) {
@@ -229,6 +237,6 @@ const ScoreBacktest = (() => {
         const openPositions=finalHoldings.map(h=>performance(holdingCycles.get(h.code),h.value));
         return {tradeRecordVersion:1,excursionBasis:"CNY remaining weighted buy cost including buy fees; close and execution marks; MAE<=0, MFE>=0; no intraday high/low or sell fees",options,curve,trades,rebalances,finalHoldings,openPositions,closedPositions,warnings:[...warnings],diagnostics:{unavailableValuations,staleHeldDays},metrics:{initial:options.capital,final,totalReturn:final/options.capital-1,cagr:(final/options.capital)**(1/years)-1,maxDrawdown,volatility:Math.sqrt(variance*252),sharpe:variance>0 ? mean/Math.sqrt(variance)*Math.sqrt(252) : null,fees,turnover:turnover/(curve.reduce((s,p)=>s+p.equity,0)/curve.length),tradeCount:trades.length,rebalanceCount:rebalances.length},source:data.source,generatedAt:new Date().toISOString()};
     }
-    return {run,prior,bucket,shouldExit};
+    return {run,prior,bucket,shouldExit,shouldReplace};
 })();
 if(typeof module!=='undefined' && module.exports) module.exports=ScoreBacktest;
