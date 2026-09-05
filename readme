@@ -105,7 +105,7 @@ node tests/watchlists.cjs
 历史代码如000001.SZ与0.000001统一识别，避免代码格式变化造成重复持仓。
 调仓表显示续持、新增、清仓及当时趋势；结果options.strategy记录策略版本。
 除「下跌且Score＜50」外，持仓满10个已完成交易日且持仓周期RunningMFE低于5%后，ScoreDecay（EntryScore−CurrentScore）≥30或RankDrop（CurrentRank−EntryRank）≥20任一成立时，也允许清仓并由高分股票补位。
-另设赢家回撤退出：RunningMFE≥40%、DrawdownFromPeak≤−15%且CurrentScore＜60三项必须同时满足，不使用Rank。DrawdownFromPeak=当前复权价/入场后最高复权价−1；最高价与当前价只采用调仓日前已完成的复权收盘和实际成交时点。
+另设赢家回撤退出：RunningMFE≥40%、DrawdownFromPeak≤−15%且CurrentScore＜60三项必须同时满足，不使用Rank。该规则每日检查，首次满足后在下一可交易日开盘清仓，不等待周度或月度常规调仓；卖出资金留待下次常规调仓补位。DrawdownFromPeak=当前复权价/入场后最高复权价−1；最高价与当前价只采用决策日前已完成的复权收盘和实际成交时点。
 交易日按该股票实际存在行情的日期计算，从首次实际买入日开始；退出判断只使用调仓日前已经完成的行情和MFE，避免未来数据泄漏。
 
 持仓收益与已清仓记录

@@ -62,7 +62,7 @@ const ScoreBacktest = (() => {
             const i=prior(asset.bars,date,inclusive);
             return i>=0 ? asset.bars[i] : null;
         }
-        const positions=new Map(), trades=[], curve=[], rebalances=[];
+        const positions=new Map(), trades=[], curve=[], rebalances=[], riskExits=[];
         const holdingCycles=new Map(), closedPositions=[];
         let cycleSequence=0;
         function performance(cycle,value) {
@@ -88,6 +88,28 @@ const ScoreBacktest = (() => {
             if(!cycle || !asset) return 0;
             const first=prior(asset.bars,cycle.openedAt)+1, last=prior(asset.bars,date);
             return Math.max(0,last-first+1);
+        }
+        function rankSnapshot(snapshot,date) {
+            const ranked=[], exclusions={行情缺失:0,趋势不足:0,估值缺失:0,汇率缺失:0};
+            for(const stock of snapshot.stocks) {
+                const asset=assets.get(stock.code);
+                if(!asset) {
+                    const currency=/^(0|1)\./.test(stock.code)?'CNY':/^116\./.test(stock.code)?'HKD':'USD';
+                    if(options.market==='ALL' || currency===options.market) exclusions.行情缺失++;
+                    continue;
+                }
+                const i=prior(asset.bars,date), bar=asset.bars[i];
+                if(i<0 || age(date,bar.date)>10) { exclusions.行情缺失++; continue; }
+                if(!rate(asset.currency,date)) { exclusions.汇率缺失++; continue; }
+                const closes=asset.bars.slice(Math.max(0,i-19),i+1).map(b=>b.rawClose), state=scoring.trend(closes);
+                if(state===null) { exclusions.趋势不足++; continue; }
+                const cap=positive(bar.marketCap) ? bar.marketCap/1e8 : positive(asset.anchorCap) && positive(asset.anchorClose) ? asset.anchorCap*bar.rawClose/asset.anchorClose/1e8 : null;
+                const result=scoring.calculate(stock,{cap,trend:state,now:localDay(date)});
+                if(result.total===null) { exclusions.估值缺失++; continue; }
+                ranked.push({code:stock.code,name:stock.name,score:result.total,confidence:result.confidence,signalDate:bar.date,trend:state});
+            }
+            ranked.sort((a,b)=>b.score-a.score || a.code.localeCompare(b.code));ranked.forEach((s,i)=>s.rank=i+1);
+            return {ranked,exclusions};
         }
         let cash=options.capital, fees=0, turnover=0, peak=options.capital, maxDrawdown=0, currentBucket=null, targets=null, snapshotIndex=-1, hadCandidate=false;
         let unavailableValuations=0, staleHeldDays=0;
@@ -135,28 +157,7 @@ const ScoreBacktest = (() => {
                 currentBucket=nextBucket;
                 const snapshot=snapshots[snapshotIndex];
                 if(!snapshot) throw Error('缺少调仓日之前的股票池记录：'+date);
-                const ranked=[], exclusions={行情缺失:0,趋势不足:0,估值缺失:0,汇率缺失:0};
-                for(const stock of snapshot.stocks) {
-                    const asset=assets.get(stock.code);
-                    if(!asset) {
-                        const currency=/^(0|1)\./.test(stock.code)?'CNY':/^116\./.test(stock.code)?'HKD':'USD';
-                        if(options.market==='ALL' || currency===options.market) exclusions.行情缺失++;
-                        continue;
-                    }
-                    const i=prior(asset.bars,date), bar=asset.bars[i];
-                    if(i<0 || age(date,bar.date)>10) { exclusions.行情缺失++; continue; }
-                    if(!rate(asset.currency,date)) { exclusions.汇率缺失++; continue; }
-                    const closes=asset.bars.slice(Math.max(0,i-19),i+1).map(b=>b.rawClose);
-                    const state=scoring.trend(closes);
-                    if(state===null) { exclusions.趋势不足++; continue; }
-                    // A supplied per-date marketCap supersedes the fixed-share approximation.
-                    const cap=positive(bar.marketCap) ? bar.marketCap/1e8 : positive(asset.anchorCap) && positive(asset.anchorClose) ? asset.anchorCap*bar.rawClose/asset.anchorClose/1e8 : null;
-                    const result=scoring.calculate(stock,{cap,trend:state,now:localDay(date)});
-                    if(result.total===null) { exclusions.估值缺失++; continue; }
-                    ranked.push({code:stock.code,name:stock.name,score:result.total,confidence:result.confidence,signalDate:bar.date,trend:state});
-                }
-                ranked.sort((a,b)=>b.score-a.score || a.code.localeCompare(b.code));
-                ranked.forEach((s,i)=>s.rank=i+1);
+                const {ranked,exclusions}=rankSnapshot(snapshot,date);
                 const signals=new Map(ranked.map(s=>[s.code,s])), retained=[], exits=[];
                 for(const code of positions.keys()) {
                     const signal=signals.get(code), cycle=holdingCycles.get(code), tradingDays=completedTradingDays(code,date);
@@ -180,6 +181,19 @@ const ScoreBacktest = (() => {
                 targets=new Map(selected.map(s=>[s.code,{value:slot,score:s.score,rank:s.rank ?? null,decisionDate:date,exitReason:'等权减仓'}]));
                 for(const s of exits) targets.set(s.code,{value:0,score:s.score,rank:s.rank,decisionDate:date,exitReason:s.reason,drawdownFromPeak:s.drawdownFromPeak});
                 rebalances.push({date,snapshotAt:snapshot.at,snapshotSha:snapshot.sha,equity,selected,exits,retainedCount:retained.length,addedCount:additions.length,eligible:ranked.length,exclusions});
+            } else if(positions.size && snapshotIndex>=0) {
+                const snapshot=snapshots[snapshotIndex], {ranked}=rankSnapshot(snapshot,date), signals=new Map(ranked.map(s=>[s.code,s])), exits=[];
+                for(const code of positions.keys()) {
+                    if(targets?.get(code)?.value===0) continue;
+                    const signal=signals.get(code), cycle=holdingCycles.get(code), currentBar=lastPrice(assets.get(code),date,false);
+                    const drawdownFromPeak=positive(cycle.HighestPriceSinceEntry) && currentBar ? currentBar.close/cycle.HighestPriceSinceEntry-1 : null;
+                    if(shouldExitWinner(signal,cycle,drawdownFromPeak)) exits.push({...signal,MFE:cycle.MFE,drawdownFromPeak,decision:'清仓',reason:'MFE≥40%且高点回撤≥15%且Score＜60'});
+                }
+                if(exits.length) {
+                    targets ||= new Map();
+                    for(const s of exits) targets.set(s.code,{value:0,score:s.score,rank:s.rank,decisionDate:date,exitReason:s.reason,drawdownFromPeak:s.drawdownFromPeak});
+                    riskExits.push({date,snapshotAt:snapshot.at,snapshotSha:snapshot.sha,exits});
+                }
             }
             if(targets) {
                 // Asian markets open before US markets; later sales cannot finance earlier buys.
@@ -242,7 +256,7 @@ const ScoreBacktest = (() => {
         if(rebalances.some(r=>r.selected.length<options.topN)) warnings.add('部分调仓日不足目标持仓数，空缺仓位保留现金');
         const finalHoldings=[...positions].map(([code,quantity])=>({code,name:assets.get(code).name,quantity,value:quantity*lastPrice(assets.get(code),days.at(-1),true).close*rate(assets.get(code).currency,days.at(-1),true)}));
         const openPositions=finalHoldings.map(h=>performance(holdingCycles.get(h.code),h.value));
-        return {tradeRecordVersion:1,excursionBasis:"CNY remaining weighted buy cost including buy fees; close and execution marks; MAE<=0, MFE>=0; no intraday high/low or sell fees",options,curve,trades,rebalances,finalHoldings,openPositions,closedPositions,warnings:[...warnings],diagnostics:{unavailableValuations,staleHeldDays},metrics:{initial:options.capital,final,totalReturn:final/options.capital-1,cagr:(final/options.capital)**(1/years)-1,maxDrawdown,volatility:Math.sqrt(variance*252),sharpe:variance>0 ? mean/Math.sqrt(variance)*Math.sqrt(252) : null,fees,turnover:turnover/(curve.reduce((s,p)=>s+p.equity,0)/curve.length),tradeCount:trades.length,rebalanceCount:rebalances.length},source:data.source,generatedAt:new Date().toISOString()};
+        return {tradeRecordVersion:1,excursionBasis:"CNY remaining weighted buy cost including buy fees; close and execution marks; MAE<=0, MFE>=0; no intraday high/low or sell fees",options,curve,trades,rebalances,riskExits,finalHoldings,openPositions,closedPositions,warnings:[...warnings],diagnostics:{unavailableValuations,staleHeldDays},metrics:{initial:options.capital,final,totalReturn:final/options.capital-1,cagr:(final/options.capital)**(1/years)-1,maxDrawdown,volatility:Math.sqrt(variance*252),sharpe:variance>0 ? mean/Math.sqrt(variance)*Math.sqrt(252) : null,fees,turnover:turnover/(curve.reduce((s,p)=>s+p.equity,0)/curve.length),tradeCount:trades.length,rebalanceCount:rebalances.length},source:data.source,generatedAt:new Date().toISOString()};
     }
     return {run,prior,bucket,shouldExit,shouldReplace,shouldExitWinner};
 })();

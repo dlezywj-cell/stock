@@ -126,16 +126,17 @@ test('winner exit requires MFE at least 40%, peak drawdown at least 15%, and Sco
  const cases=[[.4,-.15,59.9,true],[.399,-.15,59.9,false],[.4,-.149,59.9,false],[.4,-.15,60,false],[.4,null,59.9,false]];
  for(const [MFE,drawdown,score,expected] of cases) assert.equal(engine.shouldExitWinner({score},{MFE},drawdown),expected);
 });
-test('winner exit uses only the price peak and score known before the rebalance',()=>{
+test('winner exit is checked daily and uses only the prior close and saved score',()=>{
  const d=fixture(),a=d.snapshots[0].stocks[0];d.snapshots[0].stocks=[a];
- d.snapshots.push({at:'2026-01-31T10:00:00Z',sha:'winner-fades',stocks:[{...a,highPE:80,highPS:80}]});
+ d.snapshots.push({at:'2026-01-23T10:00:00Z',sha:'winner-fades',stocks:[{...a,highPE:80,highPS:80}]});
  d.assets[0].bars.find(b=>b.date==='2026-01-23').close=150;
- d.assets[0].bars.find(b=>b.date==='2026-01-31').close=120;
- d.assets[0].bars.find(b=>b.date==='2026-02-01').open=120;
- d.assets[0].bars.find(b=>b.date==='2026-02-01').close=1000;
+ d.assets[0].bars.find(b=>b.date==='2026-01-24').close=120;
+ d.assets[0].bars.find(b=>b.date==='2026-01-25').open=120;
+ d.assets[0].bars.find(b=>b.date==='2026-01-25').close=1000;
  const r=engine.run(d,{...opts,end:'2026-02-02',frequency:'monthly'}),sell=r.trades.find(t=>t.ExitReason==='MFE≥40%且高点回撤≥15%且Score＜60'),cycle=r.closedPositions[0];
- assert.equal(sell.date,'2026-02-01');near(sell.MFE,.5);near(sell.DrawdownFromPeak,-.2);
+ assert.equal(sell.date,'2026-01-25');assert.equal(sell.decisionDate,'2026-01-25');near(sell.MFE,.5);near(sell.DrawdownFromPeak,-.2);
  assert.equal(cycle.HighestPriceSinceEntry,150);near(cycle.DrawdownFromPeak,-.2);assert.ok(sell.ExitScore<60);
+ assert.equal(r.riskExits.length,1);assert.equal(r.riskExits[0].date,'2026-01-25');assert.equal(r.rebalances.length,2);
 });
 test('stalled holding exits only after 10 completed trading sessions using prior MFE',()=>{
  const d=fixture(),a=d.snapshots[0].stocks[0];d.snapshots[0].stocks=[a];
