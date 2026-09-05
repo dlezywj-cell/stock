@@ -1,4 +1,4 @@
-importScripts('score.js?v=2','backtest-engine.js?v=6');
+importScripts('score.js?v=2','backtest-engine.js?v=7');
 self.onmessage=event=>{
     const {data,options,stress}=event.data;
     try {
