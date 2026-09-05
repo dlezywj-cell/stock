@@ -122,8 +122,8 @@ test('stalled replacement requires 10 sessions and MFE below 5%, then score deca
   assert.equal(engine.shouldReplace({score,rank},{MFE,EntryScore,EntryRank},days),expected);
  }
 });
-test('winner exit requires MFE at least 40%, peak drawdown at least 15%, and Score below 40',()=>{
- const cases=[[.4,-.15,39.9,true],[.399,-.15,39.9,false],[.4,-.149,39.9,false],[.4,-.15,40,false],[.4,null,39.9,false]];
+test('winner exit requires MFE at least 40%, peak drawdown at least 15%, and Score below 60',()=>{
+ const cases=[[.4,-.15,59.9,true],[.399,-.15,59.9,false],[.4,-.149,59.9,false],[.4,-.15,60,false],[.4,null,59.9,false]];
  for(const [MFE,drawdown,score,expected] of cases) assert.equal(engine.shouldExitWinner({score},{MFE},drawdown),expected);
 });
 test('winner exit uses only the price peak and score known before the rebalance',()=>{
@@ -133,9 +133,9 @@ test('winner exit uses only the price peak and score known before the rebalance'
  d.assets[0].bars.find(b=>b.date==='2026-01-31').close=120;
  d.assets[0].bars.find(b=>b.date==='2026-02-01').open=120;
  d.assets[0].bars.find(b=>b.date==='2026-02-01').close=1000;
- const r=engine.run(d,{...opts,end:'2026-02-02',frequency:'monthly'}),sell=r.trades.find(t=>t.ExitReason==='MFE≥40%且高点回撤≥15%且Score＜40'),cycle=r.closedPositions[0];
+ const r=engine.run(d,{...opts,end:'2026-02-02',frequency:'monthly'}),sell=r.trades.find(t=>t.ExitReason==='MFE≥40%且高点回撤≥15%且Score＜60'),cycle=r.closedPositions[0];
  assert.equal(sell.date,'2026-02-01');near(sell.MFE,.5);near(sell.DrawdownFromPeak,-.2);
- assert.equal(cycle.HighestPriceSinceEntry,150);near(cycle.DrawdownFromPeak,-.2);assert.ok(sell.ExitScore<40);
+ assert.equal(cycle.HighestPriceSinceEntry,150);near(cycle.DrawdownFromPeak,-.2);assert.ok(sell.ExitScore<60);
 });
 test('stalled holding exits only after 10 completed trading sessions using prior MFE',()=>{
  const d=fixture(),a=d.snapshots[0].stocks[0];d.snapshots[0].stocks=[a];

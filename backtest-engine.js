@@ -32,7 +32,7 @@ const ScoreBacktest = (() => {
         const rankDrop=Number.isFinite(cycle?.EntryRank) && Number.isFinite(signal?.rank) && signal.rank-cycle.EntryRank>=20;
         return tradingDays>=10 && cycle?.MFE<0.05 && (scoreDecay || rankDrop);
     };
-    const shouldExitWinner = (signal,cycle,drawdownFromPeak) => cycle?.MFE>=0.40 && Number.isFinite(drawdownFromPeak) && drawdownFromPeak<=-0.15 && Number.isFinite(signal?.score) && signal.score<40;
+    const shouldExitWinner = (signal,cycle,drawdownFromPeak) => cycle?.MFE>=0.40 && Number.isFinite(drawdownFromPeak) && drawdownFromPeak<=-0.15 && Number.isFinite(signal?.score) && signal.score<60;
     function run(data, options, progress = () => {}) {
         options={market:'ALL',...options,strategy:'retain-unless-down-below-50-or-stalled-10d'};
         validate(data, options);
@@ -161,7 +161,7 @@ const ScoreBacktest = (() => {
                 for(const code of positions.keys()) {
                     const signal=signals.get(code), cycle=holdingCycles.get(code), tradingDays=completedTradingDays(code,date);
                     const currentBar=lastPrice(assets.get(code),date,false), drawdownFromPeak=positive(cycle.HighestPriceSinceEntry) && currentBar ? currentBar.close/cycle.HighestPriceSinceEntry-1 : null;
-                    const reason=shouldExit(signal) ? '下跌且Score＜50' : shouldReplace(signal,cycle,tradingDays) ? '10日MFE＜5%且Score降≥30或排名降≥20' : shouldExitWinner(signal,cycle,drawdownFromPeak) ? 'MFE≥40%且高点回撤≥15%且Score＜40' : null;
+                    const reason=shouldExit(signal) ? '下跌且Score＜50' : shouldReplace(signal,cycle,tradingDays) ? '10日MFE＜5%且Score降≥30或排名降≥20' : shouldExitWinner(signal,cycle,drawdownFromPeak) ? 'MFE≥40%且高点回撤≥15%且Score＜60' : null;
                     if(reason) exits.push({...signal,tradingDays,MFE:cycle.MFE,drawdownFromPeak,decision:'清仓',reason});
                     else retained.push({...signal,code,name:signal?.name || assets.get(code).name,score:signal?.score ?? null,confidence:signal?.confidence ?? null,signalDate:signal?.signalDate ?? '—',trend:signal?.trend ?? null,decision:'续持',reason:signal?'未同时满足退出条件':'数据不足，保留持仓'});
                 }
