@@ -4,7 +4,7 @@
     const dateString=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     const yesterday=new Date();yesterday.setDate(yesterday.getDate()-1);
     $('end').value=dateString(yesterday);$('end').max=dateString(yesterday);$('start').max=dateString(yesterday);
-    const start=new Date(yesterday);start.setMonth(start.getMonth()-3);$('start').value=dateString(start);
+    $('start').value='2026-01-01';
     for(const key of ['username','repo','branch','token']) $(''+key).value=localStorage.getItem('stock_sys_'+key)||({username:'dlezywj-cell',repo:'stockdata',branch:'main',token:''})[key];
     const pct=value=>Number.isFinite(value) ? (value*100).toFixed(2)+'%' : '—';
     const money=value=>Number.isFinite(value) ? (value/10000).toLocaleString('zh-CN',{maximumFractionDigits:2})+'万' : '—';
@@ -127,7 +127,7 @@
             svg.append(svgNode('path',{d,class:'chart-exposure-area'}));
             for(const value of [1,.5,0]) svg.append(svgNode('text',{x:width-right+8,y:areaY(value)+4,class:'chart-axis'},pct(value)));
         }
-        series.forEach(s=>svg.append(svgNode('path',{d:s.values.map((v,i)=>`${i?'L':'M'}${x(i).toFixed(2)},${y(v).toFixed(2)}`).join(' '),fill:'none',stroke:s.color,'stroke-width':2,'stroke-linejoin':'round'})));
+        [...series].reverse().forEach(s=>svg.append(svgNode('path',{d:s.values.map((v,i)=>`${i?'L':'M'}${x(i).toFixed(2)},${y(v).toFixed(2)}`).join(' '),fill:'none',stroke:s.color,'stroke-width':2,'stroke-linejoin':'round'})));
         svg.append(svgNode('text',{x:left,y:height-5,class:'chart-axis'},dates[0]),svgNode('text',{x:width-right,y:height-5,'text-anchor':'end',class:'chart-axis'},dates.at(-1)));
         const hit=svgNode('rect',{x:left,y:top,width:width-left-right,height:height-top-bottom,class:'chart-hit'});
         const vertical=svgNode('line',{class:'chart-crosshair'}), horizontal=svgNode('line',{class:'chart-crosshair'});
@@ -151,12 +151,11 @@
     function renderCharts() {
         if(!result) return;
         const dates=[result.options.start,...result.curve.map(p=>p.date)];
-        const series=[{label:'机会仓位',values:[1,...result.curve.map(p=>p.equity/result.options.capital)],color:'#2563b0'}];
-        if(baseline) series.push({label:'原策略',values:[1,...baseline.curve.map(p=>p.equity/result.options.capital)],color:'#64748b'});
+        const series=[{label:'策略净值',values:[1,...result.curve.map(p=>p.equity/result.options.capital)],color:'#c83d3d'}];
         if(stressed) series.push({label:'成本翻倍',values:[1,...stressed.curve.map(p=>p.equity/result.options.capital)],color:'#ba8b36'});
         const values=series.flatMap(s=>s.values), digits=Math.max(...values)-Math.min(...values)<.02?4:2;
         plot('chart',series,dates,v=>v.toFixed(digits),280,{label:'实际仓位',values:[0,...result.curve.map(p=>p.actualExposure)]});
-        plot('drawdown',[{label:'回撤',values:[0,...result.curve.map(p=>p.drawdown)],color:'#b85955'}],dates,pct,185);
+        plot('drawdown',[{label:'回撤',values:[0,...result.curve.map(p=>p.drawdown)],color:'#b85955'}],dates,pct,140);
     }
     let resizeFrame;window.addEventListener('resize',()=>{cancelAnimationFrame(resizeFrame);resizeFrame=requestAnimationFrame(renderCharts);});
     function download(name,content,type) {const url=URL.createObjectURL(new Blob([content],{type})),a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}

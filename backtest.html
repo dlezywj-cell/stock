@@ -8,15 +8,15 @@
 <body>
     <main>
         <header><div><a class="back" href="index.html">← 股票池</a><h1>Score 策略回测</h1><p>保留有效持仓，按评分补位，等权调仓。</p></div><span class="badge">历史股票池回放</span></header>
-        <section class="card">
+        <section class="card backtest-controls">
             <form id="backtest-form">
                 <div class="fields">
                     <label>开始日期<input type="date" id="start" required></label>
                     <label>结束日期<input type="date" id="end" required></label>
                     <label>初始资金（万元人民币）<input type="number" id="capital" value="1000" min="1" step="1" required></label>
-                    <label>持仓数量<input type="number" id="top-n" value="20" min="1" max="100" step="1" required></label>
+                    <label>持仓数量<input type="number" id="top-n" value="10" min="1" max="100" step="1" required></label>
                     <label>调仓周期<select id="frequency"><option value="daily">每日</option><option value="weekly" selected>每周</option><option value="monthly">每月</option></select></label>
-                    <label>市场<select id="market"><option value="ALL">全部市场</option><option value="CNY">A股</option><option value="HKD">港股</option><option value="USD">美股</option></select></label>
+                    <label>市场<select id="market"><option value="ALL">全部市场</option><option value="CNY" selected>A股</option><option value="HKD">港股</option><option value="USD">美股</option></select></label>
                 </div>
                 <details class="advanced"><summary>成本与设置</summary>
                     <div class="fields small-fields">
@@ -37,8 +37,17 @@
             <div id="progress-area" hidden><progress id="progress" max="1" value="0"></progress><span id="status" role="status"></span></div>
             <p id="error" role="alert" hidden></p>
         </section>
-        <div class="method-note"><strong>模型口径</strong> 历史预测取自 GitHub 当时保存的记录；市值按最新股本近似。股本变动和行情缺失会影响结果。</div>
-        <details class="card rules"><summary>评分与交易规则</summary>
+        <section id="results" hidden aria-label="回测结果">
+            <div class="results-heading"><div><h2>回测结果</h2><p id="result-caption" class="muted"></p></div><div class="actions"><button id="export-nav">导出净值</button><button id="export-exposure">导出仓位</button><button id="export-trades">导出成交</button><button id="export-data">导出数据</button><button id="export-result">保存结果</button></div></div>
+            <div id="metrics" class="metrics"></div>
+            <section class="card chart-card performance-card"><div class="chart-header"><h3>策略表现</h3><div class="legend"><span class="controlled">● 策略净值</span><span id="stress-legend" class="stress">● 成本翻倍</span><span class="exposure">■ 实际仓位</span></div></div><svg id="chart" viewBox="0 0 1000 300" role="img" aria-label="策略净值及实际仓位曲线"></svg><p id="stress-result" class="muted"></p><div class="drawdown-panel"><div class="chart-header"><h3>回撤</h3><span class="muted">相对此前净值高点</span></div><svg id="drawdown" viewBox="0 0 1000 150" role="img" aria-label="组合回撤曲线"></svg></div></section>
+            <section class="card">
+                <nav class="record-tabs" aria-label="持仓记录"><button id="show-rebalances" type="button" aria-pressed="true">调仓记录</button><button id="show-closed" type="button" aria-pressed="false">已清仓</button></nav>
+                <div id="rebalance-page"><div class="chart-header"><h3>调仓记录</h3><label class="inline">日期<select id="rebalance-date"></select></label></div><p id="rebalance-summary" class="muted"></p><div class="table-wrap"><table><thead><tr><th>排名</th><th>股票</th><th>代码</th><th>调整</th><th>趋势</th><th>Score</th><th>持仓收益率</th><th>置信系数</th><th>信号行情日</th></tr></thead><tbody id="ranked"></tbody></table></div><p class="muted">收益截至调仓前，含本轮持仓的已实现盈亏与浮盈亏；本次新增尚未买入，显示 —。</p></div>
+                <div id="closed-page" hidden><div class="chart-header"><h3>已清仓股票</h3><button id="export-closed" type="button">导出清仓</button></div><p id="closed-summary" class="muted"></p><div class="table-wrap"><table><thead><tr><th>股票</th><th>代码</th><th>首次买入</th><th>实际清仓</th><th>持有天数</th><th>累计投入</th><th>净盈亏</th><th>收益率</th><th>EntryScore</th><th>EntryRank</th><th>ExitScore</th><th>ExitRank</th><th>ExitReason</th><th>MAE</th><th>MFE</th></tr></thead><tbody id="closed-rows"></tbody></table></div><p id="closed-empty" class="muted" hidden>本次回测暂无已清仓记录。</p><p class="muted">收益率＝（累计卖出净回款－累计买入投入）÷累计买入投入。按人民币计算并计入费用；同股清仓后再买入，单独记录。部分减仓不算清仓。</p><p class="muted">MAE≤0、MFE≥0：以剩余持仓的人民币加权买入成本（含买入费用）计算最大浮亏／浮盈，采样每日收盘与实际成交价，不含盘中高低点。加减仓前后均采样；排名为下单决策时、所选市场股票池内的完整Score排名。</p></div>
+            </section>
+            <div class="method-note"><strong>模型口径</strong> 历史预测取自 GitHub 当时保存的记录；历史市值按当前股本固定估算，增发、回购及其他股本变动可能影响 Score 和排名。</div>
+            <details class="card rules"><summary>评分与交易规则</summary>
             <p>Score＝估值分×预测置信系数×60%＋趋势分×40%。估值分内，上行空间占60%、赔率占40%；上行100%、赔率4倍满分。PE/PS等权，单一方法打八折；置信系数按2/4/6个月分为1/0.7/0.5/0。</p>
             <p>首次按 Score 选入前N只。常规调仓日清仓同时满足「MA5＜MA10＜MA20」且「Score＜50」的持仓；持有满10个交易日且RunningMFE＜5%后，ScoreDecay≥30或RankDrop≥20任一成立时，也允许清仓替换。赢家回撤规则每日检查：RunningMFE≥40%、从入场后最高价回撤≥15%且CurrentScore＜60三项同时满足后，在下一可交易日开盘清仓，不等待下一次常规调仓。其他持仓继续保留，缺少有效评分或趋势数据时也保留。</p>
             <p>合格机会＝满足原买入条件且Score≥60。合格数≥10时目标仓位100%，7–9只为80%，4–6只为60%，1–3只为40%，0只为20%。目标下降不强制卖出，只冻结补仓；机会回升后按原有排名和选股规则恢复买入。仓位层不新增卖出、趋势广度或大盘择时条件。</p>
@@ -46,19 +55,9 @@
             <p>跨市场按亚洲、美股开盘先后执行，资金不足时先按可用资金买入，未成交份额保留，待资金可用后在后续开盘补齐；无开盘价或成交量时顺延。目标份额在首次可交易开盘确定，下一次调仓替换未完成订单。采用碎股等权、人民币记账；成交汇率用此前可用收盘汇率，持仓每日按最新已知汇率估值。</p>
             <p>复权价格近似包含现金分红再投资；暂不模拟整手、涨跌停封单、交易额度、流动性冲击、精确税费或盘中汇率。期末按收盘价估值，不强制平仓。年化波动与夏普按252天、无风险利率0计算。</p>
             <p>历史预测仅覆盖已保存的日期；临时修改但未上传的数据不会进入历史。数据文件和运行结果只在本机处理；导出的数据可能包含私人预测，请自行保管。</p>
-        </details>
-        <section id="results" hidden aria-label="回测结果">
-            <div class="results-heading"><div><h2>回测结果</h2><p id="result-caption" class="muted"></p></div><div class="actions"><button id="export-nav">导出净值</button><button id="export-exposure">导出仓位</button><button id="export-trades">导出成交</button><button id="export-data">导出数据</button><button id="export-result">保存结果</button></div></div>
-            <div id="metrics" class="metrics"></div>
-            <section class="card chart-card"><div class="chart-header"><h3>组合净值</h3><div class="legend"><span class="controlled">● 机会仓位</span><span class="baseline">● 原策略</span><span id="stress-legend" class="stress">● 成本翻倍</span><span class="exposure">■ 实际仓位</span></div></div><svg id="chart" viewBox="0 0 1000 300" role="img" aria-label="组合净值及实际仓位曲线"></svg><p id="stress-result" class="muted"></p></section>
-            <section class="card"><div class="chart-header"><h3>回撤</h3><span class="muted">相对此前净值高点</span></div><svg id="drawdown" viewBox="0 0 1000 180" role="img" aria-label="组合回撤曲线"></svg></section>
-            <div id="warnings" class="notice"></div>
-            <section class="card">
-                <nav class="record-tabs" aria-label="持仓记录"><button id="show-rebalances" type="button" aria-pressed="true">调仓记录</button><button id="show-closed" type="button" aria-pressed="false">已清仓</button></nav>
-                <div id="rebalance-page"><div class="chart-header"><h3>调仓记录</h3><label class="inline">日期<select id="rebalance-date"></select></label></div><p id="rebalance-summary" class="muted"></p><div class="table-wrap"><table><thead><tr><th>排名</th><th>股票</th><th>代码</th><th>调整</th><th>趋势</th><th>Score</th><th>持仓收益率</th><th>置信系数</th><th>信号行情日</th></tr></thead><tbody id="ranked"></tbody></table></div><p class="muted">收益截至调仓前，含本轮持仓的已实现盈亏与浮盈亏；本次新增尚未买入，显示 —。</p></div>
-                <div id="closed-page" hidden><div class="chart-header"><h3>已清仓股票</h3><button id="export-closed" type="button">导出清仓</button></div><p id="closed-summary" class="muted"></p><div class="table-wrap"><table><thead><tr><th>股票</th><th>代码</th><th>首次买入</th><th>实际清仓</th><th>持有天数</th><th>累计投入</th><th>净盈亏</th><th>收益率</th><th>EntryScore</th><th>EntryRank</th><th>ExitScore</th><th>ExitRank</th><th>ExitReason</th><th>MAE</th><th>MFE</th></tr></thead><tbody id="closed-rows"></tbody></table></div><p id="closed-empty" class="muted" hidden>本次回测暂无已清仓记录。</p><p class="muted">收益率＝（累计卖出净回款－累计买入投入）÷累计买入投入。按人民币计算并计入费用；同股清仓后再买入，单独记录。部分减仓不算清仓。</p><p class="muted">MAE≤0、MFE≥0：以剩余持仓的人民币加权买入成本（含买入费用）计算最大浮亏／浮盈，采样每日收盘与实际成交价，不含盘中高低点。加减仓前后均采样；排名为下单决策时、所选市场股票池内的完整Score排名。</p></div>
-            </section>
+            </details>
             <details class="card"><summary id="coverage-title">数据覆盖</summary><p id="coverage-summary"></p><ul id="failures"></ul><p id="sources" class="muted"></p></details>
+            <div id="warnings" class="notice"></div>
         </section>
     </main>
     <script src="score.js?v=2"></script><script src="backtest-engine.js?v=17"></script><script src="backtest-data.js?v=1"></script><script src="backtest-ui.js?v=18"></script>
