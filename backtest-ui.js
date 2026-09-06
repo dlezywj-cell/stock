@@ -113,8 +113,8 @@
     $('rebalance-date').onchange=renderRebalance;
     const ns='http://www.w3.org/2000/svg';
     function svgNode(tag,attrs,text) {const node=document.createElementNS(ns,tag);for(const [k,v] of Object.entries(attrs)) node.setAttribute(k,String(v));if(text!==undefined) node.textContent=text;return node;}
-    function plot(id,series,dates,format,height,area=null) {
-        const svg=$(id), width=Math.max(320,svg.clientWidth || 1000), left=58,right=area?54:20,top=18,bottom=30;
+    function plot(id,series,dates,format,height,area=null,rightPadding=null) {
+        const svg=$(id), width=Math.max(320,svg.clientWidth || 1000), left=58,right=rightPadding ?? (area?54:20),top=18,bottom=30;
         svg.setAttribute('viewBox',`0 0 ${width} ${height}`);svg.replaceChildren();
         let low=Math.min(...series.flatMap(s=>s.values)), high=Math.max(...series.flatMap(s=>s.values));
         if(high-low<1e-8) {low-=.01;high+=.01;}
@@ -155,7 +155,7 @@
         if(stressed) series.push({label:'成本翻倍',values:[1,...stressed.curve.map(p=>p.equity/result.options.capital)],color:'#ba8b36'});
         const values=series.flatMap(s=>s.values), digits=Math.max(...values)-Math.min(...values)<.02?4:2;
         plot('chart',series,dates,v=>v.toFixed(digits),280,{label:'实际仓位',values:[0,...result.curve.map(p=>p.actualExposure)]});
-        plot('drawdown',[{label:'回撤',values:[0,...result.curve.map(p=>p.drawdown)],color:'#b85955'}],dates,pct,140);
+        plot('drawdown',[{label:'回撤',values:[0,...result.curve.map(p=>p.drawdown)],color:'#377db8'}],dates,pct,140,null,54);
     }
     let resizeFrame;window.addEventListener('resize',()=>{cancelAnimationFrame(resizeFrame);resizeFrame=requestAnimationFrame(renderCharts);});
     function download(name,content,type) {const url=URL.createObjectURL(new Blob([content],{type})),a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
