@@ -33,14 +33,7 @@ const ScoreBacktest = (() => {
         return tradingDays>=10 && cycle?.MFE<0.05 && (scoreDecay || rankDrop);
     };
     const shouldExitWinner = (signal,cycle,drawdownFromPeak) => cycle?.MFE>=0.40 && Number.isFinite(drawdownFromPeak) && drawdownFromPeak<=-0.15 && Number.isFinite(signal?.score) && signal.score<60;
-    function exposureTarget(trendScore,trendChange5) {
-        const tiers=[0.30,0.50,0.70,0.90,1.00];
-        let index=trendScore>=0.20 ? 4 : trendScore>=0 ? 3 : trendScore>=-0.20 ? 2 : trendScore>=-0.40 ? 1 : 0;
-        if(Number.isFinite(trendChange5) && trendChange5<=-0.20) index--;
-        else if(Number.isFinite(trendChange5) && trendChange5>=0.20) index++;
-        return tiers[Math.max(0,Math.min(4,index))];
-    }
-    const exposureBuyCeiling = (actual,target,everInvested) => everInvested ? Math.min(target,actual+0.20) : target;
+    const eligibleExposureTarget = (eligibleCount,targetPositionCount) => Math.min(1,Math.max(0,eligibleCount)/targetPositionCount);
     function run(data, options, progress = () => {}) {
         options={market:'ALL',exposureControl:false,...options,strategy:'retain-unless-down-below-50-or-stalled-10d'};
         validate(data, options);
@@ -119,24 +112,8 @@ const ScoreBacktest = (() => {
             ranked.sort((a,b)=>b.score-a.score || a.code.localeCompare(b.code));ranked.forEach((s,i)=>s.rank=i+1);
             return {ranked,exclusions};
         }
-        function breadth(snapshot,date) {
-            let up=0,down=0,total=0;
-            for(const stock of snapshot?.stocks || []) {
-                const asset=assets.get(stock.code);
-                if(!asset) {
-                    const currency=/^(0|1)\./.test(stock.code)?'CNY':/^116\./.test(stock.code)?'HKD':'USD';
-                    if(options.market==='ALL' || currency===options.market) total++;
-                    continue;
-                }
-                total++;
-                const i=prior(asset.bars,date);if(i<19 || age(date,asset.bars[i].date)>10) continue;
-                const state=scoring.trend(asset.bars.slice(i-19,i+1).map(b=>b.rawClose));
-                if(state==='up') up++;else if(state==='down') down++;
-            }
-            return {upRatio:total?up/total:null,downRatio:total?down/total:null,trendScore:total?(up-down)/total:null,total};
-        }
         let cash=options.capital, fees=0, turnover=0, peak=options.capital, maxDrawdown=0, currentBucket=null, targets=null, snapshotIndex=-1, hadCandidate=false;
-        let unavailableValuations=0, staleHeldDays=0, everInvested=false;
+        let unavailableValuations=0, staleHeldDays=0;
         function nav(date,inclusive) {
             let result=cash;
             for(const [code,qty] of positions) {
@@ -171,23 +148,20 @@ const ScoreBacktest = (() => {
                 holdingCycles.delete(code);
             }
             fees+=fee; turnover+=notional;
-            if(side==='buy') everInvested=true;
             trades.push({date,code,name:assets.get(code).name,side,quantity:qty,price,fx:fxRate,notional,fee,score:signal.score ?? null,rank:signal.rank ?? null,decisionDate:signal.decisionDate,cycleId:cycle.id,EntryScore:cycle.EntryScore,EntryRank:cycle.EntryRank,EntrySignalDate:cycle.EntrySignalDate,ExitScore:side==='sell'?signal.score ?? null:null,ExitRank:side==='sell'?signal.rank ?? null:null,ExitReason:exitReason,DrawdownFromPeak:side==='sell'?signal.drawdownFromPeak ?? null:null,MAE:cycle.MAE,MFE:cycle.MFE});
         }
         days.forEach((date,dayIndex)=>{
             const cutoff=epoch(date);
             while(snapshotIndex+1<snapshots.length && Date.parse(snapshots[snapshotIndex+1].at)<cutoff) snapshotIndex++;
-            const dailyBreadth=breadth(snapshots[snapshotIndex],date), priorBreadth=exposure.length>=5?exposure.at(-5):null;
-            const trendChange5=Number.isFinite(dailyBreadth.trendScore) && Number.isFinite(priorBreadth?.TrendScore) ? dailyBreadth.trendScore-priorBreadth.TrendScore : null;
-            const targetExposure=options.exposureControl && Number.isFinite(dailyBreadth.trendScore) ? exposureTarget(dailyBreadth.trendScore,trendChange5) : 1;
-            const preTradeEquity=nav(date,false), preTradeExposure=preTradeEquity>0?(preTradeEquity-cash)/preTradeEquity:0;
-            const dailyMaxExposure=options.exposureControl ? exposureBuyCeiling(preTradeExposure,targetExposure,everInvested) : 1;
+            const dailyRanking=snapshotIndex>=0 ? rankSnapshot(snapshots[snapshotIndex],date) : {ranked:[],exclusions:{}};
+            const eligibleCount=dailyRanking.ranked.length, targetPositionCount=options.topN;
+            const targetExposure=options.exposureControl ? eligibleExposureTarget(eligibleCount,targetPositionCount) : 1;
             const nextBucket=bucket(date,options.frequency);
             if(nextBucket!==currentBucket) {
                 currentBucket=nextBucket;
                 const snapshot=snapshots[snapshotIndex];
                 if(!snapshot) throw Error('缺少调仓日之前的股票池记录：'+date);
-                const {ranked,exclusions}=rankSnapshot(snapshot,date);
+                const {ranked,exclusions}=dailyRanking;
                 const signals=new Map(ranked.map(s=>[s.code,s])), retained=[], exits=[];
                 for(const code of positions.keys()) {
                     const signal=signals.get(code), cycle=holdingCycles.get(code), tradingDays=completedTradingDays(code,date);
@@ -212,7 +186,7 @@ const ScoreBacktest = (() => {
                 for(const s of exits) targets.set(s.code,{value:0,score:s.score,rank:s.rank,decisionDate:date,exitReason:s.reason,drawdownFromPeak:s.drawdownFromPeak});
                 rebalances.push({date,snapshotAt:snapshot.at,snapshotSha:snapshot.sha,equity,selected,exits,retainedCount:retained.length,addedCount:additions.length,eligible:ranked.length,exclusions});
             } else if(positions.size && snapshotIndex>=0) {
-                const snapshot=snapshots[snapshotIndex], {ranked}=rankSnapshot(snapshot,date), signals=new Map(ranked.map(s=>[s.code,s])), exits=[];
+                const snapshot=snapshots[snapshotIndex], {ranked}=dailyRanking, signals=new Map(ranked.map(s=>[s.code,s])), exits=[];
                 for(const code of positions.keys()) {
                     if(targets?.get(code)?.value===0) continue;
                     const signal=signals.get(code), cycle=holdingCycles.get(code), currentBar=lastPrice(assets.get(code),date,false);
@@ -254,7 +228,7 @@ const ScoreBacktest = (() => {
                         if(qty>1e-10) buys.push({code,qty,...quote,signal:target});
                     }
                     const required=buys.reduce((sum,b)=>sum+b.qty*b.price*b.fx*(1+cost),0);
-                    const capEquity=nav(date,false), invested=Math.max(0,capEquity-cash), buyCapacity=Math.max(0,capEquity*dailyMaxExposure-invested);
+                    const capEquity=nav(date,false), invested=Math.max(0,capEquity-cash), buyCapacity=Math.max(0,capEquity*targetExposure-invested);
                     const available=options.exposureControl ? Math.min(Math.max(0,cash),buyCapacity) : Math.max(0,cash);
                     const scale=required>0 ? Math.min(1,available/required) : 0;
                     buys.forEach(b=>fill(b.code,b.qty*scale,b.price,b.fx,date,'buy',b.signal));
@@ -276,7 +250,7 @@ const ScoreBacktest = (() => {
             }
             const drawdown=equity/peak-1; maxDrawdown=Math.min(maxDrawdown,drawdown);
             const actualExposure=equity>0?Math.max(0,Math.min(1,(equity-cash)/equity)):0;
-            exposure.push({Date:date,UpRatio:dailyBreadth.upRatio,DownRatio:dailyBreadth.downRatio,TrendScore:dailyBreadth.trendScore,TrendChange5:trendChange5,TargetExposure:targetExposure,ActualExposure:actualExposure});
+            exposure.push({Date:date,EligibleCount:eligibleCount,TargetPositionCount:targetPositionCount,TargetExposure:targetExposure,ActualExposure:actualExposure,CashRatio:equity>0?cash/equity:0});
             curve.push({date,equity,cash,drawdown,holdings:positions.size,actualExposure,targetExposure});
             if(dayIndex%20===0) progress(dayIndex/days.length);
         });
@@ -295,6 +269,6 @@ const ScoreBacktest = (() => {
         const openPositions=finalHoldings.map(h=>performance(holdingCycles.get(h.code),h.value));
         return {tradeRecordVersion:1,excursionBasis:"CNY remaining weighted buy cost including buy fees; close and execution marks; MAE<=0, MFE>=0; no intraday high/low or sell fees",options,curve,exposure,trades,rebalances,riskExits,finalHoldings,openPositions,closedPositions,warnings:[...warnings],diagnostics:{unavailableValuations,staleHeldDays},metrics:{initial:options.capital,final,totalReturn:final/options.capital-1,cagr,maxDrawdown,volatility:Math.sqrt(variance*252),sharpe:variance>0 ? mean/Math.sqrt(variance)*Math.sqrt(252) : null,calmar,averageExposure,minimumExposure,fees,turnover:turnover/(curve.reduce((s,p)=>s+p.equity,0)/curve.length),tradeCount:trades.length,rebalanceCount:rebalances.length},source:data.source,generatedAt:new Date().toISOString()};
     }
-    return {run,prior,bucket,exposureTarget,exposureBuyCeiling,shouldExit,shouldReplace,shouldExitWinner};
+    return {run,prior,bucket,eligibleExposureTarget,shouldExit,shouldReplace,shouldExitWinner};
 })();
 if(typeof module!=='undefined' && module.exports) module.exports=ScoreBacktest;
