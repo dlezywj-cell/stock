@@ -34,6 +34,13 @@ const ScoreBacktest = (() => {
     };
     const shouldExitWinner = (signal,cycle,drawdownFromPeak) => cycle?.MFE>=0.40 && Number.isFinite(drawdownFromPeak) && drawdownFromPeak<=-0.15 && Number.isFinite(signal?.score) && signal.score<60;
     const eligibleExposureTarget = (eligibleCount,targetPositionCount) => Math.min(1,Math.max(0,eligibleCount)/targetPositionCount);
+    const median = values => {
+        const sorted=[...values].sort((a,b)=>a-b), middle=Math.floor(sorted.length/2);
+        return sorted.length%2 ? sorted[middle] : (sorted[middle-1]+sorted[middle])/2;
+    };
+    function summarizeEligibleCounts(threshold,counts) {
+        return {threshold,minimum:Math.min(...counts),median:median(counts),maximum:Math.max(...counts),daysBelow20:counts.filter(n=>n<20).length,daysBelow15:counts.filter(n=>n<15).length,daysBelow10:counts.filter(n=>n<10).length,tradingDays:counts.length,counts};
+    }
     function run(data, options, progress = () => {}) {
         options={market:'ALL',exposureControl:false,...options,strategy:'retain-unless-down-below-50-or-stalled-10d'};
         validate(data, options);
@@ -64,6 +71,7 @@ const ScoreBacktest = (() => {
             return i>=0 ? asset.bars[i] : null;
         }
         const positions=new Map(), trades=[], curve=[], rebalances=[], riskExits=[], exposure=[];
+        const eligibilityThresholds=[60,65,70,75,80], eligibleCountsByThreshold=new Map(eligibilityThresholds.map(value=>[value,[]]));
         const holdingCycles=new Map(), closedPositions=[];
         let cycleSequence=0;
         function performance(cycle,value) {
@@ -155,6 +163,7 @@ const ScoreBacktest = (() => {
             while(snapshotIndex+1<snapshots.length && Date.parse(snapshots[snapshotIndex+1].at)<cutoff) snapshotIndex++;
             const dailyRanking=snapshotIndex>=0 ? rankSnapshot(snapshots[snapshotIndex],date) : {ranked:[],exclusions:{}};
             const eligibleCount=dailyRanking.ranked.length, targetPositionCount=options.topN;
+            for(const threshold of eligibilityThresholds) eligibleCountsByThreshold.get(threshold).push(dailyRanking.ranked.filter(stock=>stock.score>=threshold).length);
             const targetExposure=options.exposureControl ? eligibleExposureTarget(eligibleCount,targetPositionCount) : 1;
             const nextBucket=bucket(date,options.frequency);
             if(nextBucket!==currentBucket) {
@@ -267,8 +276,9 @@ const ScoreBacktest = (() => {
         if(rebalances.some(r=>r.selected.length<options.topN)) warnings.add('部分调仓日不足目标持仓数，空缺仓位保留现金');
         const finalHoldings=[...positions].map(([code,quantity])=>({code,name:assets.get(code).name,quantity,value:quantity*lastPrice(assets.get(code),days.at(-1),true).close*rate(assets.get(code).currency,days.at(-1),true)}));
         const openPositions=finalHoldings.map(h=>performance(holdingCycles.get(h.code),h.value));
-        return {tradeRecordVersion:1,excursionBasis:"CNY remaining weighted buy cost including buy fees; close and execution marks; MAE<=0, MFE>=0; no intraday high/low or sell fees",options,curve,exposure,trades,rebalances,riskExits,finalHoldings,openPositions,closedPositions,warnings:[...warnings],diagnostics:{unavailableValuations,staleHeldDays},metrics:{initial:options.capital,final,totalReturn:final/options.capital-1,cagr,maxDrawdown,volatility:Math.sqrt(variance*252),sharpe:variance>0 ? mean/Math.sqrt(variance)*Math.sqrt(252) : null,calmar,averageExposure,minimumExposure,fees,turnover:turnover/(curve.reduce((s,p)=>s+p.equity,0)/curve.length),tradeCount:trades.length,rebalanceCount:rebalances.length},source:data.source,generatedAt:new Date().toISOString()};
+        const eligibleThresholdStats=eligibilityThresholds.map(threshold=>summarizeEligibleCounts(threshold,eligibleCountsByThreshold.get(threshold)));
+        return {tradeRecordVersion:1,excursionBasis:"CNY remaining weighted buy cost including buy fees; close and execution marks; MAE<=0, MFE>=0; no intraday high/low or sell fees",options,curve,exposure,eligibleThresholdStats,trades,rebalances,riskExits,finalHoldings,openPositions,closedPositions,warnings:[...warnings],diagnostics:{unavailableValuations,staleHeldDays},metrics:{initial:options.capital,final,totalReturn:final/options.capital-1,cagr,maxDrawdown,volatility:Math.sqrt(variance*252),sharpe:variance>0 ? mean/Math.sqrt(variance)*Math.sqrt(252) : null,calmar,averageExposure,minimumExposure,fees,turnover:turnover/(curve.reduce((s,p)=>s+p.equity,0)/curve.length),tradeCount:trades.length,rebalanceCount:rebalances.length},source:data.source,generatedAt:new Date().toISOString()};
     }
-    return {run,prior,bucket,eligibleExposureTarget,shouldExit,shouldReplace,shouldExitWinner};
+    return {run,prior,bucket,eligibleExposureTarget,summarizeEligibleCounts,shouldExit,shouldReplace,shouldExitWinner};
 })();
 if(typeof module!=='undefined' && module.exports) module.exports=ScoreBacktest;

@@ -111,6 +111,7 @@ node tests/watchlists.cjs
 每个交易日按开盘前已知的最近股票池、此前行情及原有完整评分条件统计EligibleCount；TargetPositionCount等于用户设置的目标持仓数量，TargetExposure=min（100%，EligibleCount/TargetPositionCount）。
 仓位层不降低买入标准，不增加趋势、指数或大盘择时条件，也不产生额外卖单。合格股票不足时剩余资金保留现金；出现新机会后按原有排名和选股规则补仓。
 结果exposure逐日保存Date、EligibleCount、TargetPositionCount、TargetExposure、ActualExposure、CashRatio。页面同时运行关闭仓位控制的原策略基线，比较累计收益、最大回撤、年化收益、Sharpe、Calmar、平均仓位和最低仓位，并可导出仓位CSV或保存含baseline的完整JSON。
+门槛诊断另行统计Score≥60/65/70/75/80时每日合格机会数的最小值、中位数、最大值，以及低于20/15/10只的交易日数量。该诊断不参与买入、卖出、仓位或收益优化。
 交易日按该股票实际存在行情的日期计算，从首次实际买入日开始；退出判断只使用调仓日前已经完成的行情和MFE，避免未来数据泄漏。
 
 持仓收益与已清仓记录

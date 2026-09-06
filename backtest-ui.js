@@ -21,7 +21,7 @@
     function execute(data,opts,stress,signal) {
         return new Promise((resolve,reject)=>{
             if(signal.aborted) return reject(new DOMException('已取消','AbortError'));
-            worker=new Worker('backtest-worker.js?v=14');
+            worker=new Worker('backtest-worker.js?v=15');
             const cancel=()=>{worker?.terminate();worker=null;reject(new DOMException('已取消','AbortError'));};
             signal.addEventListener('abort',cancel,{once:true});
             const finish=()=>{signal.removeEventListener('abort',cancel);worker?.terminate();worker=null;};
@@ -78,6 +78,7 @@
         const compareFields=[['累计收益率','totalReturn',pct],['最大回撤','maxDrawdown',pct],['年化收益率','cagr',pct],['Sharpe','sharpe',v=>Number.isFinite(v)?v.toFixed(2):'—'],['Calmar','calmar',v=>Number.isFinite(v)?v.toFixed(2):'—'],['平均仓位','averageExposure',pct],['最低仓位','minimumExposure',pct]];
         $('comparison-rows').replaceChildren(...compareFields.map(([label,key,fmt])=>{const tr=document.createElement('tr');[label,fmt(baseline.metrics[key]),fmt(m[key]),Number.isFinite(m[key])&&Number.isFinite(baseline.metrics[key])?fmt(m[key]-baseline.metrics[key]):'—'].forEach(v=>{const td=document.createElement('td');td.textContent=v;tr.append(td);});return tr;}));
         $('exposure-rows').replaceChildren(...result.exposure.map(row=>{const tr=document.createElement('tr');[row.Date,row.EligibleCount,row.TargetPositionCount,pct(row.TargetExposure),pct(row.ActualExposure),pct(row.CashRatio)].forEach(v=>{const td=document.createElement('td');td.textContent=v;tr.append(td);});return tr;}));
+        $('threshold-rows').replaceChildren(...result.eligibleThresholdStats.map(row=>{const tr=document.createElement('tr');[row.threshold,row.minimum,row.median,row.maximum,row.daysBelow20,row.daysBelow15,row.daysBelow10,row.tradingDays].forEach(v=>{const td=document.createElement('td');td.textContent=v;tr.append(td);});return tr;}));
         renderCharts();
         $('stress-legend').hidden=!stressed;
         $('stress-result').textContent=stressed ? `成本翻倍：累计收益 ${pct(stressed.metrics.totalReturn)}，最大回撤 ${pct(stressed.metrics.maxDrawdown)}。` : '';

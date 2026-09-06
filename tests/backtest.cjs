@@ -129,6 +129,11 @@ test('winner exit requires MFE at least 40%, peak drawdown at least 15%, and Sco
 test('eligible opportunity count determines exposure with a 100% cap',()=>{
  for(const [eligible,targetCount,target] of [[10,10,1],[12,10,1],[8,10,.8],[6,10,.6],[3,10,.3],[0,10,0]]) near(engine.eligibleExposureTarget(eligible,targetCount),target);
 });
+test('score threshold diagnostics report distribution without changing trades',()=>{
+ const summary=engine.summarizeEligibleCounts(70,[22,19,14,9,20]);
+ assert.deepEqual(summary,{threshold:70,minimum:9,median:19,maximum:22,daysBelow20:3,daysBelow15:2,daysBelow10:1,tradingDays:5,counts:[22,19,14,9,20]});
+ const d=fixture(),r=engine.run(d,{...opts});assert.deepEqual(r.eligibleThresholdStats.map(x=>x.threshold),[60,65,70,75,80]);assert.ok(r.eligibleThresholdStats.every(x=>x.counts.length===r.curve.length));
+});
 test('eligible opportunity control leaves missing slots in cash without forced sales',()=>{
  const d=fixture(),controlled=engine.run(d,{...opts,topN:3,exposureControl:true}),baseline=engine.run(d,{...opts,topN:3,exposureControl:false});
  near(controlled.exposure[0].TargetExposure,2/3);near(controlled.exposure[0].ActualExposure,2/3);near(controlled.exposure[0].CashRatio,1/3);
