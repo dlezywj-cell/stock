@@ -41,6 +41,15 @@ const ScoreBacktest = (() => {
     function summarizeEligibleCounts(threshold,counts) {
         return {threshold,minimum:Math.min(...counts),median:median(counts),maximum:Math.max(...counts),daysBelow20:counts.filter(n=>n<20).length,daysBelow15:counts.filter(n=>n<15).length,daysBelow10:counts.filter(n=>n<10).length,tradingDays:counts.length,counts};
     }
+    function scarcityForwardReturns(curve,exposure) {
+        const rows=[];
+        for(const cutoff of [20,15,10]) for(const horizon of [5,10,20]) {
+            const signalDays=exposure.filter(row=>row.EligibleCount<cutoff).length, returns=[];
+            exposure.forEach((row,index)=>{if(row.EligibleCount<cutoff && index+horizon<curve.length) returns.push(curve[index+horizon].equity/curve[index].equity-1);});
+            rows.push({cutoff,horizon,signalDays,observations:returns.length,averageReturn:returns.length?returns.reduce((sum,value)=>sum+value,0)/returns.length:null});
+        }
+        return rows;
+    }
     function run(data, options, progress = () => {}) {
         options={market:'ALL',exposureControl:false,...options,strategy:'retain-unless-down-below-50-or-stalled-10d'};
         validate(data, options);
@@ -162,7 +171,7 @@ const ScoreBacktest = (() => {
             const cutoff=epoch(date);
             while(snapshotIndex+1<snapshots.length && Date.parse(snapshots[snapshotIndex+1].at)<cutoff) snapshotIndex++;
             const dailyRanking=snapshotIndex>=0 ? rankSnapshot(snapshots[snapshotIndex],date) : {ranked:[],exclusions:{}};
-            const eligibleCount=dailyRanking.ranked.length, targetPositionCount=options.topN;
+            const eligible=dailyRanking.ranked.filter(stock=>stock.score>=60), eligibleCount=eligible.length, targetPositionCount=20;
             for(const threshold of eligibilityThresholds) eligibleCountsByThreshold.get(threshold).push(dailyRanking.ranked.filter(stock=>stock.score>=threshold).length);
             const targetExposure=options.exposureControl ? eligibleExposureTarget(eligibleCount,targetPositionCount) : 1;
             const nextBucket=bucket(date,options.frequency);
@@ -182,7 +191,8 @@ const ScoreBacktest = (() => {
                 // Existing holdings have priority, regardless of rank. Do not rebuy an
                 // exit candidate on the same rebalance, including an unfilled prior exit.
                 const heldCodes=new Set(positions.keys());
-                const additions=ranked.filter(s=>!heldCodes.has(s.code)).slice(0,Math.max(0,options.topN-retained.length)).map(s=>({...s,decision:'新增',reason:'Score排名补位'}));
+                const buyCandidates=options.exposureControl ? eligible : ranked;
+                const additions=buyCandidates.filter(s=>!heldCodes.has(s.code)).slice(0,Math.max(0,options.topN-retained.length)).map(s=>({...s,decision:'新增',reason:options.exposureControl?'Score≥60且排名补位':'Score排名补位'}));
                 const selected=[...retained,...additions], equity=nav(date,false);
                 selected.sort((a,b)=>(b.score ?? -Infinity)-(a.score ?? -Infinity) || a.code.localeCompare(b.code));
                 // Capture pre-trade performance now, never using future fills or prices.
@@ -277,8 +287,9 @@ const ScoreBacktest = (() => {
         const finalHoldings=[...positions].map(([code,quantity])=>({code,name:assets.get(code).name,quantity,value:quantity*lastPrice(assets.get(code),days.at(-1),true).close*rate(assets.get(code).currency,days.at(-1),true)}));
         const openPositions=finalHoldings.map(h=>performance(holdingCycles.get(h.code),h.value));
         const eligibleThresholdStats=eligibilityThresholds.map(threshold=>summarizeEligibleCounts(threshold,eligibleCountsByThreshold.get(threshold)));
-        return {tradeRecordVersion:1,excursionBasis:"CNY remaining weighted buy cost including buy fees; close and execution marks; MAE<=0, MFE>=0; no intraday high/low or sell fees",options,curve,exposure,eligibleThresholdStats,trades,rebalances,riskExits,finalHoldings,openPositions,closedPositions,warnings:[...warnings],diagnostics:{unavailableValuations,staleHeldDays},metrics:{initial:options.capital,final,totalReturn:final/options.capital-1,cagr,maxDrawdown,volatility:Math.sqrt(variance*252),sharpe:variance>0 ? mean/Math.sqrt(variance)*Math.sqrt(252) : null,calmar,averageExposure,minimumExposure,fees,turnover:turnover/(curve.reduce((s,p)=>s+p.equity,0)/curve.length),tradeCount:trades.length,rebalanceCount:rebalances.length},source:data.source,generatedAt:new Date().toISOString()};
+        const scarcityForwardStats=scarcityForwardReturns(curve,exposure);
+        return {tradeRecordVersion:1,excursionBasis:"CNY remaining weighted buy cost including buy fees; close and execution marks; MAE<=0, MFE>=0; no intraday high/low or sell fees",options,curve,exposure,eligibleThresholdStats,scarcityForwardStats,trades,rebalances,riskExits,finalHoldings,openPositions,closedPositions,warnings:[...warnings],diagnostics:{unavailableValuations,staleHeldDays},metrics:{initial:options.capital,final,totalReturn:final/options.capital-1,cagr,maxDrawdown,volatility:Math.sqrt(variance*252),sharpe:variance>0 ? mean/Math.sqrt(variance)*Math.sqrt(252) : null,calmar,averageExposure,minimumExposure,fees,turnover:turnover/(curve.reduce((s,p)=>s+p.equity,0)/curve.length),tradeCount:trades.length,rebalanceCount:rebalances.length},source:data.source,generatedAt:new Date().toISOString()};
     }
-    return {run,prior,bucket,eligibleExposureTarget,summarizeEligibleCounts,shouldExit,shouldReplace,shouldExitWinner};
+    return {run,prior,bucket,eligibleExposureTarget,summarizeEligibleCounts,scarcityForwardReturns,shouldExit,shouldReplace,shouldExitWinner};
 })();
 if(typeof module!=='undefined' && module.exports) module.exports=ScoreBacktest;

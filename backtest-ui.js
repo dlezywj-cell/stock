@@ -21,7 +21,7 @@
     function execute(data,opts,stress,signal) {
         return new Promise((resolve,reject)=>{
             if(signal.aborted) return reject(new DOMException('已取消','AbortError'));
-            worker=new Worker('backtest-worker.js?v=15');
+            worker=new Worker('backtest-worker.js?v=16');
             const cancel=()=>{worker?.terminate();worker=null;reject(new DOMException('已取消','AbortError'));};
             signal.addEventListener('abort',cancel,{once:true});
             const finish=()=>{signal.removeEventListener('abort',cancel);worker?.terminate();worker=null;};
@@ -77,8 +77,9 @@
         $('metrics').replaceChildren(...metrics.map(([label,value])=>{const el=document.createElement('div');el.className='metric';const title=document.createElement('span'),number=document.createElement('strong');title.textContent=label;number.textContent=value;el.append(title,number);return el;}));
         const compareFields=[['累计收益率','totalReturn',pct],['最大回撤','maxDrawdown',pct],['年化收益率','cagr',pct],['Sharpe','sharpe',v=>Number.isFinite(v)?v.toFixed(2):'—'],['Calmar','calmar',v=>Number.isFinite(v)?v.toFixed(2):'—'],['平均仓位','averageExposure',pct],['最低仓位','minimumExposure',pct]];
         $('comparison-rows').replaceChildren(...compareFields.map(([label,key,fmt])=>{const tr=document.createElement('tr');[label,fmt(baseline.metrics[key]),fmt(m[key]),Number.isFinite(m[key])&&Number.isFinite(baseline.metrics[key])?fmt(m[key]-baseline.metrics[key]):'—'].forEach(v=>{const td=document.createElement('td');td.textContent=v;tr.append(td);});return tr;}));
-        $('exposure-rows').replaceChildren(...result.exposure.map(row=>{const tr=document.createElement('tr');[row.Date,row.EligibleCount,row.TargetPositionCount,pct(row.TargetExposure),pct(row.ActualExposure),pct(row.CashRatio)].forEach(v=>{const td=document.createElement('td');td.textContent=v;tr.append(td);});return tr;}));
+        $('exposure-rows').replaceChildren(...result.exposure.map(row=>{const tr=document.createElement('tr');[row.Date,row.EligibleCount,pct(row.TargetExposure),pct(row.ActualExposure),pct(row.CashRatio)].forEach(v=>{const td=document.createElement('td');td.textContent=v;tr.append(td);});return tr;}));
         $('threshold-rows').replaceChildren(...result.eligibleThresholdStats.map(row=>{const tr=document.createElement('tr');[row.threshold,row.minimum,row.median,row.maximum,row.daysBelow20,row.daysBelow15,row.daysBelow10,row.tradingDays].forEach(v=>{const td=document.createElement('td');td.textContent=v;tr.append(td);});return tr;}));
+        $('scarcity-rows').replaceChildren(...baseline.scarcityForwardStats.map(row=>{const tr=document.createElement('tr');[`<${row.cutoff}`,`${row.horizon}日`,pct(row.averageReturn),row.observations,row.signalDays].forEach(v=>{const td=document.createElement('td');td.textContent=v;tr.append(td);});return tr;}));
         renderCharts();
         $('stress-legend').hidden=!stressed;
         $('stress-result').textContent=stressed ? `成本翻倍：累计收益 ${pct(stressed.metrics.totalReturn)}，最大回撤 ${pct(stressed.metrics.maxDrawdown)}。` : '';
@@ -160,7 +161,7 @@
     function download(name,content,type) {const url=URL.createObjectURL(new Blob([content],{type})),a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
     const csv=rows=>'\uFEFF'+rows.map(row=>row.map(value=>{let s=value==null?'':String(value);if(typeof value==='string' && /^[=+\-@\t\r]/.test(s)) s="'"+s;return '"'+s.replace(/"/g,'""')+'"';}).join(',')).join('\r\n');
     $('export-nav').onclick=()=>{if(result) download('Score净值.csv',csv([['日期','资产人民币','现金人民币','回撤','持仓数'],...result.curve.map(p=>[p.date,p.equity,p.cash,p.drawdown,p.holdings])]),'text/csv;charset=utf-8');};
-    $('export-exposure').onclick=()=>{if(result) download('Score仓位.csv',csv([['Date','EligibleCount','TargetPositionCount','TargetExposure','ActualExposure','CashRatio'],...result.exposure.map(row=>['Date','EligibleCount','TargetPositionCount','TargetExposure','ActualExposure','CashRatio'].map(key=>row[key]))]),'text/csv;charset=utf-8');};
+    $('export-exposure').onclick=()=>{if(result) download('Score仓位.csv',csv([['Date','EligibleCount','TargetExposure','ActualExposure','CashRatio'],...result.exposure.map(row=>['Date','EligibleCount','TargetExposure','ActualExposure','CashRatio'].map(key=>row[key]))]),'text/csv;charset=utf-8');};
     const tradeFields=['EntryScore','EntryRank','ExitScore','ExitRank','ExitReason','MAE','MFE','DrawdownFromPeak'];
     $('export-result').onclick=()=>{if(result) download('Score回测结果.json',JSON.stringify({...result,baseline}),'application/json');};
     $('export-trades').onclick=()=>{if(result) download('Score成交.csv',csv([['日期','代码','名称','方向','模拟份额','复权成交价','折人民币汇率','成交额人民币','成本人民币','Score','SignalRank','CycleID','DecisionDate','EntrySignalDate',...tradeFields],...result.trades.map(t=>[t.date,t.code,t.name,t.side==='buy'?'买入':'卖出',t.quantity,t.price,t.fx,t.notional,t.fee,t.score,t.rank,t.cycleId,t.decisionDate,t.EntrySignalDate,...tradeFields.map(k=>t[k])])]),'text/csv;charset=utf-8');};

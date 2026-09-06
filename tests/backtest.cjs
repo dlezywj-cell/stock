@@ -136,8 +136,13 @@ test('score threshold diagnostics report distribution without changing trades',(
 });
 test('eligible opportunity control leaves missing slots in cash without forced sales',()=>{
  const d=fixture(),controlled=engine.run(d,{...opts,topN:3,exposureControl:true}),baseline=engine.run(d,{...opts,topN:3,exposureControl:false});
- near(controlled.exposure[0].TargetExposure,2/3);near(controlled.exposure[0].ActualExposure,2/3);near(controlled.exposure[0].CashRatio,1/3);
- near(controlled.curve[0].cash,baseline.curve[0].cash);assert.equal(controlled.trades.filter(t=>t.side==='sell').length,0);
+ near(controlled.exposure[0].TargetExposure,.05);near(controlled.exposure[0].ActualExposure,.05);near(controlled.exposure[0].CashRatio,.95);
+ assert.ok(controlled.curve[0].cash>baseline.curve[0].cash);assert.equal(controlled.trades.filter(t=>t.side==='sell').length,0);
+});
+test('scarcity diagnostics use forward portfolio returns and exclude incomplete horizons',()=>{
+ const curve=[100,110,120,130,140,150,160].map((equity,i)=>({equity,date:String(i)})), exposure=[9,21,21,21,21,21,5].map(EligibleCount=>({EligibleCount}));
+ const row=engine.scarcityForwardReturns(curve,exposure).find(x=>x.cutoff===10&&x.horizon===5);
+ assert.deepEqual(row,{cutoff:10,horizon:5,signalDays:2,observations:1,averageReturn:.5});
 });
 test('winner exit is checked daily and uses only the prior close and saved score',()=>{
  const d=fixture(),a=d.snapshots[0].stocks[0];d.snapshots[0].stocks=[a];
