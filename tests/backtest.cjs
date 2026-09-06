@@ -126,6 +126,15 @@ test('winner exit requires MFE at least 40%, peak drawdown at least 15%, and Sco
  const cases=[[.4,-.15,59.9,true],[.399,-.15,59.9,false],[.4,-.149,59.9,false],[.4,-.15,60,false],[.4,null,59.9,false]];
  for(const [MFE,drawdown,score,expected] of cases) assert.equal(engine.shouldExitWinner({score},{MFE},drawdown),expected);
 });
+test('trend exposure tiers, five-day shifts, and recovery cap use exact boundaries',()=>{
+ for(const [score,change,target] of [[.2,0,1],[0,0,.9],[-.2,0,.7],[-.4,0,.5],[-.401,0,.3],[0,-.2,.7],[0,.2,1],[-.4,-.2,.3],[.2,.2,1]]) near(engine.exposureTarget(score,change),target);
+ near(engine.exposureBuyCeiling(.3,1,true),.5);near(engine.exposureBuyCeiling(.85,1,true),1);near(engine.exposureBuyCeiling(.8,.5,true),.5);near(engine.exposureBuyCeiling(0,.7,false),.7);
+});
+test('exposure control caps initial buys without forcing portfolio sales',()=>{
+ const d=fixture(),controlled=engine.run(d,{...opts,topN:2,exposureControl:true}),baseline=engine.run(d,{...opts,topN:2,exposureControl:false});
+ near(controlled.exposure[0].TargetExposure,.9);near(controlled.exposure[0].ActualExposure,.9);near(controlled.curve[0].cash,1000);near(baseline.curve[0].cash,0);
+ assert.equal(controlled.trades.filter(t=>t.side==='sell').length,0);assert.ok(controlled.exposure.every((row,i)=>i===0 || row.ActualExposure<=row.TargetExposure+1e-9));
+});
 test('winner exit is checked daily and uses only the prior close and saved score',()=>{
  const d=fixture(),a=d.snapshots[0].stocks[0];d.snapshots[0].stocks=[a];
  d.snapshots.push({at:'2026-01-23T10:00:00Z',sha:'winner-fades',stocks:[{...a,highPE:80,highPS:80}]});

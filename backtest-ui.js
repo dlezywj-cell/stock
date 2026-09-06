@@ -1,6 +1,6 @@
 (() => {
     const $=id=>document.getElementById(id);
-    let dataset=null, result=null, stressed=null, controller=null, worker=null, busy=false;
+    let dataset=null, result=null, baseline=null, stressed=null, controller=null, worker=null, busy=false;
     const dateString=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     const yesterday=new Date();yesterday.setDate(yesterday.getDate()-1);
     $('end').value=dateString(yesterday);$('end').max=dateString(yesterday);$('start').max=dateString(yesterday);
@@ -21,7 +21,7 @@
     function execute(data,opts,stress,signal) {
         return new Promise((resolve,reject)=>{
             if(signal.aborted) return reject(new DOMException('已取消','AbortError'));
-            worker=new Worker('backtest-worker.js?v=12');
+            worker=new Worker('backtest-worker.js?v=13');
             const cancel=()=>{worker?.terminate();worker=null;reject(new DOMException('已取消','AbortError'));};
             signal.addEventListener('abort',cancel,{once:true});
             const finish=()=>{signal.removeEventListener('abort',cancel);worker?.terminate();worker=null;};
@@ -48,7 +48,7 @@
             }
             progress('计算组合净值',.85);
             const output=await execute(dataset,opts,testStress,controller.signal);
-            result=output.result;stressed=output.stressed;
+            result=output.result;baseline=output.baseline;stressed=output.stressed;
             render();progress('回测完成',1);
         } catch(e) {
             controller.abort();
@@ -73,8 +73,11 @@
         $('results').hidden=false;
         const o=result.options, m=result.metrics;
         $('result-caption').textContent=`${o.start} → ${o.end} · 目标${o.topN}只 · 条件退出、等权调仓 · ${({daily:'每日',weekly:'每周',monthly:'每月'})[o.frequency]}调仓 · 单边${o.costBps}基点`;
-        const metrics=[['期末资产',money(m.final)],['累计收益',pct(m.totalReturn)],['年化收益',pct(m.cagr)],['最大回撤',pct(m.maxDrawdown)],['年化波动',pct(m.volatility)],['夏普（无风险利率0）',m.sharpe===null?'—':m.sharpe.toFixed(2)],['综合成本',money(m.fees)],['调仓 / 成交',`${m.rebalanceCount} / ${m.tradeCount}`]];
+        const metrics=[['期末资产',money(m.final)],['累计收益',pct(m.totalReturn)],['年化收益',pct(m.cagr)],['最大回撤',pct(m.maxDrawdown)],['夏普（无风险利率0）',m.sharpe===null?'—':m.sharpe.toFixed(2)],['Calmar',m.calmar===null?'—':m.calmar.toFixed(2)],['平均 / 最低仓位',`${pct(m.averageExposure)} / ${pct(m.minimumExposure)}`],['调仓 / 成交',`${m.rebalanceCount} / ${m.tradeCount}`]];
         $('metrics').replaceChildren(...metrics.map(([label,value])=>{const el=document.createElement('div');el.className='metric';const title=document.createElement('span'),number=document.createElement('strong');title.textContent=label;number.textContent=value;el.append(title,number);return el;}));
+        const compareFields=[['累计收益率','totalReturn',pct],['最大回撤','maxDrawdown',pct],['年化收益率','cagr',pct],['Sharpe','sharpe',v=>Number.isFinite(v)?v.toFixed(2):'—'],['Calmar','calmar',v=>Number.isFinite(v)?v.toFixed(2):'—'],['平均仓位','averageExposure',pct],['最低仓位','minimumExposure',pct]];
+        $('comparison-rows').replaceChildren(...compareFields.map(([label,key,fmt])=>{const tr=document.createElement('tr');[label,fmt(baseline.metrics[key]),fmt(m[key]),Number.isFinite(m[key])&&Number.isFinite(baseline.metrics[key])?fmt(m[key]-baseline.metrics[key]):'—'].forEach(v=>{const td=document.createElement('td');td.textContent=v;tr.append(td);});return tr;}));
+        $('exposure-rows').replaceChildren(...result.exposure.map(row=>{const tr=document.createElement('tr');[row.Date,pct(row.UpRatio),pct(row.DownRatio),Number.isFinite(row.TrendScore)?row.TrendScore.toFixed(3):'—',Number.isFinite(row.TrendChange5)?row.TrendChange5.toFixed(3):'—',pct(row.TargetExposure),pct(row.ActualExposure)].forEach(v=>{const td=document.createElement('td');td.textContent=v;tr.append(td);});return tr;}));
         renderCharts();
         $('stress-legend').hidden=!stressed;
         $('stress-result').textContent=stressed ? `成本翻倍：累计收益 ${pct(stressed.metrics.totalReturn)}，最大回撤 ${pct(stressed.metrics.maxDrawdown)}。` : '';
@@ -145,7 +148,8 @@
     function renderCharts() {
         if(!result) return;
         const dates=[result.options.start,...result.curve.map(p=>p.date)];
-        const series=[{label:'基准成本',values:[1,...result.curve.map(p=>p.equity/result.options.capital)],color:'#2563b0'}];
+        const series=[{label:'仓位控制',values:[1,...result.curve.map(p=>p.equity/result.options.capital)],color:'#2563b0'}];
+        if(baseline) series.push({label:'原策略',values:[1,...baseline.curve.map(p=>p.equity/result.options.capital)],color:'#64748b'});
         if(stressed) series.push({label:'成本翻倍',values:[1,...stressed.curve.map(p=>p.equity/result.options.capital)],color:'#ba8b36'});
         const values=series.flatMap(s=>s.values), digits=Math.max(...values)-Math.min(...values)<.02?4:2;
         plot('chart',series,dates,v=>v.toFixed(digits),280);
@@ -155,8 +159,9 @@
     function download(name,content,type) {const url=URL.createObjectURL(new Blob([content],{type})),a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
     const csv=rows=>'\uFEFF'+rows.map(row=>row.map(value=>{let s=value==null?'':String(value);if(typeof value==='string' && /^[=+\-@\t\r]/.test(s)) s="'"+s;return '"'+s.replace(/"/g,'""')+'"';}).join(',')).join('\r\n');
     $('export-nav').onclick=()=>{if(result) download('Score净值.csv',csv([['日期','资产人民币','现金人民币','回撤','持仓数'],...result.curve.map(p=>[p.date,p.equity,p.cash,p.drawdown,p.holdings])]),'text/csv;charset=utf-8');};
+    $('export-exposure').onclick=()=>{if(result) download('Score仓位.csv',csv([['Date','UpRatio','DownRatio','TrendScore','TrendChange5','TargetExposure','ActualExposure'],...result.exposure.map(row=>['Date','UpRatio','DownRatio','TrendScore','TrendChange5','TargetExposure','ActualExposure'].map(key=>row[key]) )]),'text/csv;charset=utf-8');};
     const tradeFields=['EntryScore','EntryRank','ExitScore','ExitRank','ExitReason','MAE','MFE','DrawdownFromPeak'];
-    $('export-result').onclick=()=>{if(result) download('Score回测结果.json',JSON.stringify(result),'application/json');};
+    $('export-result').onclick=()=>{if(result) download('Score回测结果.json',JSON.stringify({...result,baseline}),'application/json');};
     $('export-trades').onclick=()=>{if(result) download('Score成交.csv',csv([['日期','代码','名称','方向','模拟份额','复权成交价','折人民币汇率','成交额人民币','成本人民币','Score','SignalRank','CycleID','DecisionDate','EntrySignalDate',...tradeFields],...result.trades.map(t=>[t.date,t.code,t.name,t.side==='buy'?'买入':'卖出',t.quantity,t.price,t.fx,t.notional,t.fee,t.score,t.rank,t.cycleId,t.decisionDate,t.EntrySignalDate,...tradeFields.map(k=>t[k])])]),'text/csv;charset=utf-8');};
     $('export-closed').onclick=()=>{if(result) download('Score已清仓.csv',csv([['股票','代码','首次买入','实际清仓','持有天数','累计投入人民币含费用','累计卖出人民币扣费用','净盈亏人民币','收益率','CycleID',...tradeFields],...closedRows().map(r=>[r.name,r.code,r.openedAt,r.closedAt,r.holdingDays,r.invested,r.sellAmount-r.sellFees,r.pnl,r.returnRate,r.id,...tradeFields.map(k=>r[k])])]),'text/csv;charset=utf-8');};
     $('export-data').onclick=()=>{if(dataset) {const {imported,...data}=dataset;download('Score回测数据.json',JSON.stringify(data),'application/json');}};
