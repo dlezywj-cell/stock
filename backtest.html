@@ -41,7 +41,7 @@
         <details class="card rules"><summary>评分与交易规则</summary>
             <p>Score＝估值分×预测置信系数×60%＋趋势分×40%。估值分内，上行空间占60%、赔率占40%；上行100%、赔率4倍满分。PE/PS等权，单一方法打八折；置信系数按2/4/6个月分为1/0.7/0.5/0。</p>
             <p>首次按 Score 选入前N只。常规调仓日清仓同时满足「MA5＜MA10＜MA20」且「Score＜50」的持仓；持有满10个交易日且RunningMFE＜5%后，ScoreDecay≥30或RankDrop≥20任一成立时，也允许清仓替换。赢家回撤规则每日检查：RunningMFE≥40%、从入场后最高价回撤≥15%且CurrentScore＜60三项同时满足后，在下一可交易日开盘清仓，不等待下一次常规调仓。其他持仓继续保留，缺少有效评分或趋势数据时也保留。</p>
-            <p>合格机会＝满足原买入条件且Score≥60；组合目标仓位＝min（100%，合格机会数÷20）。不降低门槛；合格股票不足时保留现金，出现新机会后按原有排名和选股规则补仓。仓位层不新增卖出、趋势广度或大盘择时条件。页面同时运行原策略用于对照。</p>
+            <p>合格机会＝满足原买入条件且Score≥60。合格数≥10时目标仓位100%，7–9只为80%，4–6只为60%，1–3只为40%，0只为20%。目标下降不强制卖出，只冻结补仓；机会回升后按原有排名和选股规则恢复买入。仓位层不新增卖出、趋势广度或大盘择时条件。</p>
             <p>每日以UTC 00:00之前保存的预测、此前收盘价及20日均线评分。首次及每个调仓周期的首个可用交易日下单，按信号收盘后的下一可交易日开盘价模拟成交。续持标的优先占位，再按 Score 从高到低补足N只；本次清仓标的不在同次调仓买回。同分按代码排序，未满目标数量的名额留现金。续持与新增组合统一等权，续持可能因恢复等权而小幅加减仓。</p>
             <p>跨市场按亚洲、美股开盘先后执行，资金不足时先按可用资金买入，未成交份额保留，待资金可用后在后续开盘补齐；无开盘价或成交量时顺延。目标份额在首次可交易开盘确定，下一次调仓替换未完成订单。采用碎股等权、人民币记账；成交汇率用此前可用收盘汇率，持仓每日按最新已知汇率估值。</p>
             <p>复权价格近似包含现金分红再投资；暂不模拟整手、涨跌停封单、交易额度、流动性冲击、精确税费或盘中汇率。期末按收盘价估值，不强制平仓。年化波动与夏普按252天、无风险利率0计算。</p>
@@ -53,7 +53,7 @@
             <section class="card chart-card"><div class="chart-header"><h3>组合净值</h3><div class="legend"><span class="controlled">● 机会仓位</span><span class="baseline">● 原策略</span><span id="stress-legend" class="stress">● 成本翻倍</span></div></div><svg id="chart" viewBox="0 0 1000 300" role="img" aria-label="组合净值曲线"></svg><p id="stress-result" class="muted"></p></section>
             <section class="card"><div class="chart-header"><h3>回撤</h3><span class="muted">相对此前净值高点</span></div><svg id="drawdown" viewBox="0 0 1000 180" role="img" aria-label="组合回撤曲线"></svg></section>
             <section class="card"><h3>机会仓位前后对比</h3><div class="table-wrap"><table><thead><tr><th>指标</th><th>原策略</th><th>机会仓位</th><th>变化</th></tr></thead><tbody id="comparison-rows"></tbody></table></div></section>
-            <section class="card"><div class="chart-header"><h3>每日机会与仓位</h3><span class="muted">Eligible＝原买入条件且Score≥60；目标持仓数固定20只</span></div><div class="table-wrap exposure-table"><table><thead><tr><th>Date</th><th>EligibleCount</th><th>TargetExposure</th><th>ActualExposure</th><th>CashRatio</th></tr></thead><tbody id="exposure-rows"></tbody></table></div></section>
+            <section class="card"><div class="chart-header"><h3>每日机会与仓位</h3><span class="muted">Eligible＝原买入条件且Score≥60；仅在机会极度稀缺时减仓</span></div><div class="table-wrap exposure-table"><table><thead><tr><th>Date</th><th>EligibleCount</th><th>TargetExposure</th><th>ActualExposure</th><th>CashRatio</th></tr></thead><tbody id="exposure-rows"></tbody></table></div></section>
             <section class="card"><div class="chart-header"><h3>Score门槛机会分布</h3><span class="muted">仅统计诊断，不改变策略或仓位</span></div><div class="table-wrap"><table><thead><tr><th>Score≥</th><th>最小值</th><th>中位数</th><th>最大值</th><th>交易日&lt;20</th><th>交易日&lt;15</th><th>交易日&lt;10</th><th>交易日总数</th></tr></thead><tbody id="threshold-rows"></tbody></table></div></section>
             <section class="card"><div class="chart-header"><h3>机会稀缺后的原策略收益</h3><span class="muted">按原策略净值计算，最后不足相应观察期的信号不计入平均值</span></div><div class="table-wrap"><table><thead><tr><th>EligibleCount</th><th>未来区间</th><th>平均收益</th><th>有效样本</th><th>信号日总数</th></tr></thead><tbody id="scarcity-rows"></tbody></table></div></section>
             <div id="warnings" class="notice"></div>
@@ -65,6 +65,6 @@
             <details class="card"><summary id="coverage-title">数据覆盖</summary><p id="coverage-summary"></p><ul id="failures"></ul><p id="sources" class="muted"></p></details>
         </section>
     </main>
-    <script src="score.js?v=2"></script><script src="backtest-engine.js?v=16"></script><script src="backtest-data.js?v=1"></script><script src="backtest-ui.js?v=16"></script>
+    <script src="score.js?v=2"></script><script src="backtest-engine.js?v=17"></script><script src="backtest-data.js?v=1"></script><script src="backtest-ui.js?v=17"></script>
 </body>
 </html>

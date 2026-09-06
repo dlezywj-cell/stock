@@ -108,7 +108,7 @@ node tests/watchlists.cjs
 另设赢家回撤退出：RunningMFE≥40%、DrawdownFromPeak≤−15%且CurrentScore＜60三项必须同时满足，不使用Rank。该规则每日检查，首次满足后在下一可交易日开盘清仓，不等待周度或月度常规调仓；卖出资金留待下次常规调仓补位。DrawdownFromPeak=当前复权价/入场后最高复权价−1；最高价与当前价只采用决策日前已完成的复权收盘和实际成交时点。
 
 合格机会数量仓位控制
-每个交易日按开盘前已知的最近股票池、此前行情及原有完整评分条件统计Score≥60的EligibleCount；TargetPositionCount固定为20，TargetExposure=min（100%，EligibleCount/20）。
+每个交易日按开盘前已知的最近股票池、此前行情及原有完整评分条件统计Score≥60的EligibleCount。EligibleCount≥10时目标仓位100%，7–9只为80%，4–6只为60%，1–3只为40%，0只为20%。
 仓位层不降低Score≥60门槛，不增加趋势、指数或大盘择时条件，也不产生额外卖单。合格股票不足时剩余资金保留现金；出现新机会后按原有排名和选股规则补仓。
 结果exposure逐日保存Date、EligibleCount、TargetExposure、ActualExposure、CashRatio。页面同时运行关闭仓位控制的原策略基线，比较累计收益、最大回撤、年化收益、Sharpe、Calmar、平均仓位和最低仓位，并可导出仓位CSV或保存含baseline的完整JSON。
 门槛诊断另行统计Score≥60/65/70/75/80时每日合格机会数的最小值、中位数、最大值，以及低于20/15/10只的交易日数量。该诊断不参与买入、卖出、仓位或收益优化。

@@ -33,7 +33,7 @@ const ScoreBacktest = (() => {
         return tradingDays>=10 && cycle?.MFE<0.05 && (scoreDecay || rankDrop);
     };
     const shouldExitWinner = (signal,cycle,drawdownFromPeak) => cycle?.MFE>=0.40 && Number.isFinite(drawdownFromPeak) && drawdownFromPeak<=-0.15 && Number.isFinite(signal?.score) && signal.score<60;
-    const eligibleExposureTarget = (eligibleCount,targetPositionCount) => Math.min(1,Math.max(0,eligibleCount)/targetPositionCount);
+    const eligibleExposureTarget = eligibleCount => eligibleCount>=10 ? 1 : eligibleCount>=7 ? .8 : eligibleCount>=4 ? .6 : eligibleCount>=1 ? .4 : .2;
     const median = values => {
         const sorted=[...values].sort((a,b)=>a-b), middle=Math.floor(sorted.length/2);
         return sorted.length%2 ? sorted[middle] : (sorted[middle-1]+sorted[middle])/2;
@@ -171,9 +171,9 @@ const ScoreBacktest = (() => {
             const cutoff=epoch(date);
             while(snapshotIndex+1<snapshots.length && Date.parse(snapshots[snapshotIndex+1].at)<cutoff) snapshotIndex++;
             const dailyRanking=snapshotIndex>=0 ? rankSnapshot(snapshots[snapshotIndex],date) : {ranked:[],exclusions:{}};
-            const eligible=dailyRanking.ranked.filter(stock=>stock.score>=60), eligibleCount=eligible.length, targetPositionCount=20;
+            const eligible=dailyRanking.ranked.filter(stock=>stock.score>=60), eligibleCount=eligible.length;
             for(const threshold of eligibilityThresholds) eligibleCountsByThreshold.get(threshold).push(dailyRanking.ranked.filter(stock=>stock.score>=threshold).length);
-            const targetExposure=options.exposureControl ? eligibleExposureTarget(eligibleCount,targetPositionCount) : 1;
+            const targetExposure=options.exposureControl ? eligibleExposureTarget(eligibleCount) : 1;
             const nextBucket=bucket(date,options.frequency);
             if(nextBucket!==currentBucket) {
                 currentBucket=nextBucket;
@@ -269,7 +269,7 @@ const ScoreBacktest = (() => {
             }
             const drawdown=equity/peak-1; maxDrawdown=Math.min(maxDrawdown,drawdown);
             const actualExposure=equity>0?Math.max(0,Math.min(1,(equity-cash)/equity)):0;
-            exposure.push({Date:date,EligibleCount:eligibleCount,TargetPositionCount:targetPositionCount,TargetExposure:targetExposure,ActualExposure:actualExposure,CashRatio:equity>0?cash/equity:0});
+            exposure.push({Date:date,EligibleCount:eligibleCount,TargetExposure:targetExposure,ActualExposure:actualExposure,CashRatio:equity>0?cash/equity:0});
             curve.push({date,equity,cash,drawdown,holdings:positions.size,actualExposure,targetExposure});
             if(dayIndex%20===0) progress(dayIndex/days.length);
         });

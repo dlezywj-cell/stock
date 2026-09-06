@@ -126,8 +126,8 @@ test('winner exit requires MFE at least 40%, peak drawdown at least 15%, and Sco
  const cases=[[.4,-.15,59.9,true],[.399,-.15,59.9,false],[.4,-.149,59.9,false],[.4,-.15,60,false],[.4,null,59.9,false]];
  for(const [MFE,drawdown,score,expected] of cases) assert.equal(engine.shouldExitWinner({score},{MFE},drawdown),expected);
 });
-test('eligible opportunity count determines exposure with a 100% cap',()=>{
- for(const [eligible,targetCount,target] of [[10,10,1],[12,10,1],[8,10,.8],[6,10,.6],[3,10,.3],[0,10,0]]) near(engine.eligibleExposureTarget(eligible,targetCount),target);
+test('only extreme eligible opportunity scarcity reduces target exposure',()=>{
+ for(const [eligible,target] of [[12,1],[10,1],[9,.8],[7,.8],[6,.6],[4,.6],[3,.4],[1,.4],[0,.2]]) near(engine.eligibleExposureTarget(eligible),target);
 });
 test('score threshold diagnostics report distribution without changing trades',()=>{
  const summary=engine.summarizeEligibleCounts(70,[22,19,14,9,20]);
@@ -136,7 +136,7 @@ test('score threshold diagnostics report distribution without changing trades',(
 });
 test('eligible opportunity control leaves missing slots in cash without forced sales',()=>{
  const d=fixture(),controlled=engine.run(d,{...opts,topN:3,exposureControl:true}),baseline=engine.run(d,{...opts,topN:3,exposureControl:false});
- near(controlled.exposure[0].TargetExposure,.05);near(controlled.exposure[0].ActualExposure,.05);near(controlled.exposure[0].CashRatio,.95);
+ near(controlled.exposure[0].TargetExposure,.4);near(controlled.exposure[0].ActualExposure,1/3);near(controlled.exposure[0].CashRatio,2/3);
  assert.ok(controlled.curve[0].cash>baseline.curve[0].cash);assert.equal(controlled.trades.filter(t=>t.side==='sell').length,0);
 });
 test('scarcity diagnostics use forward portfolio returns and exclude incomplete horizons',()=>{
