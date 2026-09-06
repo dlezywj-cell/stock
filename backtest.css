@@ -6,3 +6,4 @@
 .record-tabs{display:flex;gap:8px;border-bottom:1px solid #e4e9ef;margin-bottom:20px;padding-bottom:12px}.record-tabs button[aria-pressed="true"]{background:#2563b0;border-color:#2563b0;color:white}#closed-rows td:first-child,#closed-rows th:first-child{text-align:left}
 .chart-hit{fill:transparent;pointer-events:all;cursor:crosshair}.chart-hover{pointer-events:none}.chart-crosshair{stroke:#8190a3;stroke-width:1;stroke-dasharray:5 4}.chart-tooltip-bg{fill:#263548;fill-opacity:.94}.chart-tooltip-date,.chart-tooltip-value{fill:white;font-size:12px}.chart-tooltip-date{font-weight:650}
 .exposure-table{max-height:420px}.exposure-table thead{position:sticky;top:0;z-index:1}
+.legend .exposure{color:#78b8cd}.chart-exposure-area{fill:#9fd3e3;fill-opacity:.28;stroke:none}

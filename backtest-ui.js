@@ -75,11 +75,6 @@
         $('result-caption').textContent=`${o.start} → ${o.end} · 目标${o.topN}只 · 条件退出、等权调仓 · ${({daily:'每日',weekly:'每周',monthly:'每月'})[o.frequency]}调仓 · 单边${o.costBps}基点`;
         const metrics=[['期末资产',money(m.final)],['累计收益',pct(m.totalReturn)],['年化收益',pct(m.cagr)],['最大回撤',pct(m.maxDrawdown)],['夏普（无风险利率0）',m.sharpe===null?'—':m.sharpe.toFixed(2)],['Calmar',m.calmar===null?'—':m.calmar.toFixed(2)],['平均 / 最低仓位',`${pct(m.averageExposure)} / ${pct(m.minimumExposure)}`],['调仓 / 成交',`${m.rebalanceCount} / ${m.tradeCount}`]];
         $('metrics').replaceChildren(...metrics.map(([label,value])=>{const el=document.createElement('div');el.className='metric';const title=document.createElement('span'),number=document.createElement('strong');title.textContent=label;number.textContent=value;el.append(title,number);return el;}));
-        const compareFields=[['累计收益率','totalReturn',pct],['最大回撤','maxDrawdown',pct],['年化收益率','cagr',pct],['Sharpe','sharpe',v=>Number.isFinite(v)?v.toFixed(2):'—'],['Calmar','calmar',v=>Number.isFinite(v)?v.toFixed(2):'—'],['平均仓位','averageExposure',pct],['最低仓位','minimumExposure',pct]];
-        $('comparison-rows').replaceChildren(...compareFields.map(([label,key,fmt])=>{const tr=document.createElement('tr');[label,fmt(baseline.metrics[key]),fmt(m[key]),Number.isFinite(m[key])&&Number.isFinite(baseline.metrics[key])?fmt(m[key]-baseline.metrics[key]):'—'].forEach(v=>{const td=document.createElement('td');td.textContent=v;tr.append(td);});return tr;}));
-        $('exposure-rows').replaceChildren(...result.exposure.map(row=>{const tr=document.createElement('tr');[row.Date,row.EligibleCount,pct(row.TargetExposure),pct(row.ActualExposure),pct(row.CashRatio)].forEach(v=>{const td=document.createElement('td');td.textContent=v;tr.append(td);});return tr;}));
-        $('threshold-rows').replaceChildren(...result.eligibleThresholdStats.map(row=>{const tr=document.createElement('tr');[row.threshold,row.minimum,row.median,row.maximum,row.daysBelow20,row.daysBelow15,row.daysBelow10,row.tradingDays].forEach(v=>{const td=document.createElement('td');td.textContent=v;tr.append(td);});return tr;}));
-        $('scarcity-rows').replaceChildren(...baseline.scarcityForwardStats.map(row=>{const tr=document.createElement('tr');[`<${row.cutoff}`,`${row.horizon}日`,pct(row.averageReturn),row.observations,row.signalDays].forEach(v=>{const td=document.createElement('td');td.textContent=v;tr.append(td);});return tr;}));
         renderCharts();
         $('stress-legend').hidden=!stressed;
         $('stress-result').textContent=stressed ? `成本翻倍：累计收益 ${pct(stressed.metrics.totalReturn)}，最大回撤 ${pct(stressed.metrics.maxDrawdown)}。` : '';
@@ -118,14 +113,20 @@
     $('rebalance-date').onchange=renderRebalance;
     const ns='http://www.w3.org/2000/svg';
     function svgNode(tag,attrs,text) {const node=document.createElementNS(ns,tag);for(const [k,v] of Object.entries(attrs)) node.setAttribute(k,String(v));if(text!==undefined) node.textContent=text;return node;}
-    function plot(id,series,dates,format,height) {
-        const svg=$(id), width=Math.max(320,svg.clientWidth || 1000), left=58,right=20,top=18,bottom=30;
+    function plot(id,series,dates,format,height,area=null) {
+        const svg=$(id), width=Math.max(320,svg.clientWidth || 1000), left=58,right=area?54:20,top=18,bottom=30;
         svg.setAttribute('viewBox',`0 0 ${width} ${height}`);svg.replaceChildren();
         let low=Math.min(...series.flatMap(s=>s.values)), high=Math.max(...series.flatMap(s=>s.values));
         if(high-low<1e-8) {low-=.01;high+=.01;}
         const padding=(high-low)*.08;low-=padding;high+=padding;
         const x=i=>left+i*(width-left-right)/Math.max(1,dates.length-1), y=v=>top+(high-v)*(height-top-bottom)/(high-low);
         for(let i=0;i<=4;i++) {const v=low+(high-low)*i/4,yy=y(v);svg.append(svgNode('line',{x1:left,y1:yy,x2:width-right,y2:yy,class:'chart-grid'}),svgNode('text',{x:left-8,y:yy+4,'text-anchor':'end',class:'chart-axis'},format(v)));}
+        if(area) {
+            const areaY=value=>top+(1-Math.max(0,Math.min(1,value)))*(height-top-bottom);
+            const d=`M${x(0).toFixed(2)},${height-bottom} `+area.values.map((v,i)=>`L${x(i).toFixed(2)},${areaY(v).toFixed(2)}`).join(' ')+` L${x(dates.length-1).toFixed(2)},${height-bottom} Z`;
+            svg.append(svgNode('path',{d,class:'chart-exposure-area'}));
+            for(const value of [1,.5,0]) svg.append(svgNode('text',{x:width-right+8,y:areaY(value)+4,class:'chart-axis'},pct(value)));
+        }
         series.forEach(s=>svg.append(svgNode('path',{d:s.values.map((v,i)=>`${i?'L':'M'}${x(i).toFixed(2)},${y(v).toFixed(2)}`).join(' '),fill:'none',stroke:s.color,'stroke-width':2,'stroke-linejoin':'round'})));
         svg.append(svgNode('text',{x:left,y:height-5,class:'chart-axis'},dates[0]),svgNode('text',{x:width-right,y:height-5,'text-anchor':'end',class:'chart-axis'},dates.at(-1)));
         const hit=svgNode('rect',{x:left,y:top,width:width-left-right,height:height-top-bottom,class:'chart-hit'});
@@ -140,7 +141,7 @@
             const xx=x(index), value=series[0].values[index], yy=y(value);
             vertical.setAttribute('x1',xx);vertical.setAttribute('x2',xx);vertical.setAttribute('y1',top);vertical.setAttribute('y2',height-bottom);
             horizontal.setAttribute('x1',left);horizontal.setAttribute('x2',width-right);horizontal.setAttribute('y1',yy);horizontal.setAttribute('y2',yy);
-            const lines=[dates[index],...series.map(s=>`${s.label}：${format(s.values[index])}`)], boxWidth=176, boxHeight=12+lines.length*18;
+            const lines=[dates[index],...series.map(s=>`${s.label}：${format(s.values[index])}`),...(area?[`${area.label}：${pct(area.values[index])}`]:[])], boxWidth=176, boxHeight=12+lines.length*18;
             const tx=xx+12+boxWidth>width-right ? xx-boxWidth-12 : xx+12, ty=Math.max(top,Math.min(yy+12,height-bottom-boxHeight));
             tooltip.replaceChildren(svgNode('rect',{x:tx,y:ty,width:boxWidth,height:boxHeight,rx:6,class:'chart-tooltip-bg'}),...lines.map((line,i)=>svgNode('text',{x:tx+10,y:ty+18+i*18,class:i?'chart-tooltip-value':'chart-tooltip-date'},line)));
             hover.setAttribute('visibility','visible');
@@ -154,7 +155,7 @@
         if(baseline) series.push({label:'原策略',values:[1,...baseline.curve.map(p=>p.equity/result.options.capital)],color:'#64748b'});
         if(stressed) series.push({label:'成本翻倍',values:[1,...stressed.curve.map(p=>p.equity/result.options.capital)],color:'#ba8b36'});
         const values=series.flatMap(s=>s.values), digits=Math.max(...values)-Math.min(...values)<.02?4:2;
-        plot('chart',series,dates,v=>v.toFixed(digits),280);
+        plot('chart',series,dates,v=>v.toFixed(digits),280,{label:'实际仓位',values:[0,...result.curve.map(p=>p.actualExposure)]});
         plot('drawdown',[{label:'回撤',values:[0,...result.curve.map(p=>p.drawdown)],color:'#b85955'}],dates,pct,185);
     }
     let resizeFrame;window.addEventListener('resize',()=>{cancelAnimationFrame(resizeFrame);resizeFrame=requestAnimationFrame(renderCharts);});
