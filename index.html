@@ -535,7 +535,7 @@
         let historyCache = {}; 
         let fetchQueue = [];
         let activeRequests = 0;
-        const MAX_CONCURRENT = 8; 
+        const MAX_CONCURRENT = 16;
         let fetchingSet = new Set();
 
         const REPORT_DATE_STORAGE_KEY = 'stock_sys_report_dates_v2';
@@ -1040,7 +1040,10 @@
             const targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${yahooSymbol}?range=1mo&interval=1d`;
             const proxyUrl = `https://stock-proxy.dlezywj.workers.dev/?${encodeURIComponent(targetUrl)}`;
             try {
-                const res = await fetch(proxyUrl);
+                const ctrl = new AbortController();
+                const timer = setTimeout(() => ctrl.abort(), 4500);
+                const res = await fetch(proxyUrl, { signal: ctrl.signal, cache: 'no-store' });
+                clearTimeout(timer);
                 if (!res.ok) { historyCache[code] = null; fetchingSet.delete(code); return null; }
                 const json = await res.json();
                 const result = json?.chart?.result?.[0];
