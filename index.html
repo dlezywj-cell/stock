@@ -656,25 +656,29 @@
         }
 
         async function apiFetch(url, jsonpParam, context = 'API') {
-            if (jsonpParam) {
-                try {
-                    const data = await fetchJSONP(url, jsonpParam, 4000);
-                    if (data) return data;
-                } catch (e) {}
-            }
-
-            if (typeof fetch === 'function') {
-                try {
-                    const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
-                    const timerId = ctrl ? setTimeout(() => ctrl.abort(), 6000) : null;
-                    const res = await fetch(url, ctrl ? { signal: ctrl.signal } : {});
-                    if (timerId) clearTimeout(timerId);
-                    if (res.ok) {
-                        const text = await res.text();
-                        const data = safeParseJSON(text);
+            // 上游行情接口偶发 502/超时；短重试可避免一次瞬时失败把整张表清成 0。
+            for (let attempt = 0; attempt < 2; attempt++) {
+                if (jsonpParam) {
+                    try {
+                        const data = await fetchJSONP(url, jsonpParam, 5000);
                         if (data) return data;
-                    }
-                } catch (e) {}
+                    } catch (e) {}
+                }
+
+                if (typeof fetch === 'function') {
+                    try {
+                        const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
+                        const timerId = ctrl ? setTimeout(() => ctrl.abort(), 8000) : null;
+                        const res = await fetch(url, ctrl ? { signal: ctrl.signal, cache: 'no-store' } : { cache: 'no-store' });
+                        if (timerId) clearTimeout(timerId);
+                        if (res.ok) {
+                            const text = await res.text();
+                            const data = safeParseJSON(text);
+                            if (data) return data;
+                        }
+                    } catch (e) {}
+                }
+                if (attempt === 0) await new Promise(resolve => setTimeout(resolve, 500));
             }
 
             return null;
