@@ -250,7 +250,7 @@
         #watchlist-name { width:100%; box-sizing:border-box; }
         button:disabled { opacity:.45; cursor:default; transform:none; box-shadow:none; }
         @media (min-width:769px) {
-            .header-bar { display:grid; grid-template-columns:minmax(0,1fr) 65px minmax(0,1fr); align-items:start; gap:6px; padding:10px 12px; }
+            .header-bar { display:grid; grid-template-columns:max-content minmax(65px,1fr) max-content; align-items:start; gap:6px; padding:10px 12px; }
             .header-bar .tool-group { gap:4px; min-width:0; align-content:flex-start; width:100%; }
             .header-bar .cloud-tools { grid-column:1; justify-content:flex-start; }
             .header-bar .history-tools { grid-column:3; justify-content:space-between; }
@@ -264,8 +264,8 @@
             .header-bar #histDate { width:126px !important; height:30px; box-sizing:border-box; }
             .header-bar .divider { margin:0; }
             .header-bar .sync-info { gap:6px; margin-left:0; padding-left:8px; white-space:nowrap; }
-            /* 以顶栏本身为基准绝对居中，数字与图标置于条带下方。 */
-            .header-bar #progress-bar-container { position:absolute; left:50%; top:10px; width:65px; margin:0; transform:translateX(-50%); flex-direction:column; align-items:stretch; gap:2px; z-index:1; }
+            /* 只在左侧清空与右侧刷新趋势之间居中显示，数字与图标置于条带下方。 */
+            .header-bar #progress-bar-container { grid-column:2; grid-row:1; position:static; justify-self:center; width:65px; margin:0; transform:none; flex-direction:column; align-items:stretch; gap:2px; z-index:1; }
             .header-bar #progress-text { text-align:center; line-height:14px; }
         }
         @media (max-width:768px) {
