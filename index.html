@@ -993,6 +993,23 @@
             return code;
         }
 
+        // push2 的批量接口偶发 502；push2his 的单股接口仍可用，作为轻量备用线路。
+        async function fetchMarketFallback(stock) {
+            const secid = getSecid(stock.code);
+            const rawCode = secid.split('.')[1];
+            const target = `https://push2his.eastmoney.com/api/qt/stock/get?secid=${encodeURIComponent(secid)}&fields=f43,f170,f116,f58`;
+            const proxy = `https://stock-proxy.dlezywj.workers.dev/?${encodeURIComponent(target)}`;
+            const json = await apiFetch(proxy, null, 'MarketFallback');
+            const item = json?.data;
+            if (!item || !Number.isFinite(Number(item.f43)) || !Number.isFinite(Number(item.f116))) return;
+            cachedMarketData[rawCode] = {
+                f12: rawCode,
+                f2: Number(item.f43) / 100,
+                f3: Number(item.f170) / 100,
+                f20: Number(item.f116)
+            };
+        }
+
         async function runFetcher() {
             while (fetchQueue.length > 0 && activeRequests < MAX_CONCURRENT) {
                 const { secid, code, resolve } = fetchQueue.shift();
@@ -1321,6 +1338,8 @@
                 if (!json) json = await apiFetch(url, 'cb', 'MarketAPI-Fallback');
                 if (json?.data?.diff) {
                     (Array.isArray(json.data.diff)?json.data.diff:Object.values(json.data.diff)).forEach(i => cachedMarketData[i.f12] = i);
+                } else {
+                    await Promise.all(stocks.map(fetchMarketFallback));
                 }
             }
             
