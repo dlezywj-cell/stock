@@ -1012,6 +1012,41 @@
             };
         }
 
+        // 东方财富接口/Worker 不可用时使用腾讯行情。腾讯返回的第 44 个字段是
+        // 总市值（亿元），第 3/31/32 个字段分别是现价/涨跌额/涨跌幅。
+        function getTencentSymbol(stock) {
+            const secid = getSecid(stock.code), [market, code] = secid.split('.');
+            if (market === '1') return 'sh' + code;
+            if (market === '0') return 'sz' + code;
+            if (market === '116') return 'hk' + String(parseInt(code, 10)).padStart(5, '0');
+            return code; // 美股代码可直接传入
+        }
+
+        function fetchTencentQuote(stock) {
+            return new Promise(resolve => {
+                const symbol = getTencentSymbol(stock);
+                const varName = 'v_' + symbol.replace(/[^a-zA-Z0-9_]/g, '_');
+                const script = document.createElement('script');
+                const timer = setTimeout(() => { cleanup(); resolve(false); }, 6000);
+                function cleanup() { clearTimeout(timer); script.remove(); }
+                script.onload = () => {
+                    const fields = String(window[varName] || '').split('~');
+                    const price = Number(fields[3]), changePct = Number(fields[32]);
+                    const capYi = Number(fields[44]);
+                    if (Number.isFinite(price) && price > 0) {
+                        const rawCode = getSecid(stock.code).split('.')[1];
+                        cachedMarketData[rawCode] = { f12: rawCode, f2: price,
+                            f3: Number.isFinite(changePct) ? changePct : 0,
+                            f20: Number.isFinite(capYi) ? capYi * 100000000 : 0 };
+                    }
+                    cleanup(); resolve(true);
+                };
+                script.onerror = () => { cleanup(); resolve(false); };
+                script.src = 'https://qt.gtimg.cn/q=' + encodeURIComponent(symbol) + '&_=' + Date.now();
+                document.head.appendChild(script);
+            });
+        }
+
         async function runFetcher() {
             while (fetchQueue.length > 0 && activeRequests < MAX_CONCURRENT) {
                 const { secid, code, resolve } = fetchQueue.shift();
@@ -1347,7 +1382,12 @@
                 if (json?.data?.diff) {
                     (Array.isArray(json.data.diff)?json.data.diff:Object.values(json.data.diff)).forEach(i => cachedMarketData[i.f12] = i);
                 } else {
-                    await Promise.all(stocks.map(fetchMarketFallback));
+                    // 先尝试单股东方财富，再用腾讯行情，避免接口故障时整表无数据。
+                    await Promise.all(stocks.map(async stock => {
+                        await fetchMarketFallback(stock);
+                        const rawCode = getSecid(stock.code).split('.')[1];
+                        if (!cachedMarketData[rawCode]?.f2) await fetchTencentQuote(stock);
+                    }));
                 }
             }
             
