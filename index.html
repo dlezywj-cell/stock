@@ -250,13 +250,14 @@
         #watchlist-name { width:100%; box-sizing:border-box; }
         button:disabled { opacity:.45; cursor:default; transform:none; box-shadow:none; }
         @media (min-width:769px) {
-            .header-bar { display:grid; grid-template-columns:minmax(0,1fr) 145px minmax(0,1fr); align-items:start; gap:8px; padding:10px 12px; }
+            .header-bar { display:grid; grid-template-columns:minmax(0,1fr) 95px max-content; align-items:start; gap:8px; padding:10px 12px; }
             .header-bar .tool-group { gap:6px; min-width:0; align-content:flex-start; }
             .header-bar .cloud-tools { grid-column:1; }
             .header-bar .history-tools { grid-column:3; justify-content:flex-end; }
             .history-tools { margin-left:0; }
             .cloud-tools, .watchlist-bar { flex-wrap:nowrap; }
-            .header-bar .cloud-tools, .header-bar .history-tools { flex-wrap:wrap; }
+            .header-bar .cloud-tools { flex-wrap:wrap; }
+            .header-bar .history-tools { flex-wrap:nowrap; }
             .header-bar button { height:30px; padding:6px 9px; box-sizing:border-box; }
             .watchlist-bar select { width:116px; height:30px; padding:4px 6px; box-sizing:border-box; }
             .header-bar #histDate { width:126px !important; height:30px; box-sizing:border-box; }
