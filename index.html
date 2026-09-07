@@ -259,8 +259,8 @@
             .header-bar #histDate { width:126px !important; height:30px; box-sizing:border-box; }
             .header-bar .divider { margin:0; }
             .header-bar .sync-info { gap:6px; margin-left:0; padding-left:8px; white-space:nowrap; }
-            /* 行情进度放在第一行右侧的空白区域，避免把顶部工具栏挤成第三行。 */
-            .header-bar #progress-bar-container { position:absolute; right:15px; top:10px; width:145px; margin:0; }
+            /* 行情进度放在第一行中间的空白区域，避免与右侧状态图标重叠。 */
+            .header-bar #progress-bar-container { position:absolute; left:50%; top:10px; width:145px; margin:0; transform:translateX(-50%); }
         }
         @media (max-width:768px) {
             .watchlist-bar { grid-column:1 / -1; display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); }
