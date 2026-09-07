@@ -197,6 +197,9 @@
             .history-tools #btn-reset-hist { grid-column: 1 / -1; grid-row: 3; justify-content: center; }
             .header-bar .divider, .desktop-only { display: none; }
             .header-bar .sync-info { display: none; }
+            /* 编辑面板独立成为可触摸滚动区域，手指落在面板任意位置都可上下滑动。 */
+            #input-container { max-height: calc(100vh - 76px); overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; touch-action: pan-y; }
+            #input-panel { min-height: max-content; }
             .control-bar { flex-direction: column; align-items: stretch; gap: 8px; padding: 10px; }
             .control-bar > * { width: 100%; margin: 0; }
             .spacer, .divider { display: none; }
@@ -1921,8 +1924,9 @@
 
         function editStock(c) {
             if(window.innerWidth<=768) toggleMobileMenu(true); else if(!isPanelOpen) toggleInputPanel();
-            document.getElementById('input-container').scrollIntoView({ behavior: 'smooth', block: 'start' });
-            document.getElementById('input-container').style.display='block';
+            const panel = document.getElementById('input-container');
+            panel.style.display='block';
+            panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
             const s=stocks.find(i=>i.code===c); if(!s)return;
             document.getElementById('inConfirmForecast').checked = false;
             document.getElementById('inName').value=s.name; document.getElementById('inCode').value=s.code; document.getElementById('inTags').value=s.tags||''; 
