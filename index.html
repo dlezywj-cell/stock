@@ -655,9 +655,9 @@
             });
         }
 
-        async function apiFetch(url, jsonpParam, context = 'API') {
+        async function apiFetch(url, jsonpParam, context = 'API', maxAttempts = 2) {
             // 上游行情接口偶发 502/超时；短重试可避免一次瞬时失败把整张表清成 0。
-            for (let attempt = 0; attempt < 2; attempt++) {
+            for (let attempt = 0; attempt < maxAttempts; attempt++) {
                 if (jsonpParam) {
                     try {
                         const data = await fetchJSONP(url, jsonpParam, 5000);
@@ -678,7 +678,7 @@
                         }
                     } catch (e) {}
                 }
-                if (attempt === 0) await new Promise(resolve => setTimeout(resolve, 500));
+                if (attempt === 0 && maxAttempts > 1) await new Promise(resolve => setTimeout(resolve, 300));
             }
 
             return null;
@@ -999,7 +999,9 @@
             const rawCode = secid.split('.')[1];
             const target = `https://push2his.eastmoney.com/api/qt/stock/get?secid=${encodeURIComponent(secid)}&fields=f43,f170,f116,f58`;
             const proxy = `https://stock-proxy.dlezywj.workers.dev/?${encodeURIComponent(target)}`;
-            const json = await apiFetch(proxy, null, 'MarketFallback');
+            // Worker 整体异常时，浏览器仍可通过东方财富 JSONP 直接取到单股行情。
+            let json = await apiFetch(target, 'cb', 'MarketFallback-JSONP', 1);
+            if (!json) json = await apiFetch(proxy, null, 'MarketFallback', 1);
             const item = json?.data;
             if (!item || !Number.isFinite(Number(item.f43)) || !Number.isFinite(Number(item.f116))) return;
             cachedMarketData[rawCode] = {
@@ -1334,8 +1336,8 @@
                 const secids = stocks.map(s=>getSecid(s.code)).join(',');
                 const url = `https://push2.eastmoney.com/api/qt/ulist.np/get?secids=${secids}&fields=f12,f14,f2,f3,f18,f20&invt=2&fltt=2&_=${Date.now()}`;
                 const proxyUrl = `https://stock-proxy.dlezywj.workers.dev/?${encodeURIComponent(url)}`;
-                let json = await apiFetch(proxyUrl, null, 'MarketAPI');
-                if (!json) json = await apiFetch(url, 'cb', 'MarketAPI-Fallback');
+                let json = await apiFetch(proxyUrl, null, 'MarketAPI', 1);
+                if (!json) json = await apiFetch(url, 'cb', 'MarketAPI-Fallback', 1);
                 if (json?.data?.diff) {
                     (Array.isArray(json.data.diff)?json.data.diff:Object.values(json.data.diff)).forEach(i => cachedMarketData[i.f12] = i);
                 } else {
