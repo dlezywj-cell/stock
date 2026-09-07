@@ -176,7 +176,7 @@
 
         /* === 移动端深度优化 === */
         @media (max-width: 768px) {
-            body { padding: 10px; }
+            body { padding: 10px; height: auto; min-height: 100vh; overflow-x: hidden; overflow-y: auto; }
             #mobile-nav { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px; }
             #mobile-nav h3 { grid-column: 1; grid-row: 1; }
             .mobile-status-group { grid-column: 2; grid-row: 1; justify-self: center; }
@@ -198,8 +198,12 @@
             .header-bar .divider, .desktop-only { display: none; }
             .header-bar .sync-info { display: none; }
             /* 编辑面板独立成为可触摸滚动区域，手指落在面板任意位置都可上下滑动。 */
-            #input-container { max-height: calc(100vh - 76px); overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; touch-action: pan-y; }
+            #input-container { max-height: none; overflow: visible; touch-action: auto; }
             #input-panel { min-height: max-content; }
+            #input-panel > div:last-child { display:flex !important; align-items:center; justify-content:flex-start; gap:10px; text-align:left !important; white-space:nowrap; }
+            #input-panel > div:last-child label { flex:0 0 auto; white-space:nowrap; margin:0 !important; }
+            #input-panel > div:last-child button { flex:0 0 auto; margin-left:0 !important; }
+            #input-panel > div:last-child #btn-save-text { padding-left:18px !important; padding-right:18px !important; }
             .control-bar { flex-direction: column; align-items: stretch; gap: 8px; padding: 10px; }
             .control-bar > * { width: 100%; margin: 0; }
             .spacer, .divider { display: none; }
