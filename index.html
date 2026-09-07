@@ -183,7 +183,7 @@
             .mobile-nav-actions { display: flex; grid-column: 3; grid-row: 1; justify-self: end; }
             #top-area { display: none; }
             #top-area.show { display: block; animation: slideDown 0.2s ease-out; }
-            .header-bar { flex-direction: column; gap: 10px; padding: 10px; }
+            .header-bar { display:flex; flex-direction: column; gap: 10px; padding: 10px; }
             .tool-group { width: 100%; }
             .cloud-tools { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
             .cloud-tools button { width: 100%; justify-content: center; }
@@ -250,17 +250,20 @@
         #watchlist-name { width:100%; box-sizing:border-box; }
         button:disabled { opacity:.45; cursor:default; transform:none; box-shadow:none; }
         @media (min-width:769px) {
-            .header-bar { justify-content:space-between; gap:8px; padding:10px 12px; }
-            .header-bar .tool-group { gap:6px; flex-shrink:0; }
+            .header-bar { display:grid; grid-template-columns:minmax(0,1fr) 145px minmax(0,1fr); align-items:start; gap:8px; padding:10px 12px; }
+            .header-bar .tool-group { gap:6px; min-width:0; align-content:flex-start; }
+            .header-bar .cloud-tools { grid-column:1; }
+            .header-bar .history-tools { grid-column:3; justify-content:flex-end; }
             .history-tools { margin-left:0; }
             .cloud-tools, .watchlist-bar { flex-wrap:nowrap; }
+            .header-bar .cloud-tools, .header-bar .history-tools { flex-wrap:wrap; }
             .header-bar button { height:30px; padding:6px 9px; box-sizing:border-box; }
             .watchlist-bar select { width:116px; height:30px; padding:4px 6px; box-sizing:border-box; }
             .header-bar #histDate { width:126px !important; height:30px; box-sizing:border-box; }
             .header-bar .divider { margin:0; }
             .header-bar .sync-info { gap:6px; margin-left:0; padding-left:8px; white-space:nowrap; }
-            /* 行情进度放在第一行中间，数字与图标置于条带下方，避免遮挡右侧按钮。 */
-            .header-bar #progress-bar-container { position:absolute; left:50%; top:10px; width:145px; margin:0; transform:translateX(-50%); flex-direction:column; align-items:stretch; gap:2px; z-index:1; }
+            /* 中间单独预留行情进度栏位，数字与图标置于条带下方。 */
+            .header-bar #progress-bar-container { grid-column:2; grid-row:1; position:static; width:auto; margin:0; transform:none; flex-direction:column; align-items:stretch; gap:2px; z-index:1; }
             .header-bar #progress-text { text-align:center; line-height:14px; }
         }
         @media (max-width:768px) {
