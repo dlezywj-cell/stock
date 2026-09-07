@@ -318,8 +318,6 @@
                 <button class="btn-control" id="btn-reset-hist" onclick="resetHistoricalDate()" style="display:none;">🔙 最新</button>
                 <div class="divider"></div>
                 <div class="realtime-row">
-                    <button class="btn-control" id="btn-refresh-quotes" onclick="updateTable()">刷新行情</button>
-                    <span id="quote-status" role="status" style="font-size:12px;">行情待刷新</span>
                     <button class="btn-control" id="btn-start" onclick="startRealtime()">▶ 开启</button>
                     <button class="btn-control" id="btn-stop" onclick="stopRealtime()">⏹ 暂停</button>
                 </div>
@@ -1061,8 +1059,9 @@
             const snapshot = stocks.slice();
             const status = document.getElementById('quote-status');
             const button = document.getElementById('btn-refresh-quotes');
-            status.textContent = `行情刷新中（0/${snapshot.length}）`;
-            button.disabled = true;
+            const setQuoteStatus = text => { if (status) status.textContent = text; };
+            setQuoteStatus(`行情刷新中（0/${snapshot.length}）`);
+            if (button) button.disabled = true;
             quoteRefreshPromise = (async () => {
                 const fresh = new Map();
                 const accept = quotes => {
@@ -1071,7 +1070,7 @@
                         cachedMarketData[secid] = quote;
                         cachedMarketData[quote.f12] = quote;
                     });
-                    status.textContent = `行情刷新中（${fresh.size}/${snapshot.length}）`;
+                    setQuoteStatus(`行情刷新中（${fresh.size}/${snapshot.length}）`);
                     updateTable(true);
                 };
                 // Small batches, at most three concurrent requests; refresh never overlaps itself.
@@ -1106,14 +1105,14 @@
                 }));
                 const failed = snapshot.length - fresh.size;
                 // 成功后不在工具栏留下长文本；详细时间和数据源保留在悬停提示中。
-                status.textContent = failed ? `部分失败 ${failed} 只` : '';
-                status.title = `已刷新 ${fresh.size}/${snapshot.length}；显示数据源最新可用行情，非交易时段为最近报价。`;
+                setQuoteStatus(failed ? `部分失败 ${failed} 只` : '');
+                if (status) status.title = `已刷新 ${fresh.size}/${snapshot.length}；显示数据源最新可用行情，非交易时段为最近报价。`;
             })().catch(error => {
                 console.warn('行情刷新失败', error);
-                status.textContent = '行情刷新失败，保留旧值，请重试';
+                setQuoteStatus('行情刷新失败，保留旧值，请重试');
             }).finally(() => {
                 quoteRefreshPromise = null;
-                button.disabled = false;
+                if (button) button.disabled = false;
             });
             return quoteRefreshPromise;
         }
