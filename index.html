@@ -311,6 +311,8 @@
                 <button class="btn-control" id="btn-reset-hist" onclick="resetHistoricalDate()" style="display:none;">🔙 最新</button>
                 <div class="divider"></div>
                 <div class="realtime-row">
+                    <button class="btn-control" id="btn-refresh-quotes" onclick="updateTable()">刷新行情</button>
+                    <span id="quote-status" role="status" style="font-size:12px;">行情待刷新</span>
                     <button class="btn-control" id="btn-start" onclick="startRealtime()">▶ 开启</button>
                     <button class="btn-control" id="btn-stop" onclick="stopRealtime()">⏹ 暂停</button>
                 </div>
@@ -655,28 +657,27 @@
             });
         }
 
-        async function apiFetch(url, jsonpParam, context = 'API', maxAttempts = 2) {
+        async function apiFetch(url, jsonpParam, context = 'API', maxAttempts = 2, timeoutMs = 8000) {
             // 上游行情接口偶发 502/超时；短重试可避免一次瞬时失败把整张表清成 0。
             for (let attempt = 0; attempt < maxAttempts; attempt++) {
                 if (jsonpParam) {
                     try {
-                        const data = await fetchJSONP(url, jsonpParam, 5000);
+                        const data = await fetchJSONP(url, jsonpParam, Math.min(5000, timeoutMs));
                         if (data) return data;
                     } catch (e) {}
                 }
 
                 if (typeof fetch === 'function') {
+                    const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
+                    const timerId = ctrl ? setTimeout(() => ctrl.abort(), timeoutMs) : null;
                     try {
-                        const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
-                        const timerId = ctrl ? setTimeout(() => ctrl.abort(), 8000) : null;
                         const res = await fetch(url, ctrl ? { signal: ctrl.signal, cache: 'no-store' } : { cache: 'no-store' });
-                        if (timerId) clearTimeout(timerId);
                         if (res.ok) {
                             const text = await res.text();
                             const data = safeParseJSON(text);
                             if (data) return data;
                         }
-                    } catch (e) {}
+                    } catch (e) {} finally { if (timerId) clearTimeout(timerId); }
                 }
                 if (attempt === 0 && maxAttempts > 1) await new Promise(resolve => setTimeout(resolve, 300));
             }
@@ -993,58 +994,121 @@
             return code;
         }
 
-        // push2 的批量接口偶发 502；push2his 的单股接口仍可用，作为轻量备用线路。
-        async function fetchMarketFallback(stock) {
-            const secid = getSecid(stock.code);
-            const rawCode = secid.split('.')[1];
-            const target = `https://push2his.eastmoney.com/api/qt/stock/get?secid=${encodeURIComponent(secid)}&fields=f43,f170,f116,f58`;
-            const proxy = `https://stock-proxy.dlezywj.workers.dev/?${encodeURIComponent(target)}`;
-            // Worker 整体异常时，浏览器仍可通过东方财富 JSONP 直接取到单股行情。
-            let json = await apiFetch(target, 'cb', 'MarketFallback-JSONP', 1);
-            if (!json) json = await apiFetch(proxy, null, 'MarketFallback', 1);
-            const item = json?.data;
-            if (!item || !Number.isFinite(Number(item.f43)) || !Number.isFinite(Number(item.f116))) return;
-            cachedMarketData[rawCode] = {
-                f12: rawCode,
-                f2: Number(item.f43) / 100,
-                f3: Number(item.f170) / 100,
-                f20: Number(item.f116)
-            };
-        }
+        let quoteRefreshPromise = null;
 
-        // 东方财富接口/Worker 不可用时使用腾讯行情。腾讯返回的第 44 个字段是
-        // 总市值（亿元），第 3/31/32 个字段分别是现价/涨跌额/涨跌幅。
         function getTencentSymbol(stock) {
-            const secid = getSecid(stock.code), [market, code] = secid.split('.');
+            const secid = getSecid(stock.code), dot = secid.indexOf('.');
+            const market = secid.slice(0, dot), code = secid.slice(dot + 1);
             if (market === '1') return 'sh' + code;
-            if (market === '0') return 'sz' + code;
-            if (market === '116') return 'hk' + String(parseInt(code, 10)).padStart(5, '0');
-            return code; // 美股代码可直接传入
+            if (market === '0') return (/^(4|8|92)/.test(code) ? 'bj' : 'sz') + code;
+            if (market === '116') return 'hk' + code.padStart(5, '0');
+            return 'us' + code;
         }
 
-        function fetchTencentQuote(stock) {
+        function validMarketQuote(quote) {
+            return Number(quote?.f2) > 0 && Number.isFinite(Number(quote.f2)) &&
+                Number(quote.f20) > 0 && Number.isFinite(Number(quote.f20));
+        }
+
+        // 腾讯下标 44 为流通市值，45 为总市值（亿元，按上市地币种）。
+        function parseTencentQuote(value, stock) {
+            const fields = String(value || '').split('~');
+            const quote = { f12: getSecid(stock.code).split('.').slice(1).join('.'),
+                f2: Number(fields[3]), f3: Number(fields[32]), f20: Number(fields[45]) * 1e8,
+                quoteTime: fields[30], source: '腾讯', fetchedAt: Date.now() };
+            return validMarketQuote(quote) && Number.isFinite(quote.f3) ? quote : null;
+        }
+
+        function fetchTencentBatch(batch) {
             return new Promise(resolve => {
-                const symbol = getTencentSymbol(stock);
-                const varName = 'v_' + symbol.replace(/[^a-zA-Z0-9_]/g, '_');
                 const script = document.createElement('script');
-                const timer = setTimeout(() => { cleanup(); resolve(false); }, 6000);
-                function cleanup() { clearTimeout(timer); script.remove(); }
+                const symbols = batch.map(getTencentSymbol);
+                // Clear previous globals so a missing symbol cannot masquerade as a new quote.
+                const keys = symbols.map(symbol => ('v_' + symbol).split('.'));
+                const read = parts => parts.reduce((obj, key) => obj?.[key], window);
+                keys.forEach(parts => {
+                    let obj = window;
+                    parts.slice(0, -1).forEach(key => { obj = obj[key] = {}; });
+                    delete obj[parts[parts.length - 1]];
+                });
+                const cleanup = () => { clearTimeout(timer); script.remove(); };
+                const timer = setTimeout(() => { cleanup(); resolve(new Map()); }, 5000);
                 script.onload = () => {
-                    const fields = String(window[varName] || '').split('~');
-                    const price = Number(fields[3]), changePct = Number(fields[32]);
-                    const capYi = Number(fields[44]);
-                    if (Number.isFinite(price) && price > 0) {
-                        const rawCode = getSecid(stock.code).split('.')[1];
-                        cachedMarketData[rawCode] = { f12: rawCode, f2: price,
-                            f3: Number.isFinite(changePct) ? changePct : 0,
-                            f20: Number.isFinite(capYi) ? capYi * 100000000 : 0 };
-                    }
-                    cleanup(); resolve(true);
+                    const quotes = new Map();
+                    batch.forEach((stock, index) => {
+                        const quote = parseTencentQuote(read(keys[index]), stock);
+                        if (quote) quotes.set(getSecid(stock.code), quote);
+                    });
+                    cleanup(); resolve(quotes);
                 };
-                script.onerror = () => { cleanup(); resolve(false); };
-                script.src = 'https://qt.gtimg.cn/q=' + encodeURIComponent(symbol) + '&_=' + Date.now();
+                script.onerror = () => { cleanup(); resolve(new Map()); };
+                script.charset = 'gbk';
+                script.referrerPolicy = 'no-referrer';
+                script.src = 'https://qt.gtimg.cn/q=' + symbols.map(encodeURIComponent).join(',') + '&_=' + Date.now();
                 document.head.appendChild(script);
             });
+        }
+
+        async function refreshMarketQuotes() {
+            if (quoteRefreshPromise) return quoteRefreshPromise;
+            const snapshot = stocks.slice();
+            const status = document.getElementById('quote-status');
+            const button = document.getElementById('btn-refresh-quotes');
+            status.textContent = `行情刷新中（0/${snapshot.length}）`;
+            button.disabled = true;
+            quoteRefreshPromise = (async () => {
+                const fresh = new Map();
+                const accept = quotes => {
+                    quotes.forEach((quote, secid) => {
+                        fresh.set(secid, quote);
+                        cachedMarketData[secid] = quote;
+                        cachedMarketData[quote.f12] = quote;
+                    });
+                    status.textContent = `行情刷新中（${fresh.size}/${snapshot.length}）`;
+                    updateTable(true);
+                };
+                // Small batches, at most three concurrent requests; refresh never overlaps itself.
+                let next = 0;
+                await Promise.all(Array.from({length: Math.min(3, Math.ceil(snapshot.length / 40))}, async () => {
+                    while (next < snapshot.length) {
+                        const batch = snapshot.slice(next, next += 40);
+                        accept(await fetchTencentBatch(batch));
+                    }
+                }));
+                // Check THIS refresh's results, not the old cache. Also fill partial responses.
+                const missing = snapshot.filter(stock => !fresh.has(getSecid(stock.code)));
+                let fallbackNext = 0;
+                await Promise.all(Array.from({length: Math.min(3, Math.ceil(missing.length / 50))}, async () => {
+                  while (fallbackNext < missing.length) {
+                    const batch = missing.slice(fallbackNext, fallbackNext += 50);
+                    const url = `https://push2.eastmoney.com/api/qt/ulist.np/get?secids=${batch.map(s => getSecid(s.code)).join(',')}&fields=f12,f13,f2,f3,f20&invt=2&fltt=2&_=${Date.now()}`;
+                    let json = await apiFetch(url, 'cb', 'MarketAPI', 1, 3000);
+                    if (!json?.data?.diff) json = await apiFetch(`https://stock-proxy.dlezywj.workers.dev/?${encodeURIComponent(url)}`, null, 'MarketAPI-Proxy', 1, 3000);
+                    const diff = json?.data?.diff || [];
+                    const quotes = new Map();
+                    (Array.isArray(diff) ? diff : Object.values(diff)).forEach(quote => {
+                        if (!validMarketQuote(quote)) return;
+                        const stock = batch.find(s => {
+                            const secid = getSecid(s.code);
+                            return quote.f13 != null ? secid === `${quote.f13}.${quote.f12}` : secid.slice(secid.indexOf('.') + 1) === quote.f12;
+                        });
+                        if (stock) quotes.set(getSecid(stock.code), {...quote, source: '东方财富', fetchedAt: Date.now()});
+                    });
+                    accept(quotes);
+                  }
+                }));
+                const failed = snapshot.length - fresh.size;
+                const time = new Date().toLocaleTimeString('zh-CN', {hour12: false});
+                status.textContent = failed ? `行情更新 ${fresh.size}/${snapshot.length} · ${failed} 只失败（保留旧值或暂无数据） · ${time}` : `行情已更新 ${fresh.size}/${snapshot.length} · ${time}`;
+                status.title = '显示数据源最新可用行情；非交易时段为最近报价，部分市场可能延迟。';
+            })().catch(error => {
+                console.warn('行情刷新失败', error);
+                status.textContent = '行情刷新失败，保留旧值，请重试';
+            }).finally(() => {
+                quoteRefreshPromise = null;
+                button.disabled = false;
+            });
+            return quoteRefreshPromise;
         }
 
         async function runFetcher() {
@@ -1374,21 +1438,7 @@
                 // 先用本地数据绘制股票名单，不让慢行情接口阻塞首屏。
                 // 行情返回后本函数会再次绘制并补齐价格、市值和估值。
                 updateTable(true);
-                const secids = stocks.map(s=>getSecid(s.code)).join(',');
-                const url = `https://push2.eastmoney.com/api/qt/ulist.np/get?secids=${secids}&fields=f12,f14,f2,f3,f18,f20&invt=2&fltt=2&_=${Date.now()}`;
-                const proxyUrl = `https://stock-proxy.dlezywj.workers.dev/?${encodeURIComponent(url)}`;
-                let json = await apiFetch(proxyUrl, null, 'MarketAPI', 1);
-                if (!json) json = await apiFetch(url, 'cb', 'MarketAPI-Fallback', 1);
-                if (json?.data?.diff) {
-                    (Array.isArray(json.data.diff)?json.data.diff:Object.values(json.data.diff)).forEach(i => cachedMarketData[i.f12] = i);
-                } else {
-                    // 先尝试单股东方财富，再用腾讯行情，避免接口故障时整表无数据。
-                    await Promise.all(stocks.map(async stock => {
-                        await fetchMarketFallback(stock);
-                        const rawCode = getSecid(stock.code).split('.')[1];
-                        if (!cachedMarketData[rawCode]?.f2) await fetchTencentQuote(stock);
-                    }));
-                }
+                await refreshMarketQuotes();
             }
             
             let missingHistory = 0;
@@ -1400,7 +1450,7 @@
                      rawCode = s.code.split('.')[0];
                 }
 
-                const m = cachedMarketData[rawCode] || {};
+                const m = cachedMarketData[getSecid(s.code)] || cachedMarketData[rawCode] || {};
                 
                 let cap=0, chg="0.00", valid=false, currentPrice=0;
                 if (m.f12) { 

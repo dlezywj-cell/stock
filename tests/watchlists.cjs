@@ -20,7 +20,11 @@ const encode = data => Buffer.from(JSON.stringify(data)).toString('base64');
         await context.route('**/*', async route => {
             if (route.request().url() === 'http://watchlists.test/') return route.fulfill({contentType:'text/html',body:html});
             if (new URL(route.request().url()).pathname === '/score.js') return route.fulfill({contentType:'text/javascript',body:fs.readFileSync(path.join(__dirname,'../score.js'),'utf8')});
-            if (marketQuotes && route.request().url().includes('ulist.np')) return route.fulfill({json:{data:{diff:marketQuotes}}});
+            if (marketQuotes && route.request().url().includes('ulist.np')) {
+                const data = {data:{diff:marketQuotes}};
+                const cb = new URL(route.request().url()).searchParams.get('cb');
+                return cb ? route.fulfill({contentType:'application/javascript',body:`${cb}(${JSON.stringify(data)})`}) : route.fulfill({json:data});
+            }
             if (route.request().url().includes('api.github.com')) {
                 if (route.request().method() === 'PUT') {
                     const body = route.request().postDataJSON();
