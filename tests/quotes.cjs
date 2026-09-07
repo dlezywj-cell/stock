@@ -39,7 +39,7 @@ const quote = (price, total, float = 12) => {
   });
   await page.addInitScript(stocks => {localStorage.setItem('stock_sys_data',JSON.stringify(stocks));localStorage.setItem('stock_sys_view',JSON.stringify({showCap:true}));},stocks);
   await page.goto(appUrl);
-  await page.waitForFunction(() => document.querySelector('#quote-status').textContent.includes('行情已更新'),null,{timeout:30000});
+  await page.waitForFunction(() => !document.querySelector('#btn-refresh-quotes').disabled && document.querySelector('#quote-status').textContent === '',null,{timeout:30000});
   const get = () => page.evaluate(() => stocks.map(s => cachedMarketData[getSecid(s.code)]));
   let result = await get();
   assert.ok(result.every(q => q.f2>0 && q.f20>0));

@@ -22,7 +22,7 @@
 
         /* === 顶部区域 === */
         #top-area { flex-shrink: 0; }
-        .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; background: #fff; padding: 10px 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .header-bar { position: relative; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; background: #fff; padding: 10px 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .tool-group { display: flex; align-items: center; gap: 10px; }
 
         .sync-info { display: flex; align-items: center; gap: 8px; font-size: 12px; margin-left: 10px; padding-left: 10px; border-left: 1px solid #eee; }
@@ -259,7 +259,8 @@
             .header-bar #histDate { width:126px !important; height:30px; box-sizing:border-box; }
             .header-bar .divider { margin:0; }
             .header-bar .sync-info { gap:6px; margin-left:0; padding-left:8px; white-space:nowrap; }
-            .header-bar #progress-bar-container { order:3; flex-basis:100%; margin:0; }
+            /* 行情进度放在第一行右侧的空白区域，避免把顶部工具栏挤成第三行。 */
+            .header-bar #progress-bar-container { position:absolute; right:15px; top:10px; width:145px; margin:0; }
         }
         @media (max-width:768px) {
             .watchlist-bar { grid-column:1 / -1; display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); }
@@ -1098,9 +1099,9 @@
                   }
                 }));
                 const failed = snapshot.length - fresh.size;
-                const time = new Date().toLocaleTimeString('zh-CN', {hour12: false});
-                status.textContent = failed ? `行情更新 ${fresh.size}/${snapshot.length} · ${failed} 只失败（保留旧值或暂无数据） · ${time}` : `行情已更新 ${fresh.size}/${snapshot.length} · ${time}`;
-                status.title = '显示数据源最新可用行情；非交易时段为最近报价，部分市场可能延迟。';
+                // 成功后不在工具栏留下长文本；详细时间和数据源保留在悬停提示中。
+                status.textContent = failed ? `部分失败 ${failed} 只` : '';
+                status.title = `已刷新 ${fresh.size}/${snapshot.length}；显示数据源最新可用行情，非交易时段为最近报价。`;
             })().catch(error => {
                 console.warn('行情刷新失败', error);
                 status.textContent = '行情刷新失败，保留旧值，请重试';
