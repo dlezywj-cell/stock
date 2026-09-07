@@ -264,8 +264,8 @@
             .header-bar #histDate { width:126px !important; height:30px; box-sizing:border-box; }
             .header-bar .divider { margin:0; }
             .header-bar .sync-info { gap:6px; margin-left:0; padding-left:8px; white-space:nowrap; }
-            /* 中间单独预留行情进度栏位，数字与图标置于条带下方。 */
-            .header-bar #progress-bar-container { grid-column:2; grid-row:1; position:static; width:auto; margin:0; transform:none; flex-direction:column; align-items:stretch; gap:2px; z-index:1; }
+            /* 以顶栏本身为基准绝对居中，数字与图标置于条带下方。 */
+            .header-bar #progress-bar-container { position:absolute; left:50%; top:10px; width:65px; margin:0; transform:translateX(-50%); flex-direction:column; align-items:stretch; gap:2px; z-index:1; }
             .header-bar #progress-text { text-align:center; line-height:14px; }
         }
         @media (max-width:768px) {
