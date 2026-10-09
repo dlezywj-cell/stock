@@ -1150,7 +1150,8 @@
 
         async function fetchHistoryImpl(secid, code) {
             const yahooSymbol = toYahooSymbol(secid);
-            const targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${yahooSymbol}?range=1mo&interval=1d`;
+            // 节假日会让一个自然月不足 20 个交易日，趋势均线需要完整的 20 日价格。
+            const targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${yahooSymbol}?range=2mo&interval=1d`;
             const proxyUrl = `https://stock-proxy.dlezywj.workers.dev/?${encodeURIComponent(targetUrl)}`;
             try {
                 const ctrl = new AbortController();
