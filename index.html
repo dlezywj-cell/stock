@@ -252,6 +252,12 @@
         .watchlist-bar select { width:130px; max-width:180px; padding:6px; border:1px solid #ced4da; border-radius:4px; }
         .watchlist-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:16px; }
         .score-button { padding:2px 5px; background:transparent; color:#334e7d; font-variant-numeric:tabular-nums; font-weight:700; }
+        .dev-cell { text-align:center; }
+        .dev-tag { padding:1px 5px; border-radius:3px; font-size:11px; font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap; cursor:help; }
+        .dev-tag.lv-hi { background:#fdecea; color:#b3261e; }
+        .dev-tag.lv-mid { background:#fff4e0; color:#b26a00; }
+        .dev-tag.lv-ok { background:#eef2f9; color:#4a6fa5; }
+        .dev-tag.lv-na { background:transparent; color:#bbb; font-weight:400; }
         #score-details { white-space:pre-line; line-height:1.8; }
         #score-modal .modal-content { box-sizing:border-box; width:min(500px, calc(100vw - 32px)); }
         #btn-manage-watchlist, #btn-clear-selection { background:#e9ecef; color:#495057; }
@@ -536,6 +542,8 @@
 
         let stocks = JSON.parse(APP_STORAGE.getItem('stock_sys_data')) || [];
         let viewSettings = { showCode: true, showTags: true, showReport: true, showUpdate: true, showAction: true, showCap: false, ...JSON.parse(APP_STORAGE.getItem('stock_sys_view')) };
+        // 业绩预测偏离：独立从私有仓库 wind.json 读取，仅在本机渲染，不写入 stocks
+        let windDeviation = {}, windDeviationMeta = '';
         
         let intervalId = null, sortState = { key: 'pe_up', dir: 'desc' }, isPanelOpen = false, pendingDeleteCode = null, pendingLogIndex = null, pendingSyncData = null, cachedMarketData = {}, selectedCodes = new Set(), columnFilters = {}, onlySelectedMode = false;
         
@@ -896,6 +904,30 @@
             APP_STORAGE.setItem('stock_sys_unsaved', isDirty);
             checkUnsavedStatus();
             renderWatchlistControls();
+        }
+
+        // 从私有仓库同目录读取 wind.json，缺失时静默降级为「—」，返回是否取到数据
+        async function loadWindDeviation(cfg) {
+            cfg = cfg || getGbConfig();
+            if (!cfg.username || !cfg.repo) return false;
+            const windPath = String(cfg.path || 'data.json').replace(/[^/]*$/, 'wind.json');
+            const url = `https://api.github.com/repos/${cfg.username}/${cfg.repo}/contents/${windPath}`;
+            const headers = { "Accept": "application/vnd.github.v3+json" };
+            if (cfg.token) headers["Authorization"] = `token ${cfg.token}`;
+            try {
+                const res = await fetch(`${url}?ref=${encodeURIComponent(cfg.branch)}`, { headers, cache: "no-store" });
+                if (!res.ok) {
+                    console.log(`业绩预测偏离数据不可用 (${res.status})`);
+                    return false;
+                }
+                const payload = JSON.parse(b64_to_utf8((await res.json()).content));
+                windDeviation = payload && payload.items ? payload.items : {};
+                windDeviationMeta = payload && payload.updatedAt ? payload.updatedAt : '';
+                return Object.keys(windDeviation).length > 0;
+            } catch (e) {
+                console.log("业绩预测偏离数据读取失败:", e);
+                return false;
+            }
         }
 
         async function uploadToGithub() {
@@ -1572,6 +1604,17 @@
                         if (y === null) return -1;
                         return sortState.dir === 'desc' ? y - x : x - y;
                     }
+                    if (sortState.key === 'winddev') {
+                        const devOf = (o) => {
+                            const w = windDeviation[o.code];
+                            if (!w || w.lv === '无数据') return null;
+                            return Math.max(Math.abs(w.dp ?? 0), Math.abs(w.dr ?? 0));
+                        };
+                        const x = devOf(a), y = devOf(b);
+                        if (x === null) return y === null ? 0 : 1;
+                        if (y === null) return -1;
+                        return sortState.dir === 'desc' ? y - x : x - y;
+                    }
                     if (sortState.key === 'last_update') {
                         const dA = a.logs?.[0]?.date || "";
                         const dB = b.logs?.[0]?.date || "";
@@ -1612,7 +1655,7 @@
             const allSel = rows.length>0 && rows.every(i=>selectedCodes.has(i.code));
 
             let html = `<table><thead><tr>
-                <th class="th-basic" colspan="${4 + (historicalMode?1:0) + (viewSettings.showCode?1:0) + (viewSettings.showTags?1:0) + (viewSettings.showCap?1:0) + (viewSettings.showReport?1:0)}">📊 基础行情</th>
+                <th class="th-basic" colspan="${5 + (historicalMode?1:0) + (viewSettings.showCode?1:0) + (viewSettings.showTags?1:0) + (viewSettings.showCap?1:0) + (viewSettings.showReport?1:0)}">📊 基础行情</th>
                 <th class="th-pe" colspan="4">💰 PE (利润)</th><th class="th-ps" colspan="4">🚀 PS (营收)</th>
                 <th rowspan="2" class="sortable ${show('update')} ${sk('last_update')}" onclick="setSort('last_update')" style="width:70px">📅 ${getSortIcon('last_update')}</th>
                 <th class="th-basic ${show('action')}" rowspan="2">⚙️</th>
@@ -1622,6 +1665,7 @@
                 <th>名称</th><th class="${show('code')}">代码</th><th class="${show('tags')}">属性 ${icon('tags')}</th>
                 <th onclick="setSort('chg')" class="sortable ${sk('chg')}">涨跌 ${getSortIcon('chg')}</th>
                 <th onclick="setSort('score')" class="sortable ${sk('score')}" title="点击按得分排序">Score ${getSortIcon('score')}</th>
+                <th onclick="setSort('winddev')" class="sortable ${sk('winddev')}" style="width:72px" title="鼠标悬停查看业绩预测与 Wind 一致预期的偏离；点击按偏离幅度排序">偏离 ${getSortIcon('winddev')}</th>
                 ${historicalMode ? `<th onclick="setSort('intervalChange')" class="sortable ${sk('intervalChange')}" title="${historicalDateStr}收盘至最新价；非交易日取此前最近交易日，不含现金分红">区间涨跌幅 ${getSortIcon('intervalChange')}</th>` : ''}
                 <th onclick="setSort('cap')" class="sortable ${show('cap')} ${sk('cap')}">市值 ${getSortIcon('cap')}</th>
                 <th onclick="setSort('report_date')" class="sortable ${show('report')} ${sk('report_date')}">财报日 ${getSortIcon('report_date')}</th>
@@ -1629,7 +1673,27 @@
                 <th onclick="setSort('revenue')" class="sortable ${sk('revenue')}">营收 ${getSortIcon('revenue')}</th><th>合理PS</th><th onclick="setSort('ps_down')" class="sortable ${sk('ps_down')}">下% ${icon('ps_down')}</th><th onclick="setSort('ps_up')" class="sortable ${sk('ps_up')}">上% ${icon('ps_up')}</th>
             </tr></thead><tbody>`;
 
-            if(rows.length===0) html+=`<tr><td colspan="${13 + (historicalMode?1:0) + ['code','tags','cap','report','update','action'].filter(k=>viewSettings['show'+k.charAt(0).toUpperCase()+k.slice(1)]).length}" style="text-align:center;padding:20px;color:#ccc">无数据</td></tr>`;
+            // 业绩预测偏离单元格：单元格显示判定年度与净利偏离，悬停展开完整对照
+            const devCell = (code) => {
+                const w = windDeviation[code];
+                if (!w) return `<td class="dev-cell"><span class="dev-tag lv-na" title="未取到 Wind 一致预期偏离数据">—</span></td>`;
+                if (w.lv === '无数据' || !w.y) return `<td class="dev-cell"><span class="dev-tag lv-na" title="${(w.note || '无对照数据').replace(/"/g,'&quot;')}">—</span></td>`;
+                const pf = (v) => (v === null || v === undefined) ? '—' : (v > 0 ? '+' : '') + Number(v).toFixed(1) + '%';
+                const other = w.y === '2026' ? '2027' : '2026';
+                const cls = w.lv === '显著偏离' ? 'lv-hi' : w.lv === '需复核' ? 'lv-mid' : 'lv-ok';
+                const lines = [
+                    `业绩预测偏离｜Wind 一致预期${windDeviationMeta ? ' 数据日 ' + windDeviationMeta : ''}`,
+                    `判定 ${w.y}E · ${w.lv} · ${w.c}`,
+                    `净利 自填 ${w.p ?? '—'} / Wind ${w.np ?? '—'} 亿元 偏离 ${pf(w.dp)}`,
+                    `营收 自填 ${w.r ?? '—'} / Wind ${w.rv ?? '—'} 亿元 偏离 ${pf(w.dr)}`,
+                    `对照 ${other}E 净利 ${pf(w.y === '2026' ? w.d27p : w.d26p)} 营收 ${pf(w.y === '2026' ? w.d27r : w.d26r)}`
+                ];
+                if (w.y === '2026' && w.d28p !== null && w.d28p !== undefined && Math.abs(w.d28p) < Math.abs(w.dp ?? 1e9)) {
+                    lines.push(`2028E 净利偏离 ${pf(w.d28p)}，自填值可能对应更远年度`);
+                }
+                return `<td class="dev-cell"><span class="dev-tag ${cls}" title="${lines.join('\n').replace(/"/g,'&quot;')}">${w.y.slice(2)}年 ${pf(w.dp)}</span></td>`;
+            };
+            if(rows.length===0) html+=`<tr><td colspan="${14 + (historicalMode?1:0) + ['code','tags','cap','report','update','action'].filter(k=>viewSettings['show'+k.charAt(0).toUpperCase()+k.slice(1)]).length}" style="text-align:center;padding:20px;color:#ccc">无数据</td></tr>`;
             else rows.forEach((i, rowIndex) => {
                 const p = (v) => `<span style="color:${parseFloat(v)>=0?'#d32f2f':'#2e7d32'};font-weight:${Math.abs(v)>30?'800':'bold'}">${v==='-'?'-':v+'%'}</span>`;
                 const u = i.logs?.[0]?.date ? `<span style="font-size:11px;color:#666;display:block;line-height:1.2">${i.logs[0].date.split(' ')[0]}<br><span style="color:#999;font-size:10px">${i.logs[0].date.split(' ')[1] || ''}</span></span>` : '-';
@@ -1640,6 +1704,7 @@
                     <td class="${show('tags')}" style="text-align:left">${(i.tags||"").split(' ').map(t=>t?`<span class="tag-badge">${t}</span>`:'').join('')}</td>
                     <td style="font-weight:bold;color:${parseFloat(i.chg)>=0?'#d32f2f':'#2e7d32'}">${i.chg==='-'?'-':i.chg+'%'}</td>
                     <td><button class="score-button" onclick="showScoreDetails(${rowIndex})" title="查看评分明细">${i.score.total === null ? '—' : i.score.total.toFixed(1)}</button></td>
+                    ${devCell(i.code)}
                     ${historicalMode ? `<td class="interval-change" style="font-weight:bold;color:${i.intervalChange === null ? '#888' : i.intervalChange >= 0 ? '#d32f2f' : '#2e7d32'}">${i.intervalChange === null ? '—' : (Math.round(i.intervalChange * 100) / 100).toFixed(2) + '%'}</td>` : ''}
                     <td class="${show('cap')}" style="font-family:monospace">${i.cap?i.cap.toFixed(2):'-'}</td>
                     <td class="${show('report')}">${formatReportDateCell(i.reportDateInfo)}</td>
@@ -2028,6 +2093,8 @@
         checkUnsavedStatus();
         renderTagPicker();
         updateTable();
+        // 业绩预测偏离数据独立于股票池同步，取到后在原地重绘一次（不再拉行情）
+        loadWindDeviation().then(ok => { if (ok && stocks.length) updateTable(true); });
         updateControlBtns(false);
         updateStatus('paused', '准备就绪');
         
