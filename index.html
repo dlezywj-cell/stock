@@ -1703,7 +1703,7 @@
                 const thin = Math.abs(wv) < Math.abs(mv) / 10;
                 return {
                     d: d, dir: d >= 0 ? '高' : '低', thin: thin,
-                    text: `自填比预期${d >= 0 ? '高' : '低'} ${devPct(d)}%` + (thin ? '　Wind 预期基数偏低，比例被放大' : '')
+                    text: `自填比预期${d >= 0 ? '高' : '低'} ${devPct(d)}%` + (thin ? '　小基数：Wind 预期不到自填值十分之一，比例被放大' : '')
                 };
             };
             const devCell = (code) => {
