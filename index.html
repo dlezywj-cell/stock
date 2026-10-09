@@ -258,6 +258,8 @@
         .dev-tag.lv-mid { background:#fff4e0; color:#b26a00; }
         .dev-tag.lv-ok { background:#eef2f9; color:#4a6fa5; }
         .dev-tag.lv-na { background:transparent; color:#bbb; font-weight:400; }
+        #dev-tip { position:fixed; display:none; z-index:9999; max-width:400px; padding:8px 11px; background:#2b3440; color:#f5f7fa; font-size:12px; line-height:1.75; border-radius:6px; box-shadow:0 8px 24px rgba(0,0,0,.28); white-space:pre-line; pointer-events:none; }
+        #dev-tip.on { display:block; }
         #score-details { white-space:pre-line; line-height:1.8; }
         #score-modal .modal-content { box-sizing:border-box; width:min(500px, calc(100vw - 32px)); }
         #btn-manage-watchlist, #btn-clear-selection { background:#e9ecef; color:#495057; }
@@ -468,6 +470,7 @@
         📅 当前展示 <b id="hist-banner-date"></b> 收盘截面估算市值与空间（假设股数不变，按当日收盘价与最新价比例换算），涨跌幅与趋势箭头也已切换为「以该日为基准」的口径 — <a href="#" onclick="resetHistoricalDate();return false;" style="color:#856404;text-decoration:underline;">恢复最新数据</a>
     </div>
     <div id="result"></div>
+    <div id="dev-tip" role="tooltip"></div>
 
     <div id="score-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="score-title">
         <div class="modal-content">
@@ -1674,10 +1677,11 @@
             </tr></thead><tbody>`;
 
             // 业绩预测偏离单元格：单元格显示判定年度与净利偏离，悬停展开完整对照
+            const esc = (v) => String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
             const devCell = (code) => {
                 const w = windDeviation[code];
-                if (!w) return `<td class="dev-cell"><span class="dev-tag lv-na" title="未取到 Wind 一致预期偏离数据">—</span></td>`;
-                if (w.lv === '无数据' || !w.y) return `<td class="dev-cell"><span class="dev-tag lv-na" title="${(w.note || '无对照数据').replace(/"/g,'&quot;')}">—</span></td>`;
+                if (!w) return `<td class="dev-cell"><span class="dev-tag lv-na" data-dev="未取到 Wind 一致预期偏离数据">—</span></td>`;
+                if (w.lv === '无数据' || !w.y) return `<td class="dev-cell"><span class="dev-tag lv-na" data-dev="${esc(w.note || '无对照数据')}">—</span></td>`;
                 const pf = (v) => (v === null || v === undefined) ? '—' : (v > 0 ? '+' : '') + Number(v).toFixed(1) + '%';
                 const other = w.y === '2026' ? '2027' : '2026';
                 const cls = w.lv === '显著偏离' ? 'lv-hi' : w.lv === '需复核' ? 'lv-mid' : 'lv-ok';
@@ -1691,7 +1695,7 @@
                 if (w.y === '2026' && w.d28p !== null && w.d28p !== undefined && Math.abs(w.d28p) < Math.abs(w.dp ?? 1e9)) {
                     lines.push(`2028E 净利偏离 ${pf(w.d28p)}，自填值可能对应更远年度`);
                 }
-                return `<td class="dev-cell"><span class="dev-tag ${cls}" title="${lines.join('\n').replace(/"/g,'&quot;')}">${w.y.slice(2)}年 ${pf(w.dp)}</span></td>`;
+                return `<td class="dev-cell"><span class="dev-tag ${cls}" data-dev="${esc(lines.join('\n'))}">${w.y.slice(2)}年 ${pf(w.dp)}</span></td>`;
             };
             if(rows.length===0) html+=`<tr><td colspan="${14 + (historicalMode?1:0) + ['code','tags','cap','report','update','action'].filter(k=>viewSettings['show'+k.charAt(0).toUpperCase()+k.slice(1)]).length}" style="text-align:center;padding:20px;color:#ccc">无数据</td></tr>`;
             else rows.forEach((i, rowIndex) => {
@@ -2151,6 +2155,34 @@
             const wrap = document.getElementById('tag-filter-wrap');
             if (wrap && !wrap.contains(event.target)) hideTagDropdown();
         });
+        // 业绩预测偏离悬停浮层：不依赖浏览器原生 title，避免部分环境不弹提示
+        (function initDevTooltip() {
+            const tip = document.getElementById('dev-tip');
+            if (!tip) return;
+            const hide = () => tip.classList.remove('on');
+            const place = (el) => {
+                const r = el.getBoundingClientRect(), t = tip.getBoundingClientRect();
+                let left = r.left + r.width / 2 - t.width / 2;
+                left = Math.max(8, Math.min(left, window.innerWidth - t.width - 8));
+                let top = r.bottom + 8;
+                if (top + t.height > window.innerHeight - 8) top = Math.max(8, r.top - t.height - 8);
+                tip.style.left = Math.round(left) + 'px';
+                tip.style.top = Math.round(top) + 'px';
+            };
+            document.addEventListener('mouseover', (e) => {
+                const el = e.target && e.target.closest ? e.target.closest('.dev-tag[data-dev]') : null;
+                if (!el) { hide(); return; }
+                tip.textContent = el.getAttribute('data-dev');
+                tip.classList.add('on');
+                place(el);
+            });
+            document.addEventListener('mouseout', (e) => {
+                if (e.target && e.target.closest && e.target.closest('.dev-tag[data-dev]')) hide();
+            });
+            window.addEventListener('scroll', hide, true);
+            document.getElementById('result').addEventListener('click', hide);
+        })();
+
         document.addEventListener('keydown', (event) => {
             if (event.key === 'Escape') { closeWatchlistModal(); closeScoreDetails(); }
         });
