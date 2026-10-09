@@ -258,7 +258,7 @@
         .dev-tag.lv-mid { background:#fff4e0; color:#b26a00; }
         .dev-tag.lv-ok { background:#eef2f9; color:#4a6fa5; }
         .dev-tag.lv-na { background:transparent; color:#bbb; font-weight:400; }
-        #dev-tip { position:fixed; display:none; z-index:9999; max-width:400px; padding:8px 11px; background:#2b3440; color:#f5f7fa; font-size:12px; line-height:1.75; border-radius:6px; box-shadow:0 8px 24px rgba(0,0,0,.28); white-space:pre-line; pointer-events:none; }
+        #dev-tip { position:fixed; display:none; z-index:9999; max-width:470px; padding:8px 11px; background:#2b3440; color:#f5f7fa; font-size:12px; line-height:1.75; border-radius:6px; box-shadow:0 8px 24px rgba(0,0,0,.28); white-space:pre-line; pointer-events:none; }
         #dev-tip.on { display:block; }
         #score-details { white-space:pre-line; line-height:1.8; }
         #score-modal .modal-content { box-sizing:border-box; width:min(500px, calc(100vw - 32px)); }
@@ -1613,8 +1613,8 @@
                             if (!w || w.lv === '无数据' || !w.y) return null;
                             const mag = (mine, wind) => {
                                 if (mine === null || mine === undefined || !(Math.abs(Number(mine)) > 1)) return null;
-                                if (wind === null || wind === undefined) return null;
-                                return Math.abs((wind - Number(mine)) / Math.abs(Number(mine)) * 100);
+                                if (wind === null || wind === undefined || !(Math.abs(Number(wind)) > 0)) return null;
+                                return Math.abs((Number(mine) - Number(wind)) / Math.abs(Number(wind)) * 100);
                             };
                             const vals = [mag(w.p, w.curp), mag(w.r, w.curr)].filter(v => v !== null);
                             return vals.length ? Math.max.apply(null, vals) : null;
@@ -1674,7 +1674,7 @@
                 <th>名称</th><th class="${show('code')}">代码</th><th class="${show('tags')}">属性 ${icon('tags')}</th>
                 <th onclick="setSort('chg')" class="sortable ${sk('chg')}">涨跌 ${getSortIcon('chg')}</th>
                 <th onclick="setSort('score')" class="sortable ${sk('score')}" title="点击按得分排序">Score ${getSortIcon('score')}</th>
-                <th onclick="setSort('winddev')" class="sortable ${sk('winddev')}" style="width:84px" title="自填预测与 Wind 一致预期的偏离：鼠标悬停看明细，点击按偏离幅度排序">偏离 ${getSortIcon('winddev')}</th>
+                <th onclick="setSort('winddev')" class="sortable ${sk('winddev')}" style="width:124px" title="你自填的预测值比 Wind 一致预期高或低多少：以 Wind 预期为基准。鼠标悬停看明细，点击按偏离幅度排序">偏离 Wind 预期 ${getSortIcon('winddev')}</th>
                 ${historicalMode ? `<th onclick="setSort('intervalChange')" class="sortable ${sk('intervalChange')}" title="${historicalDateStr}收盘至最新价；非交易日取此前最近交易日，不含现金分红">区间涨跌幅 ${getSortIcon('intervalChange')}</th>` : ''}
                 <th onclick="setSort('cap')" class="sortable ${show('cap')} ${sk('cap')}">市值 ${getSortIcon('cap')}</th>
                 <th onclick="setSort('report_date')" class="sortable ${show('report')} ${sk('report_date')}">财报日 ${getSortIcon('report_date')}</th>
@@ -1687,11 +1687,18 @@
             const devNum = (v) => (v === null || v === undefined) ? '—' : Number(v).toLocaleString('zh-CN', { maximumFractionDigits: 2 });
             const devPct = (v) => Math.abs(v) >= 100 ? Math.abs(v).toFixed(0) : Math.abs(v).toFixed(1);
             // 返回 {d,dir,text}：dir 为 Wind 相对自填的方向；自填缺失或为占位值时返回 null
+            // 返回 {d,dir,text,thin}：以 Wind 该年度预期为基准，dir 是「自填相对预期」的方向
+            // 自填缺失或为占位值、Wind 缺失或为零时返回 null；thin 标记预期基数偏低导致比例被放大
             const devRel = (mine, wind) => {
                 if (mine === null || mine === undefined || !(Math.abs(Number(mine)) > 1)) return null;
-                if (wind === null || wind === undefined) return null;
-                const d = (wind - Number(mine)) / Math.abs(Number(mine)) * 100;
-                return { d: d, dir: d >= 0 ? '高' : '低', text: `Wind 比自填${d >= 0 ? '高' : '低'} ${devPct(d)}%` };
+                if (wind === null || wind === undefined || !(Math.abs(Number(wind)) > 0)) return null;
+                const mv = Number(mine), wv = Number(wind);
+                const d = (mv - wv) / Math.abs(wv) * 100;
+                const thin = Math.abs(wv) < Math.abs(mv) / 20;
+                return {
+                    d: d, dir: d >= 0 ? '高' : '低', thin: thin,
+                    text: `自填比预期${d >= 0 ? '高' : '低'} ${devPct(d)}%` + (thin ? '　Wind 预期基数偏低，比例被放大' : '')
+                };
             };
             const devCell = (code) => {
                 const w = windDeviation[code];
@@ -1705,23 +1712,24 @@
                 const curP = devRel(w.p, w.curp), curR = devRel(w.r, w.curr);
                 const altP = devRel(w.p, w.altp), altR = devRel(w.r, w.altr);
                 const lines = [
-                    `业绩预测偏离｜Wind 一致预期${windDeviationMeta ? '　数据日 ' + windDeviationMeta : ''}`,
+                    `偏离 Wind 预期｜数据源 万得一致预期${windDeviationMeta ? '　数据日 ' + windDeviationMeta : ''}`,
                     `自填口径 ${y}E　偏离程度 ${lvShort}　年份判定 ${w.c}`,
+                    `口径：以 Wind 该年度预期为基准，看自填值比预期高或低多少`,
                     ``,
-                    `归母净利润：自填 ${devNum(w.p)} 亿，Wind ${y}E ${devNum(w.curp)} 亿，${curP ? curP.text : '自填缺失，不可比'}`,
-                    `营业收入：自填 ${devNum(w.r)} 亿，Wind ${y}E ${devNum(w.curr)} 亿，${curR ? curR.text : '自填缺失，不可比'}`
+                    `归母净利润：自填 ${devNum(w.p)} 亿　Wind ${y}E ${devNum(w.curp)} 亿　${curP ? curP.text : '自填缺失，不可比'}`,
+                    `营业收入：自填 ${devNum(w.r)} 亿　Wind ${y}E ${devNum(w.curr)} 亿　${curR ? curR.text : '自填缺失，不可比'}`
                 ];
                 if (altP || altR) {
                     lines.push(``, `年份复核：检验自填值会不会其实是 ${other}E 口径`);
-                    if (altP) lines.push(`　归母净利润 Wind ${other}E ${devNum(w.altp)} 亿，${altP.text}`);
-                    if (altR) lines.push(`　营业收入 Wind ${other}E ${devNum(w.altr)} 亿，${altR.text}`);
+                    if (altP) lines.push(`　归母净利润 Wind ${other}E ${devNum(w.altp)} 亿　${altP.text}`);
+                    if (altR) lines.push(`　营业收入 Wind ${other}E ${devNum(w.altr)} 亿　${altR.text}`);
                 }
                 const farP = devRel(w.p, w.farp);
                 if (far && farP && curP && Math.abs(farP.d) < Math.abs(curP.d) - 5) {
-                    lines.push(``, `年度提示：自填净利润更贴合 ${far}E，Wind ${devNum(w.farp)} 亿，${farP.text}`);
+                    lines.push(``, `年度提示：自填净利润更贴近 ${far}E，Wind ${devNum(w.farp)} 亿　${farP.text}`);
                 }
                 const head = curP || curR;
-                return `<td class="dev-cell"><span class="dev-tag ${cls}" data-dev="${esc(lines.join('\n'))}">${yy}年 ${head ? head.dir + devPct(head.d) + '%' : '—'}</span></td>`;
+                return `<td class="dev-cell"><span class="dev-tag ${cls}" data-dev="${esc(lines.join('\n'))}">${yy}年 比预期${head ? head.dir + devPct(head.d) + '%' : '—'}</span></td>`;
             };
             if(rows.length===0) html+=`<tr><td colspan="${14 + (historicalMode?1:0) + ['code','tags','cap','report','update','action'].filter(k=>viewSettings['show'+k.charAt(0).toUpperCase()+k.slice(1)]).length}" style="text-align:center;padding:20px;color:#ccc">无数据</td></tr>`;
             else rows.forEach((i, rowIndex) => {
