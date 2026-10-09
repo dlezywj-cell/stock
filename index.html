@@ -1610,8 +1610,15 @@
                     if (sortState.key === 'winddev') {
                         const devOf = (o) => {
                             const w = windDeviation[o.code];
-                            if (!w || w.lv === '无数据') return null;
-                            return Math.max(Math.abs(w.dp ?? 0), Math.abs(w.dr ?? 0));
+                            if (!w || w.lv === '无数据' || !w.y) return null;
+                            const s = w.y.slice(2);
+                            const mag = (mine, wind) => {
+                                if (mine === null || mine === undefined || !(Math.abs(Number(mine)) > 1)) return null;
+                                if (wind === null || wind === undefined) return null;
+                                return Math.abs((wind - Number(mine)) / Math.abs(Number(mine)) * 100);
+                            };
+                            const vals = [mag(w.p, w['w' + s + 'p']), mag(w.r, w['w' + s + 'r'])].filter(v => v !== null);
+                            return vals.length ? Math.max.apply(null, vals) : null;
                         };
                         const x = devOf(a), y = devOf(b);
                         if (x === null) return y === null ? 0 : 1;
@@ -1668,7 +1675,7 @@
                 <th>名称</th><th class="${show('code')}">代码</th><th class="${show('tags')}">属性 ${icon('tags')}</th>
                 <th onclick="setSort('chg')" class="sortable ${sk('chg')}">涨跌 ${getSortIcon('chg')}</th>
                 <th onclick="setSort('score')" class="sortable ${sk('score')}" title="点击按得分排序">Score ${getSortIcon('score')}</th>
-                <th onclick="setSort('winddev')" class="sortable ${sk('winddev')}" style="width:72px" title="鼠标悬停查看业绩预测与 Wind 一致预期的偏离；点击按偏离幅度排序">偏离 ${getSortIcon('winddev')}</th>
+                <th onclick="setSort('winddev')" class="sortable ${sk('winddev')}" style="width:84px" title="自填预测与 Wind 一致预期的偏离：鼠标悬停看明细，点击按偏离幅度排序">偏离 ${getSortIcon('winddev')}</th>
                 ${historicalMode ? `<th onclick="setSort('intervalChange')" class="sortable ${sk('intervalChange')}" title="${historicalDateStr}收盘至最新价；非交易日取此前最近交易日，不含现金分红">区间涨跌幅 ${getSortIcon('intervalChange')}</th>` : ''}
                 <th onclick="setSort('cap')" class="sortable ${show('cap')} ${sk('cap')}">市值 ${getSortIcon('cap')}</th>
                 <th onclick="setSort('report_date')" class="sortable ${show('report')} ${sk('report_date')}">财报日 ${getSortIcon('report_date')}</th>
@@ -1676,26 +1683,44 @@
                 <th onclick="setSort('revenue')" class="sortable ${sk('revenue')}">营收 ${getSortIcon('revenue')}</th><th>合理PS</th><th onclick="setSort('ps_down')" class="sortable ${sk('ps_down')}">下% ${icon('ps_down')}</th><th onclick="setSort('ps_up')" class="sortable ${sk('ps_up')}">上% ${icon('ps_up')}</th>
             </tr></thead><tbody>`;
 
-            // 业绩预测偏离单元格：单元格显示判定年度与净利偏离，悬停展开完整对照
+            // 业绩预测偏离单元格：单元格显示判定年度与偏离方向，悬停展开逐项对照
             const esc = (v) => String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+            const devNum = (v) => (v === null || v === undefined) ? '—' : Number(v).toLocaleString('zh-CN', { maximumFractionDigits: 2 });
+            const devPct = (v) => Math.abs(v) >= 100 ? Math.abs(v).toFixed(0) : Math.abs(v).toFixed(1);
+            // 返回 {d,dir,text}：dir 为 Wind 相对自填的方向；自填缺失或为占位值时返回 null
+            const devRel = (mine, wind) => {
+                if (mine === null || mine === undefined || !(Math.abs(Number(mine)) > 1)) return null;
+                if (wind === null || wind === undefined) return null;
+                const d = (wind - Number(mine)) / Math.abs(Number(mine)) * 100;
+                return { d: d, dir: d >= 0 ? '高' : '低', text: `Wind 比自填${d >= 0 ? '高' : '低'} ${devPct(d)}%` };
+            };
             const devCell = (code) => {
                 const w = windDeviation[code];
                 if (!w) return `<td class="dev-cell"><span class="dev-tag lv-na" data-dev="未取到 Wind 一致预期偏离数据">—</span></td>`;
                 if (w.lv === '无数据' || !w.y) return `<td class="dev-cell"><span class="dev-tag lv-na" data-dev="${esc(w.note || '无对照数据')}">—</span></td>`;
-                const pf = (v) => (v === null || v === undefined) ? '—' : (v > 0 ? '+' : '') + Number(v).toFixed(1) + '%';
-                const other = w.y === '2026' ? '2027' : '2026';
+                const y = w.y, yy = y.slice(2), other = y === '2026' ? '2027' : '2026', oo = other.slice(2);
                 const cls = w.lv === '显著偏离' ? 'lv-hi' : w.lv === '需复核' ? 'lv-mid' : 'lv-ok';
+                const lvShort = w.lv === '显著偏离' ? '偏大' : w.lv === '需复核' ? '偏中' : '吻合';
+                const curP = devRel(w.p, w['w' + yy + 'p']), curR = devRel(w.r, w['w' + yy + 'r']);
+                const altP = devRel(w.p, w['w' + oo + 'p']), altR = devRel(w.r, w['w' + oo + 'r']);
                 const lines = [
-                    `业绩预测偏离｜Wind 一致预期${windDeviationMeta ? ' 数据日 ' + windDeviationMeta : ''}`,
-                    `判定 ${w.y}E · ${w.lv} · ${w.c}`,
-                    `净利 自填 ${w.p ?? '—'} / Wind ${w.np ?? '—'} 亿元 偏离 ${pf(w.dp)}`,
-                    `营收 自填 ${w.r ?? '—'} / Wind ${w.rv ?? '—'} 亿元 偏离 ${pf(w.dr)}`,
-                    `对照 ${other}E 净利 ${pf(w.y === '2026' ? w.d27p : w.d26p)} 营收 ${pf(w.y === '2026' ? w.d27r : w.d26r)}`
+                    `业绩预测偏离｜Wind 一致预期${windDeviationMeta ? '　数据日 ' + windDeviationMeta : ''}`,
+                    `自填口径 ${y}E　偏离程度 ${lvShort}　年份判定 ${w.c}`,
+                    ``,
+                    `归母净利润：自填 ${devNum(w.p)} 亿，Wind ${y}E ${devNum(w['w' + yy + 'p'])} 亿，${curP ? curP.text : '自填缺失，不可比'}`,
+                    `营业收入：自填 ${devNum(w.r)} 亿，Wind ${y}E ${devNum(w['w' + yy + 'r'])} 亿，${curR ? curR.text : '自填缺失，不可比'}`
                 ];
-                if (w.y === '2026' && w.d28p !== null && w.d28p !== undefined && Math.abs(w.d28p) < Math.abs(w.dp ?? 1e9)) {
-                    lines.push(`2028E 净利偏离 ${pf(w.d28p)}，自填值可能对应更远年度`);
+                if (altP || altR) {
+                    lines.push(``, `年份复核：检验自填值会不会其实是 ${other}E 口径`);
+                    if (altP) lines.push(`　归母净利润 Wind ${other}E ${devNum(w['w' + oo + 'p'])} 亿，${altP.text}`);
+                    if (altR) lines.push(`　营业收入 Wind ${other}E ${devNum(w['w' + oo + 'r'])} 亿，${altR.text}`);
                 }
-                return `<td class="dev-cell"><span class="dev-tag ${cls}" data-dev="${esc(lines.join('\n'))}">${w.y.slice(2)}年 ${pf(w.dp)}</span></td>`;
+                const d28 = devRel(w.p, w.w28p);
+                if (y === '2026' && d28 && curP && Math.abs(d28.d) < Math.abs(curP.d) - 5) {
+                    lines.push(``, `年度提示：自填净利润更贴合 2028E，Wind ${devNum(w.w28p)} 亿，${d28.text}`);
+                }
+                const head = curP || curR;
+                return `<td class="dev-cell"><span class="dev-tag ${cls}" data-dev="${esc(lines.join('\n'))}">${yy}年 ${head ? head.dir + devPct(head.d) + '%' : '—'}</span></td>`;
             };
             if(rows.length===0) html+=`<tr><td colspan="${14 + (historicalMode?1:0) + ['code','tags','cap','report','update','action'].filter(k=>viewSettings['show'+k.charAt(0).toUpperCase()+k.slice(1)]).length}" style="text-align:center;padding:20px;color:#ccc">无数据</td></tr>`;
             else rows.forEach((i, rowIndex) => {
