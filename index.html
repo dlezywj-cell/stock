@@ -258,6 +258,8 @@
         .dev-tag.lv-mid { background:#fff4e0; color:#b26a00; }
         .dev-tag.lv-ok { background:#eef2f9; color:#4a6fa5; }
         .dev-tag.lv-na { background:transparent; color:#bbb; font-weight:400; }
+        .dev-refresh { cursor:pointer; color:#9aa5b4; font-weight:700; padding:0 2px; margin-left:1px; font-size:12px; }
+        .dev-refresh:hover { color:#1a73e8; }
         #dev-tip { position:fixed; display:none; z-index:9999; max-width:470px; padding:8px 11px; background:#2b3440; color:#f5f7fa; font-size:12px; line-height:1.75; border-radius:6px; box-shadow:0 8px 24px rgba(0,0,0,.28); white-space:pre-line; pointer-events:none; }
         #dev-tip.on { display:block; }
         #score-details { white-space:pre-line; line-height:1.8; }
@@ -909,6 +911,15 @@
             renderWatchlistControls();
         }
 
+        // 偏离列的自填值优先取股票池当前录入值，只有池内缺失时才回落到周频快照里记录的那份。
+        // 这样改了净利/营收，偏离列当场就变，不必等周一那次 Wind 刷新。
+        function selfFill(row, key, baked) {
+            const v = row ? row[key] : undefined;
+            if (v !== null && v !== undefined && v !== '' && Math.abs(Number(v)) > 1) return Number(v);
+            if (baked === null || baked === undefined) return null;
+            return Number(baked);
+        }
+
         // 从私有仓库同目录读取 wind.json，缺失时静默降级为「—」，返回是否取到数据
         async function loadWindDeviation(cfg) {
             cfg = cfg || getGbConfig();
@@ -931,6 +942,19 @@
                 console.log("业绩预测偏离数据读取失败:", e);
                 return false;
             }
+        }
+
+        // 手动刷新偏离列：重拉一次 Wind 快照并原地重绘。
+        // Wind 是周频数据，但这一列不必等周一，随时可以拉一次最新的。
+        async function refreshWindDeviation(btn) {
+            const label = btn ? btn.innerHTML : '';
+            if (btn) { btn.disabled = true; btn.innerHTML = '⏳'; }
+            const ok = await loadWindDeviation();
+            if (btn) { btn.disabled = false; btn.innerHTML = label; }
+            if (stocks.length) updateTable(true);
+            updateStatus(ok ? 'ok' : 'paused',
+                ok ? ('Wind 快照 ' + (windDeviationMeta || '已刷新')) : '一致预期不可用');
+            return ok;
         }
 
         async function uploadToGithub() {
@@ -1616,7 +1640,8 @@
                                 if (wind === null || wind === undefined || !(Math.abs(Number(wind)) > 0)) return null;
                                 return Math.abs((Number(mine) - Number(wind)) / Math.abs(Number(wind)) * 100);
                             };
-                            const vals = [mag(w.p, w.curp), mag(w.r, w.curr)].filter(v => v !== null);
+                            const vals = [mag(selfFill(o, 'profit', w.p), w.curp),
+                                          mag(selfFill(o, 'revenue', w.r), w.curr)].filter(v => v !== null);
                             return vals.length ? Math.max.apply(null, vals) : null;
                         };
                         const x = devOf(a), y = devOf(b);
@@ -1674,7 +1699,7 @@
                 <th>名称</th><th class="${show('code')}">代码</th><th class="${show('tags')}">属性 ${icon('tags')}</th>
                 <th onclick="setSort('chg')" class="sortable ${sk('chg')}">涨跌 ${getSortIcon('chg')}</th>
                 <th onclick="setSort('score')" class="sortable ${sk('score')}" title="点击按得分排序">Score ${getSortIcon('score')}</th>
-                <th onclick="setSort('winddev')" class="sortable ${sk('winddev')}" style="width:124px" title="你自填的预测值比 Wind 一致预期高或低多少：以 Wind 预期为基准。红色为高于预期 10% 以上，绿色为低于预期 10% 以上，黑色为正负 10% 以内。色块底色深浅表示偏离等级。鼠标悬停看明细，点击按偏离幅度排序">偏离 Wind 预期 ${getSortIcon('winddev')}</th>
+                <th onclick="setSort('winddev')" class="sortable ${sk('winddev')}" style="width:124px" title="你自填的预测值比 Wind 一致预期高或低多少：以 Wind 预期为基准。红色为高于预期 10% 以上，绿色为低于预期 10% 以上，黑色为正负 10% 以内。色块底色深浅表示偏离等级。自填值取池内当前录入，改了当场生效">偏离 Wind 预期 <span class="dev-refresh" onclick="event.stopPropagation();refreshWindDeviation(this)" title="重拉一次 Wind 一致预期快照并重算这一列。Wind 本身是周频数据，此处用于随时拿到最新一次快照">⟳</span> ${getSortIcon('winddev')}</th>
                 ${historicalMode ? `<th onclick="setSort('intervalChange')" class="sortable ${sk('intervalChange')}" title="${historicalDateStr}收盘至最新价；非交易日取此前最近交易日，不含现金分红">区间涨跌幅 ${getSortIcon('intervalChange')}</th>` : ''}
                 <th onclick="setSort('cap')" class="sortable ${show('cap')} ${sk('cap')}">市值 ${getSortIcon('cap')}</th>
                 <th onclick="setSort('report_date')" class="sortable ${show('report')} ${sk('report_date')}">财报日 ${getSortIcon('report_date')}</th>
@@ -1706,31 +1731,41 @@
                     text: `自填比预期${d >= 0 ? '高' : '低'} ${devPct(d)}%` + (thin ? '　小基数：Wind 预期不到自填值十分之一，比例被放大' : '')
                 };
             };
-            const devCell = (code) => {
-                const w = windDeviation[code];
-                if (!w) return `<td class="dev-cell"><span class="dev-tag lv-na" data-dev="未取到 Wind 一致预期偏离数据">—</span></td>`;
+            const devCell = (i) => {
+                const w = windDeviation[i.code];
+                if (!w) return `<td class="dev-cell"><span class="dev-tag lv-na" data-dev="未取到 Wind 一致预期数据">—</span></td>`;
                 if (w.lv === '无数据' || !w.y) return `<td class="dev-cell"><span class="dev-tag lv-na" data-dev="${esc(w.note || '无对照数据')}">—</span></td>`;
                 const y = w.y, yy = y.slice(2);
                 const other = w.alty || (y === '2026' ? '2027' : '2026');
                 const far = w.fary || '';
-                const cls = w.lv === '显著偏离' ? 'lv-hi' : w.lv === '需复核' ? 'lv-mid' : 'lv-ok';
-                const lvShort = w.lv === '显著偏离' ? '偏大' : w.lv === '需复核' ? '偏中' : '吻合';
-                const curP = devRel(w.p, w.curp), curR = devRel(w.r, w.curr);
-                const altP = devRel(w.p, w.altp), altR = devRel(w.r, w.altr);
+                // 自填值取池内当前录入，Wind 取周频快照，两者解耦
+                const p = selfFill(i, 'profit', w.p), r = selfFill(i, 'revenue', w.r);
+                const curP = devRel(p, w.curp), curR = devRel(r, w.curr);
+                const altP = devRel(p, w.altp), altR = devRel(r, w.altr);
+                // 等级也按当前自填值现算，不读快照里的 lv，否则会出现数字与等级对不上
+                const mags = [curP, curR].filter(Boolean).map(x => Math.abs(x.d));
+                const worst = mags.length ? Math.max.apply(null, mags) : null;
+                const lv = worst === null ? '' : (worst >= 50 ? '显著偏离' : worst >= 30 ? '需复核' : '基本吻合');
+                const cls = worst === null ? 'lv-na' : (lv === '显著偏离' ? 'lv-hi' : lv === '需复核' ? 'lv-mid' : 'lv-ok');
+                const lvShort = worst === null ? '不可比' : (lv === '显著偏离' ? '偏大' : lv === '需复核' ? '偏中' : '吻合');
                 const lines = [
-                    `偏离 Wind 预期｜数据源 万得一致预期${windDeviationMeta ? '　数据日 ' + windDeviationMeta : ''}`,
+                    `偏离 Wind 预期｜数据源 万得一致预期　Wind 快照 ${windDeviationMeta || '—'}`,
                     `自填口径 ${y}E　偏离程度 ${lvShort}　年份判定 ${w.c}`,
-                    `口径：以 Wind 该年度预期为基准，看自填值比预期高或低多少`,
-                    ``,
-                    `归母净利润：自填 ${devNum(w.p)} 亿　Wind ${y}E ${devNum(w.curp)} 亿　${curP ? curP.text : '自填缺失，不可比'}`,
-                    `营业收入：自填 ${devNum(w.r)} 亿　Wind ${y}E ${devNum(w.curr)} 亿　${curR ? curR.text : '自填缺失，不可比'}`
+                    `口径：以 Wind 该年度预期为基准，看自填值比预期高或低多少。自填值取池内当前录入，改动即时生效`
                 ];
+                if (w.lv && w.lv !== '无数据' && lv && w.lv !== lv) {
+                    lines.push(``, `等级提示：Wind 快照那一轮算作 ${w.lv}，按当前自填值现算为 ${lv}`);
+                }
+                lines.push(``,
+                    `归母净利润：自填 ${devNum(p)} 亿　Wind ${y}E ${devNum(w.curp)} 亿　${curP ? curP.text : '自填缺失，不可比'}`,
+                    `营业收入：自填 ${devNum(r)} 亿　Wind ${y}E ${devNum(w.curr)} 亿　${curR ? curR.text : '自填缺失，不可比'}`
+                );
                 if (altP || altR) {
                     lines.push(``, `年份复核：检验自填值会不会其实是 ${other}E 口径`);
                     if (altP) lines.push(`　归母净利润 Wind ${other}E ${devNum(w.altp)} 亿　${altP.text}`);
                     if (altR) lines.push(`　营业收入 Wind ${other}E ${devNum(w.altr)} 亿　${altR.text}`);
                 }
-                const farP = devRel(w.p, w.farp);
+                const farP = devRel(p, w.farp);
                 if (far && farP && curP && Math.abs(farP.d) < Math.abs(curP.d) - 5) {
                     lines.push(``, `年度提示：自填净利润更贴近 ${far}E，Wind ${devNum(w.farp)} 亿　${farP.text}`);
                 }
@@ -1750,7 +1785,7 @@
                     <td class="${show('tags')}" style="text-align:left">${(i.tags||"").split(' ').map(t=>t?`<span class="tag-badge">${t}</span>`:'').join('')}</td>
                     <td style="font-weight:bold;color:${parseFloat(i.chg)>=0?'#d32f2f':'#2e7d32'}">${i.chg==='-'?'-':i.chg+'%'}</td>
                     <td><button class="score-button" onclick="showScoreDetails(${rowIndex})" title="查看评分明细">${i.score.total === null ? '—' : i.score.total.toFixed(1)}</button></td>
-                    ${devCell(i.code)}
+                    ${devCell(i)}
                     ${historicalMode ? `<td class="interval-change" style="font-weight:bold;color:${i.intervalChange === null ? '#888' : i.intervalChange >= 0 ? '#d32f2f' : '#2e7d32'}">${i.intervalChange === null ? '—' : (Math.round(i.intervalChange * 100) / 100).toFixed(2) + '%'}</td>` : ''}
                     <td class="${show('cap')}" style="font-family:monospace">${i.cap?i.cap.toFixed(2):'-'}</td>
                     <td class="${show('report')}">${formatReportDateCell(i.reportDateInfo)}</td>
