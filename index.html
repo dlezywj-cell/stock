@@ -1674,7 +1674,7 @@
                 <th>名称</th><th class="${show('code')}">代码</th><th class="${show('tags')}">属性 ${icon('tags')}</th>
                 <th onclick="setSort('chg')" class="sortable ${sk('chg')}">涨跌 ${getSortIcon('chg')}</th>
                 <th onclick="setSort('score')" class="sortable ${sk('score')}" title="点击按得分排序">Score ${getSortIcon('score')}</th>
-                <th onclick="setSort('winddev')" class="sortable ${sk('winddev')}" style="width:124px" title="你自填的预测值比 Wind 一致预期高或低多少：以 Wind 预期为基准。鼠标悬停看明细，点击按偏离幅度排序">偏离 Wind 预期 ${getSortIcon('winddev')}</th>
+                <th onclick="setSort('winddev')" class="sortable ${sk('winddev')}" style="width:124px" title="你自填的预测值比 Wind 一致预期高或低多少：以 Wind 预期为基准。绿色为高于预期 10% 以上，红色为低于预期 10% 以上，黑色为正负 10% 以内。色块底色深浅表示偏离等级。鼠标悬停看明细，点击按偏离幅度排序">偏离 Wind 预期 ${getSortIcon('winddev')}</th>
                 ${historicalMode ? `<th onclick="setSort('intervalChange')" class="sortable ${sk('intervalChange')}" title="${historicalDateStr}收盘至最新价；非交易日取此前最近交易日，不含现金分红">区间涨跌幅 ${getSortIcon('intervalChange')}</th>` : ''}
                 <th onclick="setSort('cap')" class="sortable ${show('cap')} ${sk('cap')}">市值 ${getSortIcon('cap')}</th>
                 <th onclick="setSort('report_date')" class="sortable ${show('report')} ${sk('report_date')}">财报日 ${getSortIcon('report_date')}</th>
@@ -1735,7 +1735,9 @@
                     lines.push(``, `年度提示：自填净利润更贴近 ${far}E，Wind ${devNum(w.farp)} 亿　${farP.text}`);
                 }
                 const head = curP || curR;
-                return `<td class="dev-cell"><span class="dev-tag ${cls}" data-dev="${esc(lines.join('\n'))}">${yy}年 比预期${head ? head.dir + devPct(head.d) + '%' : '—'}</span></td>`;
+                // 方向着色：高于预期 10% 以上为绿，低于预期 10% 以上为红，正负 10% 以内为黑
+                const dCol = !head ? '' : (head.d > 10 ? 'color:#2e7d32' : (head.d < -10 ? 'color:#d32f2f' : 'color:#111'));
+                return `<td class="dev-cell"><span class="dev-tag ${cls}"${dCol ? ` style="${dCol}"` : ''} data-dev="${esc(lines.join('\n'))}">${yy}年 比预期${head ? head.dir + devPct(head.d) + '%' : '—'}</span></td>`;
             };
             if(rows.length===0) html+=`<tr><td colspan="${14 + (historicalMode?1:0) + ['code','tags','cap','report','update','action'].filter(k=>viewSettings['show'+k.charAt(0).toUpperCase()+k.slice(1)]).length}" style="text-align:center;padding:20px;color:#ccc">无数据</td></tr>`;
             else rows.forEach((i, rowIndex) => {
