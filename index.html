@@ -260,7 +260,7 @@
         .dev-tag.lv-na { background:transparent; color:#bbb; font-weight:400; }
         .dev-refresh { cursor:pointer; color:#9aa5b4; font-weight:700; padding:0 2px; margin-left:1px; font-size:12px; }
         .dev-refresh:hover { color:#1a73e8; }
-        #dev-tip { position:fixed; display:none; z-index:9999; max-width:470px; padding:8px 11px; background:#2b3440; color:#f5f7fa; font-size:12px; line-height:1.75; border-radius:6px; box-shadow:0 8px 24px rgba(0,0,0,.28); white-space:pre-line; pointer-events:none; }
+        #dev-tip { position:fixed; display:none; z-index:9999; max-width:540px; padding:8px 11px; background:#2b3440; color:#f5f7fa; font-size:12px; line-height:1.75; border-radius:6px; box-shadow:0 8px 24px rgba(0,0,0,.28); white-space:pre-line; pointer-events:none; }
         #dev-tip.on { display:block; }
         #score-details { white-space:pre-line; line-height:1.8; }
         #score-modal .modal-content { box-sizing:border-box; width:min(500px, calc(100vw - 32px)); }
@@ -1699,7 +1699,7 @@
                 <th>名称</th><th class="${show('code')}">代码</th><th class="${show('tags')}">属性 ${icon('tags')}</th>
                 <th onclick="setSort('chg')" class="sortable ${sk('chg')}">涨跌 ${getSortIcon('chg')}</th>
                 <th onclick="setSort('score')" class="sortable ${sk('score')}" title="点击按得分排序">Score ${getSortIcon('score')}</th>
-                <th onclick="setSort('winddev')" class="sortable ${sk('winddev')}" style="width:124px" title="你自填的预测值比 Wind 一致预期高或低多少：以 Wind 预期为基准。红色为高于预期 10% 以上，绿色为低于预期 10% 以上，黑色为正负 10% 以内。色块底色深浅表示偏离等级。自填值取池内当前录入，改了当场生效">偏离 Wind 预期 <span class="dev-refresh" onclick="event.stopPropagation();refreshWindDeviation(this)" title="重拉一次 Wind 一致预期快照并重算这一列。Wind 本身是周频数据，此处用于随时拿到最新一次快照">⟳</span> ${getSortIcon('winddev')}</th>
+                <th onclick="setSort('winddev')" class="sortable ${sk('winddev')}" style="width:124px" title="你自填的预测值比 Wind 一致预期高或低多少：以 Wind 预期为基准。2026E、2027E、2028E 三个年度都参与判定，取偏差最小者为判定年度。红色为高于预期 10% 以上，绿色为低于预期 10% 以上，黑色为正负 10% 以内。色块底色深浅表示偏离等级。自填值取池内当前录入，改了当场生效">偏离 Wind 预期 <span class="dev-refresh" onclick="event.stopPropagation();refreshWindDeviation(this)" title="重拉一次 Wind 一致预期快照并重算这一列。Wind 本身是周频数据，此处用于随时拿到最新一次快照">⟳</span> ${getSortIcon('winddev')}</th>
                 ${historicalMode ? `<th onclick="setSort('intervalChange')" class="sortable ${sk('intervalChange')}" title="${historicalDateStr}收盘至最新价；非交易日取此前最近交易日，不含现金分红">区间涨跌幅 ${getSortIcon('intervalChange')}</th>` : ''}
                 <th onclick="setSort('cap')" class="sortable ${show('cap')} ${sk('cap')}">市值 ${getSortIcon('cap')}</th>
                 <th onclick="setSort('report_date')" class="sortable ${show('report')} ${sk('report_date')}">财报日 ${getSortIcon('report_date')}</th>
@@ -1736,12 +1736,14 @@
                 if (!w) return `<td class="dev-cell"><span class="dev-tag lv-na" data-dev="未取到 Wind 一致预期数据">—</span></td>`;
                 if (w.lv === '无数据' || !w.y) return `<td class="dev-cell"><span class="dev-tag lv-na" data-dev="${esc(w.note || '无对照数据')}">—</span></td>`;
                 const y = w.y, yy = y.slice(2);
-                const other = w.alty || (y === '2026' ? '2027' : '2026');
-                const far = w.fary || '';
+                // 候选年度列表：新结构读 cands；旧结构回落到「另一候选年度」加更远年度，兼容缓存里的旧文件
+                const cands = (Array.isArray(w.cands) && w.cands.length) ? w.cands
+                    : [{ y: y, p: w.curp, r: w.curr }]
+                        .concat(w.alty ? [{ y: w.alty, p: w.altp, r: w.altr }] : [])
+                        .concat(w.fary ? [{ y: w.fary, p: w.farp, r: w.farr }] : []);
                 // 自填值取池内当前录入，Wind 取周频快照，两者解耦
                 const p = selfFill(i, 'profit', w.p), r = selfFill(i, 'revenue', w.r);
                 const curP = devRel(p, w.curp), curR = devRel(r, w.curr);
-                const altP = devRel(p, w.altp), altR = devRel(r, w.altr);
                 // 等级也按当前自填值现算，不读快照里的 lv，否则会出现数字与等级对不上
                 const mags = [curP, curR].filter(Boolean).map(x => Math.abs(x.d));
                 const worst = mags.length ? Math.max.apply(null, mags) : null;
@@ -1760,14 +1762,16 @@
                     `归母净利润：自填 ${devNum(p)} 亿　Wind ${y}E ${devNum(w.curp)} 亿　${curP ? curP.text : '自填缺失，不可比'}`,
                     `营业收入：自填 ${devNum(r)} 亿　Wind ${y}E ${devNum(w.curr)} 亿　${curR ? curR.text : '自填缺失，不可比'}`
                 );
-                if (altP || altR) {
-                    lines.push(``, `年份复核：检验自填值会不会其实是 ${other}E 口径`);
-                    if (altP) lines.push(`　归母净利润 Wind ${other}E ${devNum(w.altp)} 亿　${altP.text}`);
-                    if (altR) lines.push(`　营业收入 Wind ${other}E ${devNum(w.altr)} 亿　${altR.text}`);
-                }
-                const farP = devRel(p, w.farp);
-                if (far && farP && curP && Math.abs(farP.d) < Math.abs(curP.d) - 5) {
-                    lines.push(``, `年度提示：自填净利润更贴近 ${far}E，Wind ${devNum(w.farp)} 亿　${farP.text}`);
+                if (cands.length > 1) {
+                    lines.push(``,
+                        `候选年度全对照：${cands.length} 个年度都参与判定，取偏差最小者为判定年度`,
+                        `括号内是自填值比该年度预期的高低幅度`);
+                    cands.forEach((c) => {
+                        const np = devRel(p, c.p), nr = devRel(r, c.r);
+                        const seg = `　${c.y}E　净利 ${devNum(c.p)} 亿${np ? '（' + np.dir + ' ' + devPct(np.d) + '%）' : ''}` +
+                                    `　营收 ${devNum(c.r)} 亿${nr ? '（' + nr.dir + ' ' + devPct(nr.d) + '%）' : ''}`;
+                        lines.push(seg + (c.y === y ? '　← 判定年度' : ''));
+                    });
                 }
                 const head = curP || curR;
                 // 方向着色：高于预期 10% 以上为红，低于预期 10% 以上为绿，正负 10% 以内为黑
