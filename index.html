@@ -1768,8 +1768,11 @@
                         `括号内是自填值比该年度预期的高低幅度`);
                     cands.forEach((c) => {
                         const np = devRel(p, c.p), nr = devRel(r, c.r);
-                        const seg = `　${c.y}E　净利 ${devNum(c.p)} 亿${np ? '（' + np.dir + ' ' + devPct(np.d) + '%）' : ''}` +
-                                    `　营收 ${devNum(c.r)} 亿${nr ? '（' + nr.dir + ' ' + devPct(nr.d) + '%）' : ''}`;
+                        // 逐字段判断有无数据，缺哪个就不列哪个；整年都没有时明确写出来
+                        const parts = [];
+                        if (c.p !== null && c.p !== undefined) parts.push(`净利 ${devNum(c.p)} 亿${np ? '（' + np.dir + ' ' + devPct(np.d) + '%）' : ''}`);
+                        if (c.r !== null && c.r !== undefined) parts.push(`营收 ${devNum(c.r)} 亿${nr ? '（' + nr.dir + ' ' + devPct(nr.d) + '%）' : ''}`);
+                        const seg = parts.length ? `　${c.y}E　${parts.join('　')}` : `　${c.y}E　无 Wind 一致预期数据`;
                         lines.push(seg + (c.y === y ? '　← 判定年度' : ''));
                     });
                 }
