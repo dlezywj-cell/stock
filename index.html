@@ -1788,7 +1788,7 @@
                 <th>名称</th><th class="${show('code')}">代码</th><th class="${show('tags')}">属性 ${icon('tags')}</th>
                 <th onclick="setSort('chg')" class="sortable ${sk('chg')}">涨跌 ${getSortIcon('chg')}</th>
                 <th onclick="setSort('score')" class="sortable ${sk('score')}" title="点击按得分排序">Score ${getSortIcon('score')}</th>
-                <th onclick="setSort('winddev')" class="sortable ${sk('winddev')}" style="width:124px" title="你自填的预测值比 Wind 一致预期高或低多少：以 Wind 预期为基准。2026E、2027E、2028E 三个年度都参与判定，取偏差最小者为判定年度。红色为高于预期 10% 以上，绿色为低于预期 10% 以上，黑色为正负 10% 以内。色块底色深浅表示偏离等级。自填值取池内当前录入，改了当场生效。点击任意一格可以自己指定对照年度，左侧有蓝线的是手动指定的">偏离 Wind 预期 <span class="dev-refresh" onclick="event.stopPropagation();refreshWindDeviation(this)" title="重拉一次 Wind 一致预期快照并重算这一列。Wind 本身是周频数据，此处用于随时拿到最新一次快照">⟳</span> ${getSortIcon('winddev')}</th>
+                <th onclick="setSort('winddev')" class="sortable ${sk('winddev')}" style="width:124px" title="你自填的预测值比 Wind 一致预期高或低多少：以 Wind 预期为基准。2026E、2027E、2028E 三个年度都参与判定，按归母净利润的相对偏差取最小者，净利缺失或为占位值时才用营业收入。红色为高于预期 10% 以上，绿色为低于预期 10% 以上，黑色为正负 10% 以内。色块底色深浅表示偏离等级。自填值取池内当前录入，改了当场生效。点击任意一格可以自己指定对照年度，左侧有蓝线的是手动指定的">偏离 Wind 预期 <span class="dev-refresh" onclick="event.stopPropagation();refreshWindDeviation(this)" title="重拉一次 Wind 一致预期快照并重算这一列。Wind 本身是周频数据，此处用于随时拿到最新一次快照">⟳</span> ${getSortIcon('winddev')}</th>
                 ${historicalMode ? `<th onclick="setSort('intervalChange')" class="sortable ${sk('intervalChange')}" title="${historicalDateStr}收盘至最新价；非交易日取此前最近交易日，不含现金分红">区间涨跌幅 ${getSortIcon('intervalChange')}</th>` : ''}
                 <th onclick="setSort('cap')" class="sortable ${show('cap')} ${sk('cap')}">市值 ${getSortIcon('cap')}</th>
                 <th onclick="setSort('report_date')" class="sortable ${show('report')} ${sk('report_date')}">财报日 ${getSortIcon('report_date')}</th>
@@ -1862,7 +1862,7 @@
                 const nearP = nearest(p, 'p'), nearR = nearest(r, 'r');
                 const lines = [
                     `偏离 Wind 预期｜数据源 万得一致预期　Wind 快照 ${windDeviationMeta || '—'}`,
-                    `自填口径 ${y}E（${manual ? '手动指定' : '自动判定'}）　偏离程度 ${lvShort}　${manual ? `算法判定 ${auto}E` : `年份判定 ${w.c}`}`,
+                    `自填口径 ${y}E（${manual ? '手动指定' : '自动判定'}）　偏离程度 ${lvShort}　${manual ? `算法判定 ${auto}E` : `年份判定 ${w.c}，按${w.jb || '净利'}`}`,
                     `口径：以 Wind 该年度预期为基准，看自填值比预期高或低多少。自填值取池内当前录入，改动即时生效`
                 ];
                 if (w.lv && w.lv !== '无数据' && lv && w.lv !== lv) {
@@ -1874,7 +1874,7 @@
                 );
                 if (cands.length > 1) {
                     lines.push(``,
-                        `候选年度全对照：${cands.length} 个年度都参与判定，取偏差最小者为判定年度`,
+                        `候选年度全对照：判定只按${w.jb || '净利'}的相对偏差取最小者，营收不参与判定`,
                         `括号内是自填值比该年度预期的高低幅度`);
                     cands.forEach((c) => {
                         const np = devRel(p, c.p), nr = devRel(r, c.r);
