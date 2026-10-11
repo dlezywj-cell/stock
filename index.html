@@ -253,15 +253,28 @@
         .watchlist-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:16px; }
         .score-button { padding:2px 5px; background:transparent; color:#334e7d; font-variant-numeric:tabular-nums; font-weight:700; }
         .dev-cell { text-align:center; }
-        .dev-tag { padding:1px 5px; border-radius:3px; font-size:11px; font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap; cursor:help; }
+        .dev-tag { padding:1px 5px; border-radius:3px; font-size:11px; font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap; cursor:pointer; }
         .dev-tag.lv-hi { background:#fdecea; color:#b3261e; }
         .dev-tag.lv-mid { background:#fff4e0; color:#b26a00; }
         .dev-tag.lv-ok { background:#eef2f9; color:#4a6fa5; }
-        .dev-tag.lv-na { background:transparent; color:#bbb; font-weight:400; }
+        .dev-tag.lv-na { background:transparent; color:#bbb; font-weight:400; cursor:default; }
+        /* 手动指定对照年度：左侧竖线标记，说明这一格的年度不是算法猜的 */
+        .dev-tag.dev-manual { box-shadow:inset 3px 0 0 #1a73e8; padding-left:7px; }
         .dev-refresh { cursor:pointer; color:#9aa5b4; font-weight:700; padding:0 2px; margin-left:1px; font-size:12px; }
         .dev-refresh:hover { color:#1a73e8; }
         #dev-tip { position:fixed; display:none; z-index:9999; max-width:540px; padding:8px 11px; background:#2b3440; color:#f5f7fa; font-size:12px; line-height:1.75; border-radius:6px; box-shadow:0 8px 24px rgba(0,0,0,.28); white-space:pre-line; pointer-events:none; }
         #dev-tip.on { display:block; }
+        #dev-year-menu { position:fixed; display:none; z-index:10000; min-width:440px; padding:6px; background:#fff; border:1px solid #d8dee9; border-radius:8px; box-shadow:0 10px 30px rgba(0,0,0,.18); font-size:12px; }
+        #dev-year-menu.on { display:block; }
+        #dev-year-menu .ym-hd { padding:5px 8px 6px; color:#8a94a6; font-size:11px; line-height:1.6; border-bottom:1px solid #eef1f5; margin-bottom:4px; }
+        #dev-year-menu .ym-item { display:flex; align-items:baseline; gap:9px; padding:6px 8px; border-radius:5px; cursor:pointer; white-space:nowrap; }
+        #dev-year-menu .ym-item:hover { background:#f2f6fc; }
+        #dev-year-menu .ym-item.cur { background:#e8f0fe; }
+        #dev-year-menu .ym-y { flex:0 0 46px; font-weight:700; color:#1f2937; }
+        #dev-year-menu .ym-f { color:#4b5563; font-variant-numeric:tabular-nums; }
+        #dev-year-menu .ym-tag { font-size:10px; color:#1a73e8; font-weight:700; }
+        #dev-year-menu .ym-auto { color:#4b5563; }
+        #dev-year-menu .ym-sep { height:1px; background:#eef1f5; margin:4px 2px; }
         #score-details { white-space:pre-line; line-height:1.8; }
         #score-modal .modal-content { box-sizing:border-box; width:min(500px, calc(100vw - 32px)); }
         #btn-manage-watchlist, #btn-clear-selection { background:#e9ecef; color:#495057; }
@@ -473,6 +486,7 @@
     </div>
     <div id="result"></div>
     <div id="dev-tip" role="tooltip"></div>
+    <div id="dev-year-menu" role="menu" aria-label="选择对照年度"></div>
 
     <div id="score-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="score-title">
         <div class="modal-content">
@@ -955,6 +969,76 @@
             updateStatus(ok ? 'ok' : 'paused',
                 ok ? ('Wind 快照 ' + (windDeviationMeta || '已刷新')) : '一致预期不可用');
             return ok;
+        }
+
+        // 手动指定对照年度：把某只标的的 devYear 写进股票池，随 data.json 一起同步，
+        // 换台机器打开也带着。year 传空字符串则改回自动判定。
+        function setDevYear(code, year) {
+            const s = stocks.find((x) => x.code === code);
+            if (!s) return;
+            if (year) s.devYear = String(year); else delete s.devYear;
+            saveStorage();
+            setLocalChanges(true);
+            closeDevYearPicker();
+            updateTable(true);
+            updateStatus('ok', year
+                ? `${s.name} 的对照年度已固定为 ${year}E，改动存在本地，可点右上角保存到 GitHub`
+                : `${s.name} 的对照年度已改回自动判定，改动存在本地，可点右上角保存到 GitHub`);
+        }
+
+        function closeDevYearPicker() {
+            const m = document.getElementById('dev-year-menu');
+            if (m) { m.classList.remove('on'); m.innerHTML = ''; }
+        }
+
+        // 点击偏离单元格弹出的年度选择器。三个候选年度的数值与偏离都摆出来，
+        // 直接挑对得上的那一年，不用靠算法平均。
+        function openDevYearPicker(el) {
+            const menu = document.getElementById('dev-year-menu');
+            if (!menu || !el) return;
+            let opts = [];
+            try { opts = JSON.parse(el.getAttribute('data-opts') || '[]'); } catch (e) { opts = []; }
+            if (!opts.length) return;
+            const code = el.getAttribute('data-code') || '';
+            const auto = el.getAttribute('data-auto') || '';
+            const manual = el.getAttribute('data-manual') || '';
+            const num = (v) => {
+                if (v === null || v === undefined) return '—';
+                const n = Number(v);
+                const dg = Math.abs(n) >= 10 ? 2 : (Math.abs(n) >= 1 ? 3 : 4);
+                return n.toLocaleString('zh-CN', { maximumFractionDigits: dg });
+            };
+            const side = (v) => {
+                if (v === null || v === undefined) return '';
+                const a = Math.abs(v);
+                return `　比预期${v >= 0 ? '高' : '低'} ${(a >= 100 ? a.toFixed(0) : a.toFixed(1))}%`;
+            };
+            let h = `<div class="ym-hd">这一格该用哪一年的 Wind 预期来对照<br>下面把每个年度的数值和偏离都列出来，直接挑你认为对得上的那一年</div>`;
+            h += `<div class="ym-item ym-auto${manual ? '' : ' cur'}" onclick="setDevYear('${code}', '')">`
+               + `<span class="ym-y">自动</span>`
+               + `<span class="ym-f">由算法判定，当前落在 ${auto}E</span>`
+               + (manual ? `<span class="ym-tag">点此恢复</span>` : '')
+               + `</div><div class="ym-sep"></div>`;
+            opts.forEach((o) => {
+                const tags = [];
+                if (o.np) tags.push('净利像这年');
+                if (o.nr) tags.push('营收像这年');
+                h += `<div class="ym-item${manual === o.y ? ' cur' : ''}" onclick="setDevYear('${code}', '${o.y}')">`
+                   + `<span class="ym-y">${o.y}E</span>`
+                   + `<span class="ym-f">净利 ${num(o.p)} 亿${side(o.dp)}</span>`
+                   + `<span class="ym-f">营收 ${num(o.r)} 亿${side(o.dr)}</span>`
+                   + (tags.length ? `<span class="ym-tag">${tags.join('／')}</span>` : '')
+                   + `</div>`;
+            });
+            menu.innerHTML = h;
+            menu.classList.add('on');
+            const r = el.getBoundingClientRect(), m = menu.getBoundingClientRect();
+            let left = r.left + r.width / 2 - m.width / 2;
+            left = Math.max(8, Math.min(left, window.innerWidth - m.width - 8));
+            let top = r.bottom + 6;
+            if (top + m.height > window.innerHeight - 8) top = Math.max(8, r.top - m.height - 6);
+            menu.style.left = Math.round(left) + 'px';
+            menu.style.top = Math.round(top) + 'px';
         }
 
         async function uploadToGithub() {
@@ -1640,8 +1724,13 @@
                                 if (wind === null || wind === undefined || !(Math.abs(Number(wind)) > 0)) return null;
                                 return Math.abs((Number(mine) - Number(wind)) / Math.abs(Number(wind)) * 100);
                             };
-                            const vals = [mag(selfFill(o, 'profit', w.p), w.curp),
-                                          mag(selfFill(o, 'revenue', w.r), w.curr)].filter(v => v !== null);
+                            // 手动指定的年度优先，和单元格显示保持一致，否则排序会和看到的数对不上
+                            const byYear = {};
+                            (Array.isArray(w.cands) ? w.cands : []).forEach((c) => { byYear[c.y] = c; });
+                            const y = (o.devYear && byYear[o.devYear]) ? String(o.devYear) : w.y;
+                            const cy = byYear[y] || { p: w.curp, r: w.curr };
+                            const vals = [mag(selfFill(o, 'profit', w.p), cy.p),
+                                          mag(selfFill(o, 'revenue', w.r), cy.r)].filter(v => v !== null);
                             return vals.length ? Math.max.apply(null, vals) : null;
                         };
                         const x = devOf(a), y = devOf(b);
@@ -1699,7 +1788,7 @@
                 <th>名称</th><th class="${show('code')}">代码</th><th class="${show('tags')}">属性 ${icon('tags')}</th>
                 <th onclick="setSort('chg')" class="sortable ${sk('chg')}">涨跌 ${getSortIcon('chg')}</th>
                 <th onclick="setSort('score')" class="sortable ${sk('score')}" title="点击按得分排序">Score ${getSortIcon('score')}</th>
-                <th onclick="setSort('winddev')" class="sortable ${sk('winddev')}" style="width:124px" title="你自填的预测值比 Wind 一致预期高或低多少：以 Wind 预期为基准。2026E、2027E、2028E 三个年度都参与判定，取偏差最小者为判定年度。红色为高于预期 10% 以上，绿色为低于预期 10% 以上，黑色为正负 10% 以内。色块底色深浅表示偏离等级。自填值取池内当前录入，改了当场生效">偏离 Wind 预期 <span class="dev-refresh" onclick="event.stopPropagation();refreshWindDeviation(this)" title="重拉一次 Wind 一致预期快照并重算这一列。Wind 本身是周频数据，此处用于随时拿到最新一次快照">⟳</span> ${getSortIcon('winddev')}</th>
+                <th onclick="setSort('winddev')" class="sortable ${sk('winddev')}" style="width:124px" title="你自填的预测值比 Wind 一致预期高或低多少：以 Wind 预期为基准。2026E、2027E、2028E 三个年度都参与判定，取偏差最小者为判定年度。红色为高于预期 10% 以上，绿色为低于预期 10% 以上，黑色为正负 10% 以内。色块底色深浅表示偏离等级。自填值取池内当前录入，改了当场生效。点击任意一格可以自己指定对照年度，左侧有蓝线的是手动指定的">偏离 Wind 预期 <span class="dev-refresh" onclick="event.stopPropagation();refreshWindDeviation(this)" title="重拉一次 Wind 一致预期快照并重算这一列。Wind 本身是周频数据，此处用于随时拿到最新一次快照">⟳</span> ${getSortIcon('winddev')}</th>
                 ${historicalMode ? `<th onclick="setSort('intervalChange')" class="sortable ${sk('intervalChange')}" title="${historicalDateStr}收盘至最新价；非交易日取此前最近交易日，不含现金分红">区间涨跌幅 ${getSortIcon('intervalChange')}</th>` : ''}
                 <th onclick="setSort('cap')" class="sortable ${show('cap')} ${sk('cap')}">市值 ${getSortIcon('cap')}</th>
                 <th onclick="setSort('report_date')" class="sortable ${show('report')} ${sk('report_date')}">财报日 ${getSortIcon('report_date')}</th>
@@ -1735,32 +1824,53 @@
                 const w = windDeviation[i.code];
                 if (!w) return `<td class="dev-cell"><span class="dev-tag lv-na" data-dev="未取到 Wind 一致预期数据">—</span></td>`;
                 if (w.lv === '无数据' || !w.y) return `<td class="dev-cell"><span class="dev-tag lv-na" data-dev="${esc(w.note || '无对照数据')}">—</span></td>`;
-                const y = w.y, yy = y.slice(2);
                 // 候选年度列表：新结构读 cands；旧结构回落到「另一候选年度」加更远年度，兼容缓存里的旧文件
                 const cands = (Array.isArray(w.cands) && w.cands.length) ? w.cands
-                    : [{ y: y, p: w.curp, r: w.curr }]
+                    : [{ y: w.y, p: w.curp, r: w.curr }]
                         .concat(w.alty ? [{ y: w.alty, p: w.altp, r: w.altr }] : [])
                         .concat(w.fary ? [{ y: w.fary, p: w.farp, r: w.farr }] : []);
+                const byYear = {};
+                cands.forEach((c) => { byYear[c.y] = c; });
+                const auto = w.y;
+                // 对照年度：池内手动指定的优先。但只在那个年度确实有 Wind 数据时才生效，
+                // 否则静默回落到自动判定，不把整格变成「—」。
+                const manual = (i.devYear && byYear[i.devYear]) ? String(i.devYear) : '';
+                const y = manual || auto, yy = y.slice(2);
+                const cy = byYear[y] || { p: w.curp, r: w.curr };
                 // 自填值取池内当前录入，Wind 取周频快照，两者解耦
                 const p = selfFill(i, 'profit', w.p), r = selfFill(i, 'revenue', w.r);
-                const curP = devRel(p, w.curp), curR = devRel(r, w.curr);
+                const curP = devRel(p, cy.p), curR = devRel(r, cy.r);
                 // 等级也按当前自填值现算，不读快照里的 lv，否则会出现数字与等级对不上
                 const mags = [curP, curR].filter(Boolean).map(x => Math.abs(x.d));
                 const worst = mags.length ? Math.max.apply(null, mags) : null;
                 const lv = worst === null ? '' : (worst >= 50 ? '显著偏离' : worst >= 30 ? '需复核' : '基本吻合');
                 const cls = worst === null ? 'lv-na' : (lv === '显著偏离' ? 'lv-hi' : lv === '需复核' ? 'lv-mid' : 'lv-ok');
                 const lvShort = worst === null ? '不可比' : (lv === '显著偏离' ? '偏大' : lv === '需复核' ? '偏中' : '吻合');
+                // 净利与营收各自最贴近哪一年。两者不一致说明自填值内部口径打架，
+                // 这时自动判定取的是两者的平均值，未必是用户真正填的那一年。
+                const nearest = (mine, key) => {
+                    if (mine === null || mine === undefined || !(Math.abs(Number(mine)) > 1)) return null;
+                    let best = null, bi = null;
+                    cands.forEach((c) => {
+                        const wv = c[key];
+                        if (wv === null || wv === undefined || !(Math.abs(Number(wv)) > 0)) return;
+                        const dd = Math.abs(Number(wv) - Number(mine)) / Math.abs(Number(mine));
+                        if (best === null || dd < best) { best = dd; bi = c.y; }
+                    });
+                    return bi;
+                };
+                const nearP = nearest(p, 'p'), nearR = nearest(r, 'r');
                 const lines = [
                     `偏离 Wind 预期｜数据源 万得一致预期　Wind 快照 ${windDeviationMeta || '—'}`,
-                    `自填口径 ${y}E　偏离程度 ${lvShort}　年份判定 ${w.c}`,
+                    `自填口径 ${y}E（${manual ? '手动指定' : '自动判定'}）　偏离程度 ${lvShort}　${manual ? `算法判定 ${auto}E` : `年份判定 ${w.c}`}`,
                     `口径：以 Wind 该年度预期为基准，看自填值比预期高或低多少。自填值取池内当前录入，改动即时生效`
                 ];
                 if (w.lv && w.lv !== '无数据' && lv && w.lv !== lv) {
                     lines.push(``, `等级提示：Wind 快照那一轮算作 ${w.lv}，按当前自填值现算为 ${lv}`);
                 }
                 lines.push(``,
-                    `归母净利润：自填 ${devNum(p)} 亿　Wind ${y}E ${devNum(w.curp)} 亿　${curP ? curP.text : '自填缺失，不可比'}`,
-                    `营业收入：自填 ${devNum(r)} 亿　Wind ${y}E ${devNum(w.curr)} 亿　${curR ? curR.text : '自填缺失，不可比'}`
+                    `归母净利润：自填 ${devNum(p)} 亿　Wind ${y}E ${devNum(cy.p)} 亿　${curP ? curP.text : '自填缺失，不可比'}`,
+                    `营业收入：自填 ${devNum(r)} 亿　Wind ${y}E ${devNum(cy.r)} 亿　${curR ? curR.text : '自填缺失，不可比'}`
                 );
                 if (cands.length > 1) {
                     lines.push(``,
@@ -1773,13 +1883,30 @@
                         if (c.p !== null && c.p !== undefined) parts.push(`净利 ${devNum(c.p)} 亿${np ? '（' + np.dir + ' ' + devPct(np.d) + '%）' : ''}`);
                         if (c.r !== null && c.r !== undefined) parts.push(`营收 ${devNum(c.r)} 亿${nr ? '（' + nr.dir + ' ' + devPct(nr.d) + '%）' : ''}`);
                         const seg = parts.length ? `　${c.y}E　${parts.join('　')}` : `　${c.y}E　无 Wind 一致预期数据`;
-                        lines.push(seg + (c.y === y ? '　← 判定年度' : ''));
+                        lines.push(seg + (c.y === y ? '　← 当前对照' : '') + (c.y === auto && c.y !== y ? '　← 算法判定' : ''));
                     });
                 }
+                if (nearP && nearR && nearP !== nearR) {
+                    lines.push(``,
+                        `字段口径提示：净利数值更贴近 ${nearP}E，营收数值更贴近 ${nearR}E，两个字段指向不同年度。`,
+                        `若两者确实是同一年填的，多半有一个已经过时，核对后只留一个年度口径更清楚。`);
+                }
+                lines.push(``, `点击这一格可以自己指定对照年度（当前 ${manual ? `手动 ${y}E` : `自动 ${y}E`}），不必等算法猜。`);
                 const head = curP || curR;
                 // 方向着色：高于预期 10% 以上为红，低于预期 10% 以上为绿，正负 10% 以内为黑
                 const dCol = !head ? '' : (head.d > 10 ? 'color:#d32f2f' : (head.d < -10 ? 'color:#2e7d32' : 'color:#111'));
-                return `<td class="dev-cell"><span class="dev-tag ${cls}"${dCol ? ` style="${dCol}"` : ''} data-dev="${esc(lines.join('\n'))}">${yy}年 比预期${head ? head.dir + devPct(head.d) + '%' : '—'}</span></td>`;
+                // 年度选择器要用的展开数据：每个候选年度的 Wind 值与偏离一起带上，菜单里直接比。
+                // 塞进 data-opts 而不是重新算一遍，避免菜单和浮层两处口径打架。
+                const opts = cands.map((c) => {
+                    const np = devRel(p, c.p), nr = devRel(r, c.r);
+                    return {
+                        y: c.y,
+                        p: c.p === undefined ? null : c.p, r: c.r === undefined ? null : c.r,
+                        dp: np ? np.d : null, dr: nr ? nr.d : null,
+                        np: c.y === nearP, nr: c.y === nearR
+                    };
+                });
+                return `<td class="dev-cell"><span class="dev-tag ${cls}${manual ? ' dev-manual' : ''}"${dCol ? ` style="${dCol}"` : ''} data-code="${i.code}" data-dev="${esc(lines.join('\n'))}" data-auto="${auto}" data-manual="${manual}" data-opts="${esc(JSON.stringify(opts))}">${yy}年 比预期${head ? head.dir + devPct(head.d) + '%' : '—'}</span></td>`;
             };
             if(rows.length===0) html+=`<tr><td colspan="${14 + (historicalMode?1:0) + ['code','tags','cap','report','update','action'].filter(k=>viewSettings['show'+k.charAt(0).toUpperCase()+k.slice(1)]).length}" style="text-align:center;padding:20px;color:#ccc">无数据</td></tr>`;
             else rows.forEach((i, rowIndex) => {
@@ -2244,6 +2371,10 @@
             const tip = document.getElementById('dev-tip');
             if (!tip) return;
             const hide = () => tip.classList.remove('on');
+            const menuOn = () => {
+                const m = document.getElementById('dev-year-menu');
+                return !!(m && m.classList.contains('on'));
+            };
             const place = (el) => {
                 const r = el.getBoundingClientRect(), t = tip.getBoundingClientRect();
                 let left = r.left + r.width / 2 - t.width / 2;
@@ -2255,7 +2386,8 @@
             };
             document.addEventListener('mouseover', (e) => {
                 const el = e.target && e.target.closest ? e.target.closest('.dev-tag[data-dev]') : null;
-                if (!el) { hide(); return; }
+                // 年度选择器开着时不弹浮层，两者都落在单元格下方会叠在一起
+                if (!el || menuOn()) { hide(); return; }
                 tip.textContent = el.getAttribute('data-dev');
                 tip.classList.add('on');
                 place(el);
@@ -2263,12 +2395,26 @@
             document.addEventListener('mouseout', (e) => {
                 if (e.target && e.target.closest && e.target.closest('.dev-tag[data-dev]')) hide();
             });
-            window.addEventListener('scroll', hide, true);
-            document.getElementById('result').addEventListener('click', hide);
+            window.addEventListener('scroll', () => { hide(); closeDevYearPicker(); }, true);
+            window.addEventListener('resize', closeDevYearPicker);
+            // 点击偏离单元格 → 弹年度选择器；点别处 → 收起
+            document.getElementById('result').addEventListener('click', (e) => {
+                hide();
+                const el = e.target && e.target.closest ? e.target.closest('.dev-tag[data-code]') : null;
+                if (!el || el.classList.contains('lv-na')) { closeDevYearPicker(); return; }
+                e.stopPropagation();
+                if (menuOn()) { closeDevYearPicker(); return; }
+                openDevYearPicker(el);
+            });
+            document.addEventListener('click', (e) => {
+                if (e.target && e.target.closest && e.target.closest('#dev-year-menu')) return;
+                if (e.target && e.target.closest && e.target.closest('.dev-tag[data-code]')) return;
+                closeDevYearPicker();
+            });
         })();
 
         document.addEventListener('keydown', (event) => {
-            if (event.key === 'Escape') { closeWatchlistModal(); closeScoreDetails(); }
+            if (event.key === 'Escape') { closeWatchlistModal(); closeScoreDetails(); closeDevYearPicker(); }
         });
     </script>
 </body>
