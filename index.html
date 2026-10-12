@@ -1778,9 +1778,10 @@
             const allSel = rows.length>0 && rows.every(i=>selectedCodes.has(i.code));
 
             let html = `<table><thead><tr>
-                <th class="th-basic" colspan="${5 + (historicalMode?1:0) + (viewSettings.showCode?1:0) + (viewSettings.showTags?1:0) + (viewSettings.showCap?1:0) + (viewSettings.showReport?1:0)}">📊 基础行情</th>
+                <th class="th-basic" colspan="${4 + (historicalMode?1:0) + (viewSettings.showCode?1:0) + (viewSettings.showTags?1:0) + (viewSettings.showCap?1:0) + (viewSettings.showReport?1:0)}">📊 基础行情</th>
                 <th class="th-pe" colspan="4">💰 PE (利润)</th><th class="th-ps" colspan="4">🚀 PS (营收)</th>
                 <th rowspan="2" class="sortable ${show('update')} ${sk('last_update')}" onclick="setSort('last_update')" style="width:70px">📅 ${getSortIcon('last_update')}</th>
+                <th rowspan="2" class="sortable ${sk('winddev')}" onclick="setSort('winddev')" style="width:124px" title="你自填的预测值比 Wind 一致预期高或低多少：以 Wind 预期为基准。2026E、2027E、2028E 三个年度都参与判定，按归母净利润的相对偏差取最小者，净利缺失或为占位值时才用营业收入。红色为高于预期 10% 以上，绿色为低于预期 10% 以上，黑色为正负 10% 以内。色块底色深浅表示偏离等级。自填值取池内当前录入，改了当场生效。点击任意一格可以自己指定对照年度，左侧有蓝线的是手动指定的">偏离 Wind 预期 <span class="dev-refresh" onclick="event.stopPropagation();refreshWindDeviation(this)" title="重拉一次 Wind 一致预期快照并重算这一列。Wind 本身是周频数据，此处用于随时拿到最新一次快照">⟳</span> ${getSortIcon('winddev')}</th>
                 <th class="th-basic ${show('action')}" rowspan="2">⚙️</th>
                 <th class="th-select" rowspan="2" onclick="toggleSelectAll()"><input type="checkbox" ${allSel?'checked':''}></th>
             </tr><tr>
@@ -1788,7 +1789,6 @@
                 <th>名称</th><th class="${show('code')}">代码</th><th class="${show('tags')}">属性 ${icon('tags')}</th>
                 <th onclick="setSort('chg')" class="sortable ${sk('chg')}">涨跌 ${getSortIcon('chg')}</th>
                 <th onclick="setSort('score')" class="sortable ${sk('score')}" title="点击按得分排序">Score ${getSortIcon('score')}</th>
-                <th onclick="setSort('winddev')" class="sortable ${sk('winddev')}" style="width:124px" title="你自填的预测值比 Wind 一致预期高或低多少：以 Wind 预期为基准。2026E、2027E、2028E 三个年度都参与判定，按归母净利润的相对偏差取最小者，净利缺失或为占位值时才用营业收入。红色为高于预期 10% 以上，绿色为低于预期 10% 以上，黑色为正负 10% 以内。色块底色深浅表示偏离等级。自填值取池内当前录入，改了当场生效。点击任意一格可以自己指定对照年度，左侧有蓝线的是手动指定的">偏离 Wind 预期 <span class="dev-refresh" onclick="event.stopPropagation();refreshWindDeviation(this)" title="重拉一次 Wind 一致预期快照并重算这一列。Wind 本身是周频数据，此处用于随时拿到最新一次快照">⟳</span> ${getSortIcon('winddev')}</th>
                 ${historicalMode ? `<th onclick="setSort('intervalChange')" class="sortable ${sk('intervalChange')}" title="${historicalDateStr}收盘至最新价；非交易日取此前最近交易日，不含现金分红">区间涨跌幅 ${getSortIcon('intervalChange')}</th>` : ''}
                 <th onclick="setSort('cap')" class="sortable ${show('cap')} ${sk('cap')}">市值 ${getSortIcon('cap')}</th>
                 <th onclick="setSort('report_date')" class="sortable ${show('report')} ${sk('report_date')}">财报日 ${getSortIcon('report_date')}</th>
@@ -1919,13 +1919,13 @@
                     <td class="${show('tags')}" style="text-align:left">${(i.tags||"").split(' ').map(t=>t?`<span class="tag-badge">${t}</span>`:'').join('')}</td>
                     <td style="font-weight:bold;color:${parseFloat(i.chg)>=0?'#d32f2f':'#2e7d32'}">${i.chg==='-'?'-':i.chg+'%'}</td>
                     <td><button class="score-button" onclick="showScoreDetails(${rowIndex})" title="查看评分明细">${i.score.total === null ? '—' : i.score.total.toFixed(1)}</button></td>
-                    ${devCell(i)}
                     ${historicalMode ? `<td class="interval-change" style="font-weight:bold;color:${i.intervalChange === null ? '#888' : i.intervalChange >= 0 ? '#d32f2f' : '#2e7d32'}">${i.intervalChange === null ? '—' : (Math.round(i.intervalChange * 100) / 100).toFixed(2) + '%'}</td>` : ''}
                     <td class="${show('cap')}" style="font-family:monospace">${i.cap?i.cap.toFixed(2):'-'}</td>
                     <td class="${show('report')}">${formatReportDateCell(i.reportDateInfo)}</td>
                     <td>${i.profit||'-'}</td><td style="font-size:12px">${i.lowPE||'-'}~${i.highPE||'-'}</td><td>${p(i.peRes.down)}</td><td>${p(i.peRes.up)}</td>
                     <td>${i.revenue||'-'}</td><td style="font-size:12px">${i.lowPS||'-'}~${i.highPS||'-'}</td><td>${p(i.psRes.down)}</td><td>${p(i.psRes.up)}</td>
                     <td class="${show('update')}">${u}</td>
+                    ${devCell(i)}
                     <td class="${show('action')}"><button class="btn-log" onclick="showLogs('${i.code}')">📝</button><button class="btn-edit" onclick="editStock('${i.code}')">✏️</button><button class="btn-delete" onclick="openDeleteModal('${i.code}')">✕</button></td>
                     <td class="td-select" onclick="toggleSelectRow('${i.code}')"><input type="checkbox" class="row-checkbox" ${selectedCodes.has(i.code)?'checked':''}></td>
                 </tr>`;
