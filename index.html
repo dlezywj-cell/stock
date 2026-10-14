@@ -619,6 +619,10 @@
         // 业绩预测偏离：独立从私有仓库 consensus.json 读取，仅在本机渲染，不写入 stocks
         let consensusData = {}, consensusMeta = '', consensusWindow = '';
         let brokerForecast = {}, brokerMeta = '', brokerBasis = '';
+        // 券商预期 / 券商一致预期的候选年度。每周任务落库时会把它当时真正用的候选年度
+        // 写进 broker.json 与 consensus.json 的 candYears；页面优先读它——跨年时数据源
+        // 往后挪一年（2026/27/28 → 2027/28/29），页面列口径与文案跟着挪，不用改代码。
+        let brokerCandYears = [];
         // 机构明细浮层的关闭入口。声明放在这里，避免 updateTable 先于浮层初始化被调用时报未初始化。
         let closeBrokerTip = () => {};
         
@@ -1010,6 +1014,9 @@
                 consensusData = payload && payload.items ? payload.items : {};
                 consensusMeta = payload && payload.updatedAt ? payload.updatedAt : '';
                 consensusWindow = payload && payload.window && payload.window.days ? ('近 ' + payload.window.days + ' 天') : '';
+                if (payload && Array.isArray(payload.candYears) && payload.candYears.length) {
+                    brokerCandYears = payload.candYears.map(String);
+                }
                 return Object.keys(consensusData).length > 0;
             } catch (e) {
                 console.log("券商一致预期数据读取失败:", e);
@@ -1048,6 +1055,9 @@
                 brokerForecast = payload && payload.items ? payload.items : {};
                 brokerMeta = payload && payload.updatedAt ? payload.updatedAt : '';
                 brokerBasis = payload && payload.basis ? payload.basis : '';
+                if (payload && Array.isArray(payload.candYears) && payload.candYears.length) {
+                    brokerCandYears = payload.candYears.map(String);
+                }
                 return Object.keys(brokerForecast).length > 0;
             } catch (e) {
                 console.log("机构盈利预测明细读取失败:", e);
@@ -1067,17 +1077,56 @@
             return ok;
         }
 
-        // 覆盖机构家数：取三年中覆盖最多的一年，作为这一列的可比口径
+        // 一份明细里的年度键（升序）。不写死年份，谁有哪几年就认哪几年。
+        const yearKeys = (o) => Object.keys(o || {}).filter((k) => /^\d{4}$/.test(k)).sort();
+
+        // 覆盖机构家数：取各候选年度中覆盖最多的一年，作为这一列的可比口径
         const bkCount = (code) => {
             const b = brokerForecast[code];
             if (!b) return 0;
             let m = 0;
-            ['2026', '2027', '2028'].forEach((y) => {
+            yearKeys(b).forEach((y) => {
                 const n = Array.isArray(b[y]) ? b[y].length : 0;
                 if (n > m) m = n;
             });
             return m;
         };
+
+        // 当前候选年度（升序）。优先用每周任务落库时写进 candYears 的值；读不到（老数据）就从
+        // 实际明细里推：取覆盖标的数最多的那个年度组合。这样跨年时数据源往后挪一年，
+        // 页面列口径与文案跟着挪，不需要改页面。
+        const activeCandYears = () => {
+            if (brokerCandYears.length) return brokerCandYears.map(String).sort();
+            const cnt = {};
+            Object.keys(brokerForecast).forEach((c) => {
+                const ks = yearKeys(brokerForecast[c]);
+                if (ks.length) { const k = ks.join(','); cnt[k] = (cnt[k] || 0) + 1; }
+            });
+            let best = '', bn = -1;
+            Object.keys(cnt).forEach((k) => {
+                if (cnt[k] > bn || (cnt[k] === bn && k > best)) { bn = cnt[k]; best = k; }
+            });
+            if (best) return best.split(',').slice(-3);
+            const y0 = new Date().getFullYear();
+            return [String(y0 + 1), String(y0 + 2), String(y0 + 3)];
+        };
+
+        // 偏离列表头的说明文案。候选年度是动态的，所以这里的年度要现算，不能写死。
+        function devColTitle() {
+            const ys = activeCandYears().map((y) => y + 'E');
+            const yrs = ys.length > 1
+                ? (ys.slice(0, -1).join('、') + '、' + ys[ys.length - 1])
+                : (ys[0] || '');
+            return '你自填的预测值比券商一致预期高或低多少：以券商一致预期为基准。'
+                + '券商一致预期取近半年内发布的券商研报，逐年算术平均。'
+                + (yrs ? yrs + ' 这几个年度都参与判定，' : '')
+                + '按归母净利润的相对偏差取最小者，净利缺失或为占位值时才用营业收入。'
+                + '红色为高于预期 10% 以上，绿色为低于预期 10% 以上，黑色为正负 10% 以内。'
+                + '色块底色深浅表示偏离等级。自填值取池内当前录入，改了当场生效。'
+                + '点击任意一格可以自己指定对照年度，左侧有蓝线的是手动指定的。'
+                + '港美股没有免费的券商分机构明细，会显示为「—」。'
+                + '如果工具栏的下拉框选了某个年度、净利与营收都取自券商一致预期，这一格会留空——自己跟自己比没有偏离可言';
+        }
 
         const escText = (v) => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
@@ -1357,7 +1406,7 @@
         function brokerTipHtml(code) {
             const b = brokerForecast[code];
             if (!b) return '';
-            const years = ['2026', '2027', '2028'].filter((y) => Array.isArray(b[y]) && b[y].length);
+            const years = yearKeys(b).filter((y) => Array.isArray(b[y]) && b[y].length);
             if (!years.length) return '';
             const fmt = (v) => (v === null || v === undefined) ? '—'
                 : Number(v).toLocaleString('zh-CN', { maximumFractionDigits: Math.abs(Number(v)) >= 10 ? 2 : 3 });
@@ -1377,7 +1426,7 @@
             });
             let body = `<div class="bk-hd">数据源 ${escText(brokerBasis || '机构研报')}　快照 ${brokerMeta || '—'}｜单位亿元<br>`
                 + `每行一家券商，取该券商最近一次预测对应的研报日期，只保留一年以内发布的研报；`
-                + `同一券商只保留最新一篇。缺的字段以「—」表示。三年合计 ${total} 条。</div>`;
+                + `同一券商只保留最新一篇。缺的字段以「—」表示。${years.length} 个年度合计 ${total} 条。</div>`;
             years.forEach((y) => {
                 const list = byDate(b[y]);
                 const undated = list.filter((row) => !pick(row).date).length;
@@ -2222,7 +2271,7 @@
                 <th class="th-basic" colspan="${4 + (historicalMode?1:0) + (viewSettings.showCode?1:0) + (viewSettings.showTags?1:0) + (viewSettings.showCap?1:0) + (viewSettings.showReport?1:0)}">📊 基础行情</th>
                 <th class="th-pe" colspan="4">💰 PE (利润)</th><th class="th-ps" colspan="4">🚀 PS (营收)</th>
                 <th rowspan="2" class="sortable ${show('update')} ${sk('last_update')}" onclick="setSort('last_update')" style="width:70px">📅 ${getSortIcon('last_update')}</th>
-                <th rowspan="2" class="sortable ${sk('consdev')}" onclick="setSort('consdev')" style="width:124px" title="你自填的预测值比券商一致预期高或低多少：以券商一致预期为基准。券商一致预期取近半年内发布的券商研报，逐年算术平均。2026E、2027E、2028E 三个年度都参与判定，按归母净利润的相对偏差取最小者，净利缺失或为占位值时才用营业收入。红色为高于预期 10% 以上，绿色为低于预期 10% 以上，黑色为正负 10% 以内。色块底色深浅表示偏离等级。自填值取池内当前录入，改了当场生效。点击任意一格可以自己指定对照年度，左侧有蓝线的是手动指定的。港美股没有免费的券商分机构明细，会显示为「—」。如果工具栏的下拉框选了某个年度、净利与营收都取自券商一致预期，这一格会留空——自己跟自己比没有偏离可言">偏离券商预期 <span class="dev-refresh" onclick="event.stopPropagation();refreshConsensus(this)" title="重拉一次券商一致预期快照并重算这一列。券商预期由每周一刷新，此处用于随时拿到最新一次快照">⟳</span> ${getSortIcon('consdev')}</th>
+                <th rowspan="2" class="sortable ${sk('consdev')}" onclick="setSort('consdev')" style="width:124px" title="${devColTitle()}">偏离券商预期 <span class="dev-refresh" onclick="event.stopPropagation();refreshConsensus(this)" title="重拉一次券商一致预期快照并重算这一列。券商预期由每周一刷新，此处用于随时拿到最新一次快照">⟳</span> ${getSortIcon('consdev')}</th>
                 <th rowspan="2" class="sortable ${sk('broker')}" onclick="setSort('broker')" style="width:92px" title="各券商对该标的营业收入与归母净利润的预测明细，当年、第二年和第三年逐年列出，并标注该券商研报的发布日期。只保留一年以内发布的研报。单元格显示覆盖券商家数，取三年中覆盖最多的一年。点击展开逐券商明细（右上角 × 或 Esc 关闭），数据每周刷新一次，点 ⟳ 可手动重拉。">券商预期 <span class="bk-refresh" onclick="event.stopPropagation();refreshBrokerForecast(this)" title="重拉一次机构盈利预测明细快照">⟳</span> ${getSortIcon('broker')}</th>
                 <th class="th-basic ${show('action')}" rowspan="2">⚙️</th>
                 <th class="th-select" rowspan="2" onclick="toggleSelectAll()"><input type="checkbox" ${allSel?'checked':''}></th>
