@@ -1072,11 +1072,24 @@
                 ? { org: row[0], date: row[1] || '', rev: row[2], np: row[3] }
                 : { org: row[0], date: '', rev: row[1], np: row[2] });
             const total = years.reduce((a, y) => a + b[y].length, 0);
+            // 按研报发布日期从早到晚排列，越靠下越新，方便看预期随时间怎么移动。
+            // 日期是 YYYY-MM-DD，直接字典序比较即可；没有日期的排在最后，
+            // 且因为它们彼此相等，稳定排序会保留 JSON 里原有的顺序（净利降序）。
+            const byDate = (rows) => rows.slice().sort((x, y) => {
+                const dx = pick(x).date, dy = pick(y).date;
+                if (!dx && !dy) return 0;
+                if (!dx) return 1;
+                if (!dy) return -1;
+                return dx < dy ? -1 : (dx > dy ? 1 : 0);
+            });
             let body = `<div class="bk-hd">数据源 ${escText(brokerBasis || '机构研报')}　快照 ${brokerMeta || '—'}｜单位亿元<br>`
-                + `每行一家券商，取该券商最近一次预测对应的研报日期，只保留一年以内发布的研报。缺的字段以「—」表示。三年合计 ${total} 条。</div>`;
+                + `每行一家券商，取该券商最近一次预测对应的研报日期，只保留一年以内发布的研报；`
+                + `同一券商只保留最新一篇。缺的字段以「—」表示。三年合计 ${total} 条。</div>`;
             years.forEach((y) => {
-                const list = b[y];
-                body += `<div class="bk-sec">${y}E　${list.length} 家</div>`;
+                const list = byDate(b[y]);
+                const undated = list.filter((row) => !pick(row).date).length;
+                body += `<div class="bk-sec">${y}E　${list.length} 家`
+                    + (undated ? `（其中 ${undated} 家无发布日期，排在最后）` : '') + `</div>`;
                 body += '<table><tr><th>券商</th><th>发布日期</th><th class="bk-num">营收</th><th class="bk-num">净利</th></tr>';
                 list.forEach((row, k) => {
                     const r = pick(row);
@@ -1086,7 +1099,9 @@
                 });
                 body += '</table>';
             });
-            body += '<div class="bk-foot">按净利从高到低排列。暂无该年度预测的券商不会出现。</div>';
+            body += '<div class="bk-foot">按研报发布日期从早到晚排列，越靠下越新。'
+                + '同一券商只保留最新一篇，所以这里看到的是各家的时间先后，不是单家券商的历次修订。'
+                + '暂无该年度预测的券商不会出现。</div>';
             const nm = (stocks.find((s) => s.code === code) || {}).name || '';
             return `<div class="bk-bar"><span class="bk-tt">机构盈利预测明细${nm ? ' · ' + escText(nm) : ''}</span>`
                 + `<button class="bk-x" type="button" title="关闭（Esc）" aria-label="关闭">×</button></div>`
