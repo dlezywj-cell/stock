@@ -266,11 +266,19 @@
         #dev-tip.on { display:block; }
         .bk-cell { text-align:center; }
         .bk-tag { padding:1px 5px; border-radius:3px; font-size:11px; font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap; cursor:pointer; background:#eef2f9; color:#4a6fa5; }
+        .bk-tag:hover { background:#dfe8f6; }
+        .bk-tag.bk-active { background:#1a73e8; color:#fff; }
         .bk-tag.bk-na { background:transparent; color:#bbb; font-weight:400; cursor:default; }
         .bk-refresh { cursor:pointer; color:#9aa5b4; font-weight:700; padding:0 2px; margin-left:1px; font-size:12px; }
         .bk-refresh:hover { color:#1a73e8; }
-        #bk-tip { position:fixed; display:none; z-index:9998; width:min(620px, calc(100vw - 24px)); max-height:min(68vh, 540px); overflow-y:auto; padding:9px 12px; background:#2b3440; color:#f5f7fa; font-size:12px; line-height:1.55; border-radius:6px; box-shadow:0 8px 24px rgba(0,0,0,.28); }
-        #bk-tip.on { display:block; }
+        /* 点击展开的机构明细浮层：标题栏固定、内容区可滚动，右上角有关闭键 */
+        #bk-tip { position:fixed; display:none; z-index:9998; width:min(660px, calc(100vw - 24px)); max-height:min(72vh, 620px); flex-direction:column; background:#2b3440; color:#f5f7fa; font-size:12px; line-height:1.55; border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,.28); overflow:hidden; }
+        #bk-tip.on { display:flex; }
+        #bk-tip .bk-bar { display:flex; align-items:center; justify-content:space-between; gap:10px; flex:0 0 auto; padding:7px 8px 7px 12px; background:#232c36; border-bottom:1px solid #3d4959; }
+        #bk-tip .bk-tt { font-weight:700; color:#dbe5f2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        #bk-tip .bk-x { flex:0 0 auto; width:22px; height:22px; padding:0; border:0; border-radius:5px; background:#3a4756; color:#cfd8e3; font-size:15px; font-weight:700; line-height:1; cursor:pointer; }
+        #bk-tip .bk-x:hover { background:#4a5a6d; color:#fff; }
+        #bk-tip .bk-body { flex:1 1 auto; overflow-y:auto; overscroll-behavior:contain; padding:8px 12px 10px; }
         #bk-tip .bk-hd { color:#c3cede; line-height:1.65; padding-bottom:6px; border-bottom:1px solid #3d4959; }
         #bk-tip .bk-sec { margin:9px 0 2px; font-weight:700; color:#9fc2ff; font-variant-numeric:tabular-nums; }
         /* 全局 table 规则带 min-width:1350px 与 sticky 表头，这里必须整段盖掉，否则浮层表格会被撑爆、数值列被挤出可视区 */
@@ -278,6 +286,7 @@
         #bk-tip th, #bk-tip td { padding:1px 10px 1px 0; border:0; border-bottom:1px solid #3d4959; background:transparent; white-space:nowrap; font-variant-numeric:tabular-nums; }
         #bk-tip th { text-align:left; font-weight:600; color:#93a0b2; position:static; user-select:none; }
         #bk-tip th.bk-num, #bk-tip td.bk-num { text-align:right; }
+        #bk-tip td.bk-date { color:#9fb0c6; }
         #bk-tip tbody tr:last-child td { border-bottom:0; }
         #bk-tip td.bk-org { color:#e8eef7; }
         /* 全局规则 tbody tr:nth-child(even){background:#f8f9fa} 与 tbody tr:hover td 会透过
@@ -509,7 +518,7 @@
     </div>
     <div id="result"></div>
     <div id="dev-tip" role="tooltip"></div>
-    <div id="bk-tip" role="tooltip" aria-label="机构盈利预测明细"></div>
+    <div id="bk-tip" role="dialog" aria-modal="false" aria-label="机构盈利预测明细"></div>
     <div id="dev-year-menu" role="menu" aria-label="选择对照年度"></div>
 
     <div id="score-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="score-title">
@@ -588,6 +597,8 @@
         // 业绩预测偏离：独立从私有仓库 wind.json 读取，仅在本机渲染，不写入 stocks
         let windDeviation = {}, windDeviationMeta = '';
         let brokerForecast = {}, brokerMeta = '', brokerBasis = '';
+        // 机构明细浮层的关闭入口。声明放在这里，避免 updateTable 先于浮层初始化被调用时报未初始化。
+        let closeBrokerTip = () => {};
         
         let intervalId = null, sortState = { key: 'pe_up', dir: 'desc' }, isPanelOpen = false, pendingDeleteCode = null, pendingLogIndex = null, pendingSyncData = null, cachedMarketData = {}, selectedCodes = new Set(), columnFilters = {}, onlySelectedMode = false;
         
@@ -1047,7 +1058,8 @@
 
         const escText = (v) => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-        // 浮层内容：按年度分节，每节一张机构表，营收与净利各一列
+        // 浮层内容：标题栏（含关闭键）+ 可滚动内容区，按年度分节，每节一张机构表。
+        // 行结构 [券商, 发布日期, 营收, 净利]；老版本的 [券商, 营收, 净利] 也能读。
         function brokerTipHtml(code) {
             const b = brokerForecast[code];
             if (!b) return '';
@@ -1055,21 +1067,29 @@
             if (!years.length) return '';
             const fmt = (v) => (v === null || v === undefined) ? '—'
                 : Number(v).toLocaleString('zh-CN', { maximumFractionDigits: Math.abs(Number(v)) >= 10 ? 2 : 3 });
+            const pick = (row) => (row.length >= 4
+                ? { org: row[0], date: row[1] || '', rev: row[2], np: row[3] }
+                : { org: row[0], date: '', rev: row[1], np: row[2] });
             const total = years.reduce((a, y) => a + b[y].length, 0);
-            let h = `<div class="bk-hd">机构盈利预测明细｜数据源 ${escText(brokerBasis || '机构研报')}　快照 ${brokerMeta || '—'}<br>`
-                + `每行一家机构，取该机构最近一次预测，单位亿元。缺的字段以「—」表示。三年合计 ${total} 条。</div>`;
+            let body = `<div class="bk-hd">数据源 ${escText(brokerBasis || '机构研报')}　快照 ${brokerMeta || '—'}｜单位亿元<br>`
+                + `每行一家券商，取该券商最近一次预测对应的研报日期，只保留一年以内发布的研报。缺的字段以「—」表示。三年合计 ${total} 条。</div>`;
             years.forEach((y) => {
                 const list = b[y];
-                h += `<div class="bk-sec">${y}E　${list.length} 家</div>`;
-                h += '<table><tr><th>机构</th><th class="bk-num">营收</th><th class="bk-num">净利</th></tr>';
+                body += `<div class="bk-sec">${y}E　${list.length} 家</div>`;
+                body += '<table><tr><th>券商</th><th>发布日期</th><th class="bk-num">营收</th><th class="bk-num">净利</th></tr>';
                 list.forEach((row, k) => {
-                    h += `<tr class="${k % 2 ? 'bk-alt' : ''}"><td class="bk-org">${escText(row[0])}</td>`
-                        + `<td class="bk-num">${fmt(row[1])}</td><td class="bk-num">${fmt(row[2])}</td></tr>`;
+                    const r = pick(row);
+                    body += `<tr class="${k % 2 ? 'bk-alt' : ''}"><td class="bk-org">${escText(r.org)}</td>`
+                        + `<td class="bk-date">${r.date ? escText(r.date) : '—'}</td>`
+                        + `<td class="bk-num">${fmt(r.rev)}</td><td class="bk-num">${fmt(r.np)}</td></tr>`;
                 });
-                h += '</table>';
+                body += '</table>';
             });
-            h += '<div class="bk-foot">按净利从高到低排列。暂无该年度预测的机构不会出现。</div>';
-            return h;
+            body += '<div class="bk-foot">按净利从高到低排列。暂无该年度预测的券商不会出现。</div>';
+            const nm = (stocks.find((s) => s.code === code) || {}).name || '';
+            return `<div class="bk-bar"><span class="bk-tt">机构盈利预测明细${nm ? ' · ' + escText(nm) : ''}</span>`
+                + `<button class="bk-x" type="button" title="关闭（Esc）" aria-label="关闭">×</button></div>`
+                + `<div class="bk-body">${body}</div>`;
         }
 
         // 手动指定对照年度：把某只标的的 devYear 写进股票池，随 data.json 一起同步，
@@ -1687,6 +1707,7 @@
         }
 
         async function updateTable(skipFetch = false) {
+            closeBrokerTip();   // 表格要整体重绘，机构明细浮层里引用的单元格会失效，先收起来
             const el = document.getElementById('result');
             renderWatchlistControls();
             
@@ -1884,7 +1905,7 @@
                 <th class="th-pe" colspan="4">💰 PE (利润)</th><th class="th-ps" colspan="4">🚀 PS (营收)</th>
                 <th rowspan="2" class="sortable ${show('update')} ${sk('last_update')}" onclick="setSort('last_update')" style="width:70px">📅 ${getSortIcon('last_update')}</th>
                 <th rowspan="2" class="sortable ${sk('winddev')}" onclick="setSort('winddev')" style="width:124px" title="你自填的预测值比 Wind 一致预期高或低多少：以 Wind 预期为基准。2026E、2027E、2028E 三个年度都参与判定，按归母净利润的相对偏差取最小者，净利缺失或为占位值时才用营业收入。红色为高于预期 10% 以上，绿色为低于预期 10% 以上，黑色为正负 10% 以内。色块底色深浅表示偏离等级。自填值取池内当前录入，改了当场生效。点击任意一格可以自己指定对照年度，左侧有蓝线的是手动指定的">偏离 Wind 预期 <span class="dev-refresh" onclick="event.stopPropagation();refreshWindDeviation(this)" title="重拉一次 Wind 一致预期快照并重算这一列。Wind 本身是周频数据，此处用于随时拿到最新一次快照">⟳</span> ${getSortIcon('winddev')}</th>
-                <th rowspan="2" class="sortable ${sk('broker')}" onclick="setSort('broker')" style="width:92px" title="Wind 上各机构对该标的营业收入与归母净利润的预测明细，当年、第二年和第三年逐年列出。单元格显示覆盖机构家数，取三年中覆盖最多的一年。鼠标悬停展开逐机构明细。数据每周刷新一次，点 ⟳ 可手动重拉。">券商预期 <span class="bk-refresh" onclick="event.stopPropagation();refreshBrokerForecast(this)" title="重拉一次机构盈利预测明细快照">⟳</span> ${getSortIcon('broker')}</th>
+                <th rowspan="2" class="sortable ${sk('broker')}" onclick="setSort('broker')" style="width:92px" title="各券商对该标的营业收入与归母净利润的预测明细，当年、第二年和第三年逐年列出，并标注该券商研报的发布日期。只保留一年以内发布的研报。单元格显示覆盖券商家数，取三年中覆盖最多的一年。点击展开逐券商明细（右上角 × 或 Esc 关闭），数据每周刷新一次，点 ⟳ 可手动重拉。">券商预期 <span class="bk-refresh" onclick="event.stopPropagation();refreshBrokerForecast(this)" title="重拉一次机构盈利预测明细快照">⟳</span> ${getSortIcon('broker')}</th>
                 <th class="th-basic ${show('action')}" rowspan="2">⚙️</th>
                 <th class="th-select" rowspan="2" onclick="toggleSelectAll()"><input type="checkbox" ${allSel?'checked':''}></th>
             </tr><tr>
@@ -2011,11 +2032,11 @@
                 });
                 return `<td class="dev-cell"><span class="dev-tag ${cls}${manual ? ' dev-manual' : ''}"${dCol ? ` style="${dCol}"` : ''} data-code="${i.code}" data-dev="${esc(lines.join('\n'))}" data-auto="${auto}" data-manual="${manual}" data-opts="${esc(JSON.stringify(opts))}">${yy}年 比预期${head ? head.dir + devPct(head.d) + '%' : '—'}</span></td>`;
             };
-            // 券商预期单元格：显示覆盖机构家数，悬停展开三年逐机构明细
+            // 券商预期单元格：显示覆盖机构家数，点击展开三年逐机构明细
             const bkCell = (i) => {
                 const n = bkCount(i.code);
                 if (!n) return `<td class="bk-cell"><span class="bk-tag bk-na" title="暂无该标的的机构盈利预测明细">—</span></td>`;
-                return `<td class="bk-cell"><span class="bk-tag" data-bkcode="${i.code}" title="悬停查看各机构对营收与归母净利润的逐年预测">${n} 家</span></td>`;
+                return `<td class="bk-cell"><span class="bk-tag" data-bkcode="${i.code}" title="点击查看各券商对营收与归母净利润的逐年预测，含研报发布日期">${n} 家</span></td>`;
             };
             if(rows.length===0) html+=`<tr><td colspan="${15 + (historicalMode?1:0) + ['code','tags','cap','report','update','action'].filter(k=>viewSettings['show'+k.charAt(0).toUpperCase()+k.slice(1)]).length}" style="text-align:center;padding:20px;color:#ccc">无数据</td></tr>`;
             else rows.forEach((i, rowIndex) => {
@@ -2525,45 +2546,62 @@
             });
         })();
 
-        (function initBrokerTooltip() {
+        // 券商预期浮层：**点击**单元格展开，右上角 × 或 Esc 或点空白处关闭，
+        // 内容区独立滚动（标题栏不跟着滚），页面滚动时浮层跟着单元格走。
+        (function initBrokerTip() {
             const tip = document.getElementById('bk-tip');
             if (!tip) return;
-            let hideTimer = null;
-            const cancel = () => { if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; } };
-            const hide = () => { cancel(); tip.classList.remove('on'); };
-            const later = () => { cancel(); hideTimer = setTimeout(() => tip.classList.remove('on'), 200); };
+            let openCode = null;
             const place = (el) => {
+                if (!el) return;
                 const r = el.getBoundingClientRect(), t = tip.getBoundingClientRect();
                 let left = r.left + r.width / 2 - t.width / 2;
                 left = Math.max(8, Math.min(left, window.innerWidth - t.width - 8));
                 let top = r.bottom + 8;
-                if (top + t.height > window.innerHeight - 8) top = Math.max(8, r.top - t.height - 8);
+                if (top + t.height > window.innerHeight - 8) {
+                    top = Math.max(8, r.top - t.height - 8);
+                }
+                // 保底：任何情况下都留在视口内，避免点到屏幕外的单元格时浮层跑到看不见的地方
+                top = Math.max(8, Math.min(top, Math.max(8, window.innerHeight - t.height - 8)));
                 tip.style.left = Math.round(left) + 'px';
                 tip.style.top = Math.round(top) + 'px';
             };
-            document.addEventListener('mouseover', (e) => {
+            const tagOf = (code) => document.querySelector('.bk-tag[data-bkcode="' + code + '"]');
+            const close = () => {
+                openCode = null;
+                tip.classList.remove('on');
+                tip.innerHTML = '';
+                document.querySelectorAll('.bk-tag.bk-active').forEach((e) => e.classList.remove('bk-active'));
+            };
+            closeBrokerTip = close;
+            const open = (tag) => {
+                const code = tag.getAttribute('data-bkcode');
+                if (openCode === code) { close(); return; }   // 再点同一格收起
+                const html = brokerTipHtml(code);
+                if (!html) { close(); return; }
+                tip.innerHTML = html;
+                tip.classList.add('on');
+                document.querySelectorAll('.bk-tag.bk-active').forEach((e) => e.classList.remove('bk-active'));
+                tag.classList.add('bk-active');
+                openCode = code;
+                place(tag);
+            };
+            document.addEventListener('click', (e) => {
                 const el = e.target;
-                if (!el || !el.closest) { later(); return; }
+                if (!el || !el.closest) return;
+                if (el.closest('#bk-tip .bk-x')) { e.stopPropagation(); close(); return; }
                 const tag = el.closest('.bk-tag[data-bkcode]');
-                if (tag) {
-                    const html = brokerTipHtml(tag.getAttribute('data-bkcode'));
-                    if (!html) { hide(); return; }
-                    cancel();
-                    tip.innerHTML = html;
-                    tip.classList.add('on');
-                    place(tag);
-                    return;
-                }
-                // 鼠标进到浮层里（要滚动查看长名单）就不收，离开才收
-                if (el.closest('#bk-tip')) { cancel(); return; }
-                later();
+                if (tag) { open(tag); return; }
+                if (el.closest('#bk-tip')) return;   // 浮层内选字、滚动不关闭
+                close();
             });
-            window.addEventListener('scroll', () => hide(), true);
-            window.addEventListener('resize', hide);
+            const follow = () => { if (openCode) place(tagOf(openCode)); };
+            window.addEventListener('scroll', follow, true);
+            window.addEventListener('resize', follow);
         })();
 
         document.addEventListener('keydown', (event) => {
-            if (event.key === 'Escape') { closeWatchlistModal(); closeScoreDetails(); closeDevYearPicker(); }
+            if (event.key === 'Escape') { closeWatchlistModal(); closeScoreDetails(); closeDevYearPicker(); closeBrokerTip(); }
         });
     </script>
 </body>
