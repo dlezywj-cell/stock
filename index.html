@@ -264,6 +264,24 @@
         .dev-refresh:hover { color:#1a73e8; }
         #dev-tip { position:fixed; display:none; z-index:9999; max-width:540px; padding:8px 11px; background:#2b3440; color:#f5f7fa; font-size:12px; line-height:1.75; border-radius:6px; box-shadow:0 8px 24px rgba(0,0,0,.28); white-space:pre-line; pointer-events:none; }
         #dev-tip.on { display:block; }
+        .bk-cell { text-align:center; }
+        .bk-tag { padding:1px 5px; border-radius:3px; font-size:11px; font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap; cursor:pointer; background:#eef2f9; color:#4a6fa5; }
+        .bk-tag.bk-na { background:transparent; color:#bbb; font-weight:400; cursor:default; }
+        .bk-refresh { cursor:pointer; color:#9aa5b4; font-weight:700; padding:0 2px; margin-left:1px; font-size:12px; }
+        .bk-refresh:hover { color:#1a73e8; }
+        #bk-tip { position:fixed; display:none; z-index:9998; width:min(620px, calc(100vw - 24px)); max-height:min(68vh, 540px); overflow-y:auto; padding:9px 12px; background:#2b3440; color:#f5f7fa; font-size:12px; line-height:1.55; border-radius:6px; box-shadow:0 8px 24px rgba(0,0,0,.28); }
+        #bk-tip.on { display:block; }
+        #bk-tip .bk-hd { color:#c3cede; line-height:1.65; padding-bottom:6px; border-bottom:1px solid #3d4959; }
+        #bk-tip .bk-sec { margin:9px 0 2px; font-weight:700; color:#9fc2ff; font-variant-numeric:tabular-nums; }
+        /* 全局 table 规则带 min-width:1350px 与 sticky 表头，这里必须整段盖掉，否则浮层表格会被撑爆、数值列被挤出可视区 */
+        #bk-tip table { border-collapse:collapse; border-spacing:0; width:100%; min-width:0; table-layout:auto; }
+        #bk-tip th, #bk-tip td { padding:1px 10px 1px 0; border:0; border-bottom:1px solid #3d4959; background:transparent; white-space:nowrap; font-variant-numeric:tabular-nums; }
+        #bk-tip th { text-align:left; font-weight:600; color:#93a0b2; position:static; user-select:none; }
+        #bk-tip th.bk-num, #bk-tip td.bk-num { text-align:right; }
+        #bk-tip tbody tr:last-child td { border-bottom:0; }
+        #bk-tip td.bk-org { color:#e8eef7; }
+        #bk-tip tr.bk-alt td { background:rgba(255,255,255,.035); }
+        #bk-tip .bk-foot { margin-top:8px; padding-top:6px; border-top:1px solid #3d4959; color:#93a0b2; }
         #dev-year-menu { position:fixed; display:none; z-index:10000; min-width:440px; padding:6px; background:#fff; border:1px solid #d8dee9; border-radius:8px; box-shadow:0 10px 30px rgba(0,0,0,.18); font-size:12px; }
         #dev-year-menu.on { display:block; }
         #dev-year-menu .ym-hd { padding:5px 8px 6px; color:#8a94a6; font-size:11px; line-height:1.6; border-bottom:1px solid #eef1f5; margin-bottom:4px; }
@@ -486,6 +504,7 @@
     </div>
     <div id="result"></div>
     <div id="dev-tip" role="tooltip"></div>
+    <div id="bk-tip" role="tooltip" aria-label="机构盈利预测明细"></div>
     <div id="dev-year-menu" role="menu" aria-label="选择对照年度"></div>
 
     <div id="score-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="score-title">
@@ -563,6 +582,7 @@
         let viewSettings = { showCode: true, showTags: true, showReport: true, showUpdate: true, showAction: true, showCap: false, ...JSON.parse(APP_STORAGE.getItem('stock_sys_view')) };
         // 业绩预测偏离：独立从私有仓库 wind.json 读取，仅在本机渲染，不写入 stocks
         let windDeviation = {}, windDeviationMeta = '';
+        let brokerForecast = {}, brokerMeta = '';
         
         let intervalId = null, sortState = { key: 'pe_up', dir: 'desc' }, isPanelOpen = false, pendingDeleteCode = null, pendingLogIndex = null, pendingSyncData = null, cachedMarketData = {}, selectedCodes = new Set(), columnFilters = {}, onlySelectedMode = false;
         
@@ -969,6 +989,81 @@
             updateStatus(ok ? 'ok' : 'paused',
                 ok ? ('Wind 快照 ' + (windDeviationMeta || '已刷新')) : '一致预期不可用');
             return ok;
+        }
+
+        // 从私有仓库同目录读取 broker.json（机构盈利预测明细），缺失时静默降级为「—」
+        async function loadBrokerForecast(cfg) {
+            cfg = cfg || getGbConfig();
+            if (!cfg.username || !cfg.repo) return false;
+            const bkPath = String(cfg.path || 'data.json').replace(/[^/]*$/, 'broker.json');
+            const url = `https://api.github.com/repos/${cfg.username}/${cfg.repo}/contents/${bkPath}`;
+            const headers = { "Accept": "application/vnd.github.v3+json" };
+            if (cfg.token) headers["Authorization"] = `token ${cfg.token}`;
+            try {
+                const res = await fetch(`${url}?ref=${encodeURIComponent(cfg.branch)}`, { headers, cache: "no-store" });
+                if (!res.ok) {
+                    console.log(`机构盈利预测明细不可用 (${res.status})`);
+                    return false;
+                }
+                const payload = JSON.parse(b64_to_utf8((await res.json()).content));
+                brokerForecast = payload && payload.items ? payload.items : {};
+                brokerMeta = payload && payload.updatedAt ? payload.updatedAt : '';
+                return Object.keys(brokerForecast).length > 0;
+            } catch (e) {
+                console.log("机构盈利预测明细读取失败:", e);
+                return false;
+            }
+        }
+
+        // 手动重拉机构明细，和偏离列一样可以不等周一
+        async function refreshBrokerForecast(btn) {
+            const label = btn ? btn.innerHTML : '';
+            if (btn) { btn.disabled = true; btn.innerHTML = '⏳'; }
+            const ok = await loadBrokerForecast();
+            if (btn) { btn.disabled = false; btn.innerHTML = label; }
+            if (stocks.length) updateTable(true);
+            updateStatus(ok ? 'ok' : 'paused',
+                ok ? ('机构明细快照 ' + (brokerMeta || '已刷新')) : '机构明细不可用');
+            return ok;
+        }
+
+        // 覆盖机构家数：取三年中覆盖最多的一年，作为这一列的可比口径
+        const bkCount = (code) => {
+            const b = brokerForecast[code];
+            if (!b) return 0;
+            let m = 0;
+            ['2026', '2027', '2028'].forEach((y) => {
+                const n = Array.isArray(b[y]) ? b[y].length : 0;
+                if (n > m) m = n;
+            });
+            return m;
+        };
+
+        const escText = (v) => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+        // 浮层内容：按年度分节，每节一张机构表，营收与净利各一列
+        function brokerTipHtml(code) {
+            const b = brokerForecast[code];
+            if (!b) return '';
+            const years = ['2026', '2027', '2028'].filter((y) => Array.isArray(b[y]) && b[y].length);
+            if (!years.length) return '';
+            const fmt = (v) => (v === null || v === undefined) ? '—'
+                : Number(v).toLocaleString('zh-CN', { maximumFractionDigits: Math.abs(Number(v)) >= 10 ? 2 : 3 });
+            const total = years.reduce((a, y) => a + b[y].length, 0);
+            let h = `<div class="bk-hd">机构盈利预测明细｜数据源 万得 Wind　快照 ${brokerMeta || '—'}<br>`
+                + `每行一家机构，取该机构最近一次预测，单位与标的记账本位币一致。三年合计 ${total} 条。</div>`;
+            years.forEach((y) => {
+                const list = b[y];
+                h += `<div class="bk-sec">${y}E　${list.length} 家</div>`;
+                h += '<table><tr><th>机构</th><th class="bk-num">营收</th><th class="bk-num">净利</th></tr>';
+                list.forEach((row, k) => {
+                    h += `<tr class="${k % 2 ? 'bk-alt' : ''}"><td class="bk-org">${escText(row[0])}</td>`
+                        + `<td class="bk-num">${fmt(row[1])}</td><td class="bk-num">${fmt(row[2])}</td></tr>`;
+                });
+                h += '</table>';
+            });
+            h += '<div class="bk-foot">按净利从高到低排列。暂无该年度预测的机构不会出现。</div>';
+            return h;
         }
 
         // 手动指定对照年度：把某只标的的 devYear 写进股票池，随 data.json 一起同步，
@@ -1766,6 +1861,7 @@
                         if(sortState.key=='revenue') return parseFloat(o.revenue)||0;
                         if(sortState.key.includes('pe')) return parseFloat(o.peRes[sortState.key.split('_')[1]])||-9999;
                         if(sortState.key.includes('ps')) return parseFloat(o.psRes[sortState.key.split('_')[1]])||-9999;
+                        if(sortState.key=='broker') return bkCount(o.code);
                         return 0;
                     };
                     return sortState.dir==='desc' ? val(b)-val(a) : val(a)-val(b);
@@ -1782,6 +1878,7 @@
                 <th class="th-pe" colspan="4">💰 PE (利润)</th><th class="th-ps" colspan="4">🚀 PS (营收)</th>
                 <th rowspan="2" class="sortable ${show('update')} ${sk('last_update')}" onclick="setSort('last_update')" style="width:70px">📅 ${getSortIcon('last_update')}</th>
                 <th rowspan="2" class="sortable ${sk('winddev')}" onclick="setSort('winddev')" style="width:124px" title="你自填的预测值比 Wind 一致预期高或低多少：以 Wind 预期为基准。2026E、2027E、2028E 三个年度都参与判定，按归母净利润的相对偏差取最小者，净利缺失或为占位值时才用营业收入。红色为高于预期 10% 以上，绿色为低于预期 10% 以上，黑色为正负 10% 以内。色块底色深浅表示偏离等级。自填值取池内当前录入，改了当场生效。点击任意一格可以自己指定对照年度，左侧有蓝线的是手动指定的">偏离 Wind 预期 <span class="dev-refresh" onclick="event.stopPropagation();refreshWindDeviation(this)" title="重拉一次 Wind 一致预期快照并重算这一列。Wind 本身是周频数据，此处用于随时拿到最新一次快照">⟳</span> ${getSortIcon('winddev')}</th>
+                <th rowspan="2" class="sortable ${sk('broker')}" onclick="setSort('broker')" style="width:92px" title="Wind 上各机构对该标的营业收入与归母净利润的预测明细，当年、第二年和第三年逐年列出。单元格显示覆盖机构家数，取三年中覆盖最多的一年。鼠标悬停展开逐机构明细。数据每周刷新一次，点 ⟳ 可手动重拉。">券商预期 <span class="bk-refresh" onclick="event.stopPropagation();refreshBrokerForecast(this)" title="重拉一次机构盈利预测明细快照">⟳</span> ${getSortIcon('broker')}</th>
                 <th class="th-basic ${show('action')}" rowspan="2">⚙️</th>
                 <th class="th-select" rowspan="2" onclick="toggleSelectAll()"><input type="checkbox" ${allSel?'checked':''}></th>
             </tr><tr>
@@ -1908,7 +2005,13 @@
                 });
                 return `<td class="dev-cell"><span class="dev-tag ${cls}${manual ? ' dev-manual' : ''}"${dCol ? ` style="${dCol}"` : ''} data-code="${i.code}" data-dev="${esc(lines.join('\n'))}" data-auto="${auto}" data-manual="${manual}" data-opts="${esc(JSON.stringify(opts))}">${yy}年 比预期${head ? head.dir + devPct(head.d) + '%' : '—'}</span></td>`;
             };
-            if(rows.length===0) html+=`<tr><td colspan="${14 + (historicalMode?1:0) + ['code','tags','cap','report','update','action'].filter(k=>viewSettings['show'+k.charAt(0).toUpperCase()+k.slice(1)]).length}" style="text-align:center;padding:20px;color:#ccc">无数据</td></tr>`;
+            // 券商预期单元格：显示覆盖机构家数，悬停展开三年逐机构明细
+            const bkCell = (i) => {
+                const n = bkCount(i.code);
+                if (!n) return `<td class="bk-cell"><span class="bk-tag bk-na" title="Wind 无该标的的机构盈利预测明细">—</span></td>`;
+                return `<td class="bk-cell"><span class="bk-tag" data-bkcode="${i.code}" title="悬停查看各机构对营收与归母净利润的逐年预测">${n} 家</span></td>`;
+            };
+            if(rows.length===0) html+=`<tr><td colspan="${15 + (historicalMode?1:0) + ['code','tags','cap','report','update','action'].filter(k=>viewSettings['show'+k.charAt(0).toUpperCase()+k.slice(1)]).length}" style="text-align:center;padding:20px;color:#ccc">无数据</td></tr>`;
             else rows.forEach((i, rowIndex) => {
                 const p = (v) => `<span style="color:${parseFloat(v)>=0?'#d32f2f':'#2e7d32'};font-weight:${Math.abs(v)>30?'800':'bold'}">${v==='-'?'-':v+'%'}</span>`;
                 const u = i.logs?.[0]?.date ? `<span style="font-size:11px;color:#666;display:block;line-height:1.2">${i.logs[0].date.split(' ')[0]}<br><span style="color:#999;font-size:10px">${i.logs[0].date.split(' ')[1] || ''}</span></span>` : '-';
@@ -1926,6 +2029,7 @@
                     <td>${i.revenue||'-'}</td><td style="font-size:12px">${i.lowPS||'-'}~${i.highPS||'-'}</td><td>${p(i.psRes.down)}</td><td>${p(i.psRes.up)}</td>
                     <td class="${show('update')}">${u}</td>
                     ${devCell(i)}
+                    ${bkCell(i)}
                     <td class="${show('action')}"><button class="btn-log" onclick="showLogs('${i.code}')">📝</button><button class="btn-edit" onclick="editStock('${i.code}')">✏️</button><button class="btn-delete" onclick="openDeleteModal('${i.code}')">✕</button></td>
                     <td class="td-select" onclick="toggleSelectRow('${i.code}')"><input type="checkbox" class="row-checkbox" ${selectedCodes.has(i.code)?'checked':''}></td>
                 </tr>`;
@@ -2310,6 +2414,8 @@
         updateTable();
         // 业绩预测偏离数据独立于股票池同步，取到后在原地重绘一次（不再拉行情）
         loadWindDeviation().then(ok => { if (ok && stocks.length) updateTable(true); });
+        // 机构盈利预测明细同样独立于股票池同步，取到后原地重绘一次
+        loadBrokerForecast().then(ok => { if (ok && stocks.length) updateTable(true); });
         updateControlBtns(false);
         updateStatus('paused', '准备就绪');
         
@@ -2411,6 +2517,43 @@
                 if (e.target && e.target.closest && e.target.closest('.dev-tag[data-code]')) return;
                 closeDevYearPicker();
             });
+        })();
+
+        (function initBrokerTooltip() {
+            const tip = document.getElementById('bk-tip');
+            if (!tip) return;
+            let hideTimer = null;
+            const cancel = () => { if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; } };
+            const hide = () => { cancel(); tip.classList.remove('on'); };
+            const later = () => { cancel(); hideTimer = setTimeout(() => tip.classList.remove('on'), 200); };
+            const place = (el) => {
+                const r = el.getBoundingClientRect(), t = tip.getBoundingClientRect();
+                let left = r.left + r.width / 2 - t.width / 2;
+                left = Math.max(8, Math.min(left, window.innerWidth - t.width - 8));
+                let top = r.bottom + 8;
+                if (top + t.height > window.innerHeight - 8) top = Math.max(8, r.top - t.height - 8);
+                tip.style.left = Math.round(left) + 'px';
+                tip.style.top = Math.round(top) + 'px';
+            };
+            document.addEventListener('mouseover', (e) => {
+                const el = e.target;
+                if (!el || !el.closest) { later(); return; }
+                const tag = el.closest('.bk-tag[data-bkcode]');
+                if (tag) {
+                    const html = brokerTipHtml(tag.getAttribute('data-bkcode'));
+                    if (!html) { hide(); return; }
+                    cancel();
+                    tip.innerHTML = html;
+                    tip.classList.add('on');
+                    place(tag);
+                    return;
+                }
+                // 鼠标进到浮层里（要滚动查看长名单）就不收，离开才收
+                if (el.closest('#bk-tip')) { cancel(); return; }
+                later();
+            });
+            window.addEventListener('scroll', () => hide(), true);
+            window.addEventListener('resize', hide);
         })();
 
         document.addEventListener('keydown', (event) => {
