@@ -594,8 +594,8 @@
 
         let stocks = JSON.parse(APP_STORAGE.getItem('stock_sys_data')) || [];
         let viewSettings = { showCode: true, showTags: true, showReport: true, showUpdate: true, showAction: true, showCap: false, ...JSON.parse(APP_STORAGE.getItem('stock_sys_view')) };
-        // 业绩预测偏离：独立从私有仓库 wind.json 读取，仅在本机渲染，不写入 stocks
-        let windDeviation = {}, windDeviationMeta = '';
+        // 业绩预测偏离：独立从私有仓库 consensus.json 读取，仅在本机渲染，不写入 stocks
+        let consensusData = {}, consensusMeta = '', consensusWindow = '';
         let brokerForecast = {}, brokerMeta = '', brokerBasis = '';
         // 机构明细浮层的关闭入口。声明放在这里，避免 updateTable 先于浮层初始化被调用时报未初始化。
         let closeBrokerTip = () => {};
@@ -961,8 +961,8 @@
             renderWatchlistControls();
         }
 
-        // 偏离列的自填值优先取股票池当前录入值，只有池内缺失时才回落到周频快照里记录的那份。
-        // 这样改了净利/营收，偏离列当场就变，不必等周一那次 Wind 刷新。
+        // 偏离列的自填值优先取股票池当前录入值，只有池内缺失时才回落到快照里记录的那份。
+        // 这样改了净利/营收，偏离列当场就变，不必等周一那次券商预期刷新。
         function selfFill(row, key, baked) {
             const v = row ? row[key] : undefined;
             if (v !== null && v !== undefined && v !== '' && Math.abs(Number(v)) > 1) return Number(v);
@@ -970,40 +970,41 @@
             return Number(baked);
         }
 
-        // 从私有仓库同目录读取 wind.json，缺失时静默降级为「—」，返回是否取到数据
-        async function loadWindDeviation(cfg) {
+        // 从私有仓库同目录读取 consensus.json，缺失时静默降级为「—」，返回是否取到数据
+        async function loadConsensus(cfg) {
             cfg = cfg || getGbConfig();
             if (!cfg.username || !cfg.repo) return false;
-            const windPath = String(cfg.path || 'data.json').replace(/[^/]*$/, 'wind.json');
-            const url = `https://api.github.com/repos/${cfg.username}/${cfg.repo}/contents/${windPath}`;
+            const consPath = String(cfg.path || 'data.json').replace(/[^/]*$/, 'consensus.json');
+            const url = `https://api.github.com/repos/${cfg.username}/${cfg.repo}/contents/${consPath}`;
             const headers = { "Accept": "application/vnd.github.v3+json" };
             if (cfg.token) headers["Authorization"] = `token ${cfg.token}`;
             try {
                 const res = await fetch(`${url}?ref=${encodeURIComponent(cfg.branch)}`, { headers, cache: "no-store" });
                 if (!res.ok) {
-                    console.log(`业绩预测偏离数据不可用 (${res.status})`);
+                    console.log(`券商一致预期数据不可用 (${res.status})`);
                     return false;
                 }
                 const payload = JSON.parse(b64_to_utf8((await res.json()).content));
-                windDeviation = payload && payload.items ? payload.items : {};
-                windDeviationMeta = payload && payload.updatedAt ? payload.updatedAt : '';
-                return Object.keys(windDeviation).length > 0;
+                consensusData = payload && payload.items ? payload.items : {};
+                consensusMeta = payload && payload.updatedAt ? payload.updatedAt : '';
+                consensusWindow = payload && payload.window && payload.window.days ? ('近 ' + payload.window.days + ' 天') : '';
+                return Object.keys(consensusData).length > 0;
             } catch (e) {
-                console.log("业绩预测偏离数据读取失败:", e);
+                console.log("券商一致预期数据读取失败:", e);
                 return false;
             }
         }
 
-        // 手动刷新偏离列：重拉一次 Wind 快照并原地重绘。
-        // Wind 是周频数据，但这一列不必等周一，随时可以拉一次最新的。
-        async function refreshWindDeviation(btn) {
+        // 手动刷新偏离列：重拉一次券商预期快照并原地重绘。
+        // 券商预期是周频数据，但这一列不必等周一，随时可以拉一次最新的。
+        async function refreshConsensus(btn) {
             const label = btn ? btn.innerHTML : '';
             if (btn) { btn.disabled = true; btn.innerHTML = '⏳'; }
-            const ok = await loadWindDeviation();
+            const ok = await loadConsensus();
             if (btn) { btn.disabled = false; btn.innerHTML = label; }
             if (stocks.length) updateTable(true);
             updateStatus(ok ? 'ok' : 'paused',
-                ok ? ('Wind 快照 ' + (windDeviationMeta || '已刷新')) : '一致预期不可用');
+                ok ? ('券商预期快照 ' + (consensusMeta || '已刷新')) : '一致预期不可用');
             return ok;
         }
 
@@ -1134,7 +1135,7 @@
                 const a = Math.abs(v);
                 return `　比预期${v >= 0 ? '高' : '低'} ${(a >= 100 ? a.toFixed(0) : a.toFixed(1))}%`;
             };
-            let h = `<div class="ym-hd">这一格该用哪一年的 Wind 预期来对照<br>下面把每个年度的数值和偏离都列出来，直接挑你认为对得上的那一年</div>`;
+            let h = `<div class="ym-hd">这一格该用哪一年的券商预期来对照<br>下面把每个年度的数值和偏离都列出来，直接挑你认为对得上的那一年</div>`;
             h += `<div class="ym-item ym-auto${manual ? '' : ' cur'}" onclick="setDevYear('${code}', '')">`
                + `<span class="ym-y">自动</span>`
                + `<span class="ym-f">由算法判定，当前落在 ${auto}E</span>`
@@ -1837,14 +1838,14 @@
                         if (y === null) return -1;
                         return sortState.dir === 'desc' ? y - x : x - y;
                     }
-                    if (sortState.key === 'winddev') {
+                    if (sortState.key === 'consdev') {
                         const devOf = (o) => {
-                            const w = windDeviation[o.code];
+                            const w = consensusData[o.code];
                             if (!w || w.lv === '无数据' || !w.y) return null;
-                            const mag = (mine, wind) => {
+                            const mag = (mine, base) => {
                                 if (mine === null || mine === undefined || !(Math.abs(Number(mine)) > 1)) return null;
-                                if (wind === null || wind === undefined || !(Math.abs(Number(wind)) > 0)) return null;
-                                return Math.abs((Number(mine) - Number(wind)) / Math.abs(Number(wind)) * 100);
+                                if (base === null || base === undefined || !(Math.abs(Number(base)) > 0)) return null;
+                                return Math.abs((Number(mine) - Number(base)) / Math.abs(Number(base)) * 100);
                             };
                             // 手动指定的年度优先，和单元格显示保持一致，否则排序会和看到的数对不上
                             const byYear = {};
@@ -1904,7 +1905,7 @@
                 <th class="th-basic" colspan="${4 + (historicalMode?1:0) + (viewSettings.showCode?1:0) + (viewSettings.showTags?1:0) + (viewSettings.showCap?1:0) + (viewSettings.showReport?1:0)}">📊 基础行情</th>
                 <th class="th-pe" colspan="4">💰 PE (利润)</th><th class="th-ps" colspan="4">🚀 PS (营收)</th>
                 <th rowspan="2" class="sortable ${show('update')} ${sk('last_update')}" onclick="setSort('last_update')" style="width:70px">📅 ${getSortIcon('last_update')}</th>
-                <th rowspan="2" class="sortable ${sk('winddev')}" onclick="setSort('winddev')" style="width:124px" title="你自填的预测值比 Wind 一致预期高或低多少：以 Wind 预期为基准。2026E、2027E、2028E 三个年度都参与判定，按归母净利润的相对偏差取最小者，净利缺失或为占位值时才用营业收入。红色为高于预期 10% 以上，绿色为低于预期 10% 以上，黑色为正负 10% 以内。色块底色深浅表示偏离等级。自填值取池内当前录入，改了当场生效。点击任意一格可以自己指定对照年度，左侧有蓝线的是手动指定的">偏离 Wind 预期 <span class="dev-refresh" onclick="event.stopPropagation();refreshWindDeviation(this)" title="重拉一次 Wind 一致预期快照并重算这一列。Wind 本身是周频数据，此处用于随时拿到最新一次快照">⟳</span> ${getSortIcon('winddev')}</th>
+                <th rowspan="2" class="sortable ${sk('consdev')}" onclick="setSort('consdev')" style="width:124px" title="你自填的预测值比券商一致预期高或低多少：以券商一致预期为基准。券商一致预期取近半年内发布的券商研报，逐年算术平均。2026E、2027E、2028E 三个年度都参与判定，按归母净利润的相对偏差取最小者，净利缺失或为占位值时才用营业收入。红色为高于预期 10% 以上，绿色为低于预期 10% 以上，黑色为正负 10% 以内。色块底色深浅表示偏离等级。自填值取池内当前录入，改了当场生效。点击任意一格可以自己指定对照年度，左侧有蓝线的是手动指定的。港美股没有免费的券商分机构明细，会显示为「—」">偏离券商预期 <span class="dev-refresh" onclick="event.stopPropagation();refreshConsensus(this)" title="重拉一次券商一致预期快照并重算这一列。券商预期由每周一刷新，此处用于随时拿到最新一次快照">⟳</span> ${getSortIcon('consdev')}</th>
                 <th rowspan="2" class="sortable ${sk('broker')}" onclick="setSort('broker')" style="width:92px" title="各券商对该标的营业收入与归母净利润的预测明细，当年、第二年和第三年逐年列出，并标注该券商研报的发布日期。只保留一年以内发布的研报。单元格显示覆盖券商家数，取三年中覆盖最多的一年。点击展开逐券商明细（右上角 × 或 Esc 关闭），数据每周刷新一次，点 ⟳ 可手动重拉。">券商预期 <span class="bk-refresh" onclick="event.stopPropagation();refreshBrokerForecast(this)" title="重拉一次机构盈利预测明细快照">⟳</span> ${getSortIcon('broker')}</th>
                 <th class="th-basic ${show('action')}" rowspan="2">⚙️</th>
                 <th class="th-select" rowspan="2" onclick="toggleSelectAll()"><input type="checkbox" ${allSel?'checked':''}></th>
@@ -1930,23 +1931,22 @@
                 return n.toLocaleString('zh-CN', { maximumFractionDigits: digits });
             };
             const devPct = (v) => Math.abs(v) >= 100 ? Math.abs(v).toFixed(0) : Math.abs(v).toFixed(1);
-            // 返回 {d,dir,text}：dir 为 Wind 相对自填的方向；自填缺失或为占位值时返回 null
-            // 返回 {d,dir,text,thin}：以 Wind 该年度预期为基准，dir 是「自填相对预期」的方向
-            // 自填缺失或为占位值、Wind 缺失或为零时返回 null；thin 标记预期基数偏低导致比例被放大
-            const devRel = (mine, wind) => {
+            // 返回 {d,dir,text,thin}：以券商一致预期该年度值为基准，dir 是「自填相对预期」的方向
+            // 自填缺失或为占位值、券商预期缺失或为零时返回 null；thin 标记预期基数偏低导致比例被放大
+            const devRel = (mine, base) => {
                 if (mine === null || mine === undefined || !(Math.abs(Number(mine)) > 1)) return null;
-                if (wind === null || wind === undefined || !(Math.abs(Number(wind)) > 0)) return null;
-                const mv = Number(mine), wv = Number(wind);
-                const d = (mv - wv) / Math.abs(wv) * 100;
-                const thin = Math.abs(wv) < Math.abs(mv) / 10;
+                if (base === null || base === undefined || !(Math.abs(Number(base)) > 0)) return null;
+                const mv = Number(mine), bv = Number(base);
+                const d = (mv - bv) / Math.abs(bv) * 100;
+                const thin = Math.abs(bv) < Math.abs(mv) / 10;
                 return {
                     d: d, dir: d >= 0 ? '高' : '低', thin: thin,
-                    text: `自填比预期${d >= 0 ? '高' : '低'} ${devPct(d)}%` + (thin ? '　小基数：Wind 预期不到自填值十分之一，比例被放大' : '')
+                    text: `自填比预期${d >= 0 ? '高' : '低'} ${devPct(d)}%` + (thin ? '　小基数：券商一致预期不到自填值十分之一，比例被放大' : '')
                 };
             };
             const devCell = (i) => {
-                const w = windDeviation[i.code];
-                if (!w) return `<td class="dev-cell"><span class="dev-tag lv-na" data-dev="未取到 Wind 一致预期数据">—</span></td>`;
+                const w = consensusData[i.code];
+                if (!w) return `<td class="dev-cell"><span class="dev-tag lv-na" data-dev="未取到券商一致预期数据">—</span></td>`;
                 if (w.lv === '无数据' || !w.y) return `<td class="dev-cell"><span class="dev-tag lv-na" data-dev="${esc(w.note || '无对照数据')}">—</span></td>`;
                 // 候选年度列表：新结构读 cands；旧结构回落到「另一候选年度」加更远年度，兼容缓存里的旧文件
                 const cands = (Array.isArray(w.cands) && w.cands.length) ? w.cands
@@ -1956,12 +1956,12 @@
                 const byYear = {};
                 cands.forEach((c) => { byYear[c.y] = c; });
                 const auto = w.y;
-                // 对照年度：池内手动指定的优先。但只在那个年度确实有 Wind 数据时才生效，
+                // 对照年度：池内手动指定的优先。但只在那个年度确实有券商预期时才生效，
                 // 否则静默回落到自动判定，不把整格变成「—」。
                 const manual = (i.devYear && byYear[i.devYear]) ? String(i.devYear) : '';
                 const y = manual || auto, yy = y.slice(2);
                 const cy = byYear[y] || { p: w.curp, r: w.curr };
-                // 自填值取池内当前录入，Wind 取周频快照，两者解耦
+                // 自填值取池内当前录入，券商预期取周频快照，两者解耦
                 const p = selfFill(i, 'profit', w.p), r = selfFill(i, 'revenue', w.r);
                 const curP = devRel(p, cy.p), curR = devRel(r, cy.r);
                 // 等级也按当前自填值现算，不读快照里的 lv，否则会出现数字与等级对不上
@@ -1985,16 +1985,16 @@
                 };
                 const nearP = nearest(p, 'p'), nearR = nearest(r, 'r');
                 const lines = [
-                    `偏离 Wind 预期｜数据源 万得一致预期　Wind 快照 ${windDeviationMeta || '—'}`,
+                    `偏离券商预期｜数据源 近半年券商研报均值　券商预期快照 ${consensusMeta || '—'}${consensusWindow ? '　窗口 ' + consensusWindow : ''}`,
                     `自填口径 ${y}E（${manual ? '手动指定' : '自动判定'}）　偏离程度 ${lvShort}　${manual ? `算法判定 ${auto}E` : `年份判定 ${w.c}，按${w.jb || '净利'}`}`,
-                    `口径：以 Wind 该年度预期为基准，看自填值比预期高或低多少。自填值取池内当前录入，改动即时生效`
+                    `口径：以券商一致预期该年度值为基准，看自填值比预期高或低多少。自填值取池内当前录入，改动即时生效`
                 ];
                 if (w.lv && w.lv !== '无数据' && lv && w.lv !== lv) {
-                    lines.push(``, `等级提示：Wind 快照那一轮算作 ${w.lv}，按当前自填值现算为 ${lv}`);
+                    lines.push(``, `等级提示：快照那一轮算作 ${w.lv}，按当前自填值现算为 ${lv}`);
                 }
                 lines.push(``,
-                    `归母净利润：自填 ${devNum(p)} 亿　Wind ${y}E ${devNum(cy.p)} 亿　${curP ? curP.text : '自填缺失，不可比'}`,
-                    `营业收入：自填 ${devNum(r)} 亿　Wind ${y}E ${devNum(cy.r)} 亿　${curR ? curR.text : '自填缺失，不可比'}`
+                    `归母净利润：自填 ${devNum(p)} 亿　券商预期 ${y}E ${devNum(cy.p)} 亿　${curP ? curP.text : '自填缺失，不可比'}`,
+                    `营业收入：自填 ${devNum(r)} 亿　券商预期 ${y}E ${devNum(cy.r)} 亿　${curR ? curR.text : '自填缺失，不可比'}`
                 );
                 if (cands.length > 1) {
                     lines.push(``,
@@ -2006,7 +2006,7 @@
                         const parts = [];
                         if (c.p !== null && c.p !== undefined) parts.push(`净利 ${devNum(c.p)} 亿${np ? '（' + np.dir + ' ' + devPct(np.d) + '%）' : ''}`);
                         if (c.r !== null && c.r !== undefined) parts.push(`营收 ${devNum(c.r)} 亿${nr ? '（' + nr.dir + ' ' + devPct(nr.d) + '%）' : ''}`);
-                        const seg = parts.length ? `　${c.y}E　${parts.join('　')}` : `　${c.y}E　无 Wind 一致预期数据`;
+                        const seg = parts.length ? `　${c.y}E　${parts.join('　')}` : `　${c.y}E　无券商一致预期数据`;
                         lines.push(seg + (c.y === y ? '　← 当前对照' : '') + (c.y === auto && c.y !== y ? '　← 算法判定' : ''));
                     });
                 }
@@ -2019,7 +2019,7 @@
                 const head = curP || curR;
                 // 方向着色：高于预期 10% 以上为红，低于预期 10% 以上为绿，正负 10% 以内为黑
                 const dCol = !head ? '' : (head.d > 10 ? 'color:#d32f2f' : (head.d < -10 ? 'color:#2e7d32' : 'color:#111'));
-                // 年度选择器要用的展开数据：每个候选年度的 Wind 值与偏离一起带上，菜单里直接比。
+                // 年度选择器要用的展开数据：每个候选年度的券商预期值与偏离一起带上，菜单里直接比。
                 // 塞进 data-opts 而不是重新算一遍，避免菜单和浮层两处口径打架。
                 const opts = cands.map((c) => {
                     const np = devRel(p, c.p), nr = devRel(r, c.r);
@@ -2440,7 +2440,7 @@
         renderTagPicker();
         updateTable();
         // 业绩预测偏离数据独立于股票池同步，取到后在原地重绘一次（不再拉行情）
-        loadWindDeviation().then(ok => { if (ok && stocks.length) updateTable(true); });
+        loadConsensus().then(ok => { if (ok && stocks.length) updateTable(true); });
         // 机构盈利预测明细同样独立于股票池同步，取到后原地重绘一次
         loadBrokerForecast().then(ok => { if (ok && stocks.length) updateTable(true); });
         updateControlBtns(false);
