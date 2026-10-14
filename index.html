@@ -262,6 +262,29 @@
         .dev-tag.dev-manual { box-shadow:inset 3px 0 0 #1a73e8; padding-left:7px; }
         .dev-refresh { cursor:pointer; color:#9aa5b4; font-weight:700; padding:0 2px; margin-left:1px; font-size:12px; }
         .dev-refresh:hover { color:#1a73e8; }
+        /* 净利与营收都取自券商预期时，这一格没有「自填 vs 预期」的偏离可比，只留一个淡色出处 */
+        .dev-tag.dev-auto { background:transparent; color:#8a94a6; font-weight:400; cursor:default; box-shadow:inset 2px 0 0 #cdd8e5; padding-left:7px; }
+        /* 净利与营收的来源标识。只有「市场预期填充」打开时才上色，关着时全表都是自填、上色没有区分意义。
+           淡蓝＝取自券商一致预期，右上角小字是年度；淡黄＝你自己填的。点一下可换来源。 */
+        .fill-cell { cursor:pointer; font-variant-numeric:tabular-nums; }
+        .fill-cell.fill-auto { background-color:#e6f0fd; box-shadow:inset 2px 0 0 #1a73e8; }
+        .fill-cell.fill-self { background-color:#fff6e0; box-shadow:inset 2px 0 0 #dfa125; }
+        /* 全局规则 tbody tr:hover td 会给整行刷底色，这里按同一选择器覆盖回来，免得悬停时来源色被冲掉 */
+        tbody tr:hover td.fill-cell.fill-auto { background-color:#d8e8fb; }
+        tbody tr:hover td.fill-cell.fill-self { background-color:#fdeecd; }
+        .fill-cell .fill-yr, .fill-cell .fill-ovr { font-size:9px; font-weight:700; vertical-align:super; margin-left:3px; padding:0 2px; border-radius:2px; line-height:1.1; }
+        .fill-cell .fill-yr { color:#1a5fb4; background:#cfe2fb; }
+        .fill-cell .fill-ovr { color:#8a5c10; background:#f6dfae; }
+        /* 全局开关：市场预期填充（开关 + 年度 + 生效统计） */
+        .fill-global { display:flex; align-items:center; gap:7px; padding:5px 9px; border:1px solid #d8e2ef; border-radius:6px; background:#f7fafd; font-size:12px; color:#41506b; white-space:nowrap; }
+        .fill-global.on { border-color:#9cc3f0; background:#eef6ff; }
+        .fill-global .fg-sw { display:inline-flex; align-items:center; gap:4px; cursor:pointer; font-weight:600; margin:0; }
+        .fill-global .fg-sw input { width:auto; margin:0; }
+        .fill-global select { height:26px; padding:2px 4px; font-size:12px; border:1px solid #ced4da; border-radius:4px; background:#fff; }
+        .fill-global .fg-stat { color:#6b7785; font-size:11px; }
+        .fill-global.on .fg-stat { color:#2b6cb0; }
+        #fill-hint { display:none; margin:0 0 8px; padding:6px 10px; background:#eef6ff; border:1px solid #cde0f7; border-radius:6px; font-size:12px; line-height:1.6; color:#2b5c9b; }
+        #fill-hint.on { display:block; }
         #dev-tip { position:fixed; display:none; z-index:9999; max-width:540px; padding:8px 11px; background:#2b3440; color:#f5f7fa; font-size:12px; line-height:1.75; border-radius:6px; box-shadow:0 8px 24px rgba(0,0,0,.28); white-space:pre-line; pointer-events:none; }
         #dev-tip.on { display:block; }
         .bk-cell { text-align:center; }
@@ -296,17 +319,19 @@
         #bk-tip tbody tr:hover td { background-color:transparent; }
         #bk-tip tr.bk-alt td { background:rgba(255,255,255,.06); }
         #bk-tip .bk-foot { margin-top:8px; padding-top:6px; border-top:1px solid #3d4959; color:#93a0b2; }
-        #dev-year-menu { position:fixed; display:none; z-index:10000; min-width:440px; padding:6px; background:#fff; border:1px solid #d8dee9; border-radius:8px; box-shadow:0 10px 30px rgba(0,0,0,.18); font-size:12px; }
-        #dev-year-menu.on { display:block; }
-        #dev-year-menu .ym-hd { padding:5px 8px 6px; color:#8a94a6; font-size:11px; line-height:1.6; border-bottom:1px solid #eef1f5; margin-bottom:4px; }
-        #dev-year-menu .ym-item { display:flex; align-items:baseline; gap:9px; padding:6px 8px; border-radius:5px; cursor:pointer; white-space:nowrap; }
-        #dev-year-menu .ym-item:hover { background:#f2f6fc; }
-        #dev-year-menu .ym-item.cur { background:#e8f0fe; }
-        #dev-year-menu .ym-y { flex:0 0 46px; font-weight:700; color:#1f2937; }
-        #dev-year-menu .ym-f { color:#4b5563; font-variant-numeric:tabular-nums; }
-        #dev-year-menu .ym-tag { font-size:10px; color:#1a73e8; font-weight:700; }
-        #dev-year-menu .ym-auto { color:#4b5563; }
-        #dev-year-menu .ym-sep { height:1px; background:#eef1f5; margin:4px 2px; }
+        /* 两张浮出菜单共用一套外壳：年度对照选择器与「净利/营收取哪一年」的来源选择器 */
+        #dev-year-menu, #fill-menu { position:fixed; display:none; z-index:10000; min-width:440px; padding:6px; background:#fff; border:1px solid #d8dee9; border-radius:8px; box-shadow:0 10px 30px rgba(0,0,0,.18); font-size:12px; }
+        #fill-menu { min-width:360px; }
+        #dev-year-menu.on, #fill-menu.on { display:block; }
+        #dev-year-menu .ym-hd, #fill-menu .ym-hd { padding:5px 8px 6px; color:#8a94a6; font-size:11px; line-height:1.6; border-bottom:1px solid #eef1f5; margin-bottom:4px; }
+        #dev-year-menu .ym-item, #fill-menu .ym-item { display:flex; align-items:baseline; gap:9px; padding:6px 8px; border-radius:5px; cursor:pointer; white-space:nowrap; }
+        #dev-year-menu .ym-item:hover, #fill-menu .ym-item:hover { background:#f2f6fc; }
+        #dev-year-menu .ym-item.cur, #fill-menu .ym-item.cur { background:#e8f0fe; }
+        #dev-year-menu .ym-y, #fill-menu .ym-y { flex:0 0 46px; font-weight:700; color:#1f2937; }
+        #dev-year-menu .ym-f, #fill-menu .ym-f { color:#4b5563; font-variant-numeric:tabular-nums; }
+        #dev-year-menu .ym-tag, #fill-menu .ym-tag { font-size:10px; color:#1a73e8; font-weight:700; }
+        #dev-year-menu .ym-auto, #fill-menu .ym-auto { color:#4b5563; }
+        #dev-year-menu .ym-sep, #fill-menu .ym-sep { height:1px; background:#eef1f5; margin:4px 2px; }
         #score-details { white-space:pre-line; line-height:1.8; }
         #score-modal .modal-content { box-sizing:border-box; width:min(500px, calc(100vw - 32px)); }
         #btn-manage-watchlist, #btn-clear-selection { background:#e9ecef; color:#495057; }
@@ -418,6 +443,16 @@
             
             <!-- 录入按钮放在中间 -->
             <button class="btn-toggle" onclick="toggleInputPanel()" id="toggle-btn">➕ 录入/管理</button>
+
+            <!-- 市场预期填充：把券商一致预期直接填进净利/营收列，用哪一年由你选 -->
+            <div class="fill-global" id="fill-global">
+                <label class="fg-sw" title="打开后，净利与营收默认取券商一致预期（近半年研报的逐年算术平均）。你自己填的值仍留在池里，随时可以切回。">
+                    <input type="checkbox" id="fill-on" onchange="toggleFillSettings(this.checked)">
+                    <span>市场预期填充</span>
+                </label>
+                <select id="fill-year" onchange="chooseFillYear(this.value)" title="选择用哪一年的券商一致预期填进净利与营收列"></select>
+                <span class="fg-stat" id="fill-stat"></span>
+            </div>
             
             <div class="spacer"></div> <!-- 右侧弹簧 -->
             
@@ -440,6 +475,10 @@
         <div id="input-container">
             <div id="input-panel">
                 <input type="hidden" id="editCode" value="">
+                <div id="fill-hint">
+                    ⓘ 「市场预期填充」开着，表格里的净利与营收默认取自券商一致预期；下面这两个框里是<b>你自己录的值</b>，
+                    只在这只股票改回自填（或全局关掉）之后才生效。
+                </div>
                 <div class="input-row">
                     <div class="group-box" style="background: #fff; border-color: #ddd; flex: 1.2;">
                         <div style="display:flex; gap:5px; width:100%; align-items:center;">
@@ -520,6 +559,7 @@
     <div id="dev-tip" role="tooltip"></div>
     <div id="bk-tip" role="dialog" aria-modal="false" aria-label="机构盈利预测明细"></div>
     <div id="dev-year-menu" role="menu" aria-label="选择对照年度"></div>
+    <div id="fill-menu" role="menu" aria-label="选择净利与营收的来源"></div>
 
     <div id="score-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="score-title">
         <div class="modal-content">
@@ -1058,6 +1098,283 @@
         };
 
         const escText = (v) => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+        // ---------------------------------------------------------------- 市场预期填充
+        // 净利与营收这两个数有两个来源：券商一致预期（自动）与用户自己录（自填）。
+        // 全局开关决定默认来源；个股可以在净利/营收格上点一下单独覆盖。
+        // 取值一律**逐字段**判定：某一年只有营收没有净利时，只有营收走自动值，净利仍用自填。
+        let fillSettings = Object.assign(
+            { on: false, year: String(new Date().getFullYear() + 1) },
+            (() => { try { return JSON.parse(APP_STORAGE.getItem('stock_sys_fill') || '{}'); } catch (e) { return {}; } })()
+        );
+        function saveFillSettings() { APP_STORAGE.setItem('stock_sys_fill', JSON.stringify(fillSettings)); }
+
+        // 券商一致预期里这一只股票**真正有值**的候选年度（升序）。
+        // cands 里港美股与部分 A 股的年度是占位的 null，必须剔掉，否则下拉与菜单会出现空年度。
+        const autoYears = (code) => {
+            const w = consensusData[code];
+            if (!w || !Array.isArray(w.cands)) return [];
+            return w.cands.filter((c) => {
+                const p = (c.p === null || c.p === undefined) ? null : Number(c.p);
+                const r = (c.r === null || c.r === undefined) ? null : Number(c.r);
+                return (p !== null && Number.isFinite(p)) || (r !== null && Number.isFinite(r));
+            }).map((c) => String(c.y)).sort();
+        };
+
+        // 取某只股票某一年度的券商一致预期；该年度没有数据返回 null
+        const autoYearVal = (code, year) => {
+            const w = consensusData[code];
+            if (!w || !Array.isArray(w.cands)) return null;
+            const c = w.cands.find((x) => String(x.y) === String(year));
+            if (!c) return null;
+            const p = (c.p === null || c.p === undefined) ? null : Number(c.p);
+            const r = (c.r === null || c.r === undefined) ? null : Number(c.r);
+            if (p === null && r === null) return null;
+            return { p: Number.isFinite(p) ? p : null, r: Number.isFinite(r) ? r : null };
+        };
+
+        // 全局默认来源
+        const fillGlobal = () => ((fillSettings.on && fillSettings.year)
+            ? { mode: 'auto', year: String(fillSettings.year) }
+            : { mode: 'self' });
+
+        // 这一只用哪个来源：s.fill 缺失=跟随全局；'self'=强制自填；'YYYY'=强制自动取该年
+        const fillTarget = (s) => {
+            const f = s && s.fill;
+            if (f === 'self') return { mode: 'self', year: '', pinned: true };
+            if (f) return { mode: 'auto', year: String(f), pinned: true };
+            const g = fillGlobal();
+            return { mode: g.mode, year: g.year || '', pinned: false };
+        };
+
+        // 池内录入值的有效性：空、非数字、绝对值 ≤1（占位值）都视为没有
+        const selfNum = (v) => {
+            const n = Number(v);
+            if (v === null || v === undefined || v === '' || !Number.isFinite(n) || Math.abs(n) <= 1) return null;
+            return n;
+        };
+
+        // 生效值：解析出最终参与计算的净利与营收，并分别标注来源
+        const fillResolve = (s) => {
+            const t = fillTarget(s);
+            const out = {
+                mode: t.mode, year: t.year, pinned: t.pinned,
+                p: selfNum(s.profit), r: selfNum(s.revenue),
+                pSrc: 'self', rSrc: 'self', fellBack: false,
+            };
+            if (t.mode === 'auto' && t.year) {
+                const a = autoYearVal(s.code, t.year);
+                if (a) {
+                    if (a.p !== null) { out.p = a.p; out.pSrc = 'auto'; } else { out.fellBack = true; }
+                    if (a.r !== null) { out.r = a.r; out.rSrc = 'auto'; } else { out.fellBack = true; }
+                } else {
+                    out.fellBack = true;      // 想要自动但这个年度没有券商预期，整只退回自填
+                }
+            }
+            return out;
+        };
+
+        // 全局开关打开时，自填的格子才需要标色——提示「这个数是我自己填的」。
+        // 开关没打开时全表都是自填，上色没有区分意义，一律素面，保持与从前一致。
+        const fillColorOn = () => fillSettings.on === true;
+
+        // 写作 stocks[i].fill，随 data.json 一起同步，换台机器也带着。
+        // val 传 '' 表示跟随全局，传 'self' 表示强制自填，传 'YYYY' 表示强制自动取该年。
+        function setStockFill(code, val) {
+            const s = stocks.find((x) => x.code === code);
+            if (!s) return;
+            if (val) s.fill = String(val); else delete s.fill;
+            saveStorage();
+            setLocalChanges(true);
+            closeFillMenu();
+            updateTable(true);
+            const label = val === 'self' ? '改回自己填'
+                : val ? `改用市场预期 ${val}E` : '改回跟随全局';
+            updateStatus('ok', `${s.name} 的净利与营收来源已${label}，改动存在本地，可点右上角保存到 GitHub`);
+        }
+
+        // 池子里真正有券商预期的年度（升序）。一只都没有时兜底给出后三年，免得下拉是空的。
+        const fillYearOptions = () => {
+            const set = {};
+            Object.keys(consensusData).forEach((c) => { autoYears(c).forEach((y) => { set[y] = 1; }); });
+            const ys = Object.keys(set).sort();
+            if (ys.length) return ys;
+            const y0 = new Date().getFullYear();
+            return [String(y0 + 1), String(y0 + 2), String(y0 + 3)];
+        };
+
+        // 默认年度取「今年之后的第一个可用年度」——现在 2026 年，所以默认落在 2027E
+        const fillDefaultYear = (ys) => {
+            const want = String(new Date().getFullYear() + 1);
+            const hit = ys.filter((y) => y >= want).sort()[0];
+            return hit || ys[ys.length - 1] || '';
+        };
+
+        // 全局控件回填：开关、年度下拉、生效统计、录入面板的提示条。数据一变就要同步一次。
+        function syncFillControls() {
+            const box = document.getElementById('fill-global');
+            const on = document.getElementById('fill-on');
+            const sel = document.getElementById('fill-year');
+            if (box && on && sel) {
+                const ys = fillYearOptions();
+                if (String(sel.dataset.years || '') !== ys.join(',')) {
+                    sel.innerHTML = ys.map((y) => `<option value="${y}">${y}E</option>`).join('');
+                    sel.dataset.years = ys.join(',');
+                }
+                if (!fillSettings.year || ys.indexOf(String(fillSettings.year)) < 0) {
+                    fillSettings.year = fillDefaultYear(ys);
+                    saveFillSettings();
+                }
+                on.checked = fillSettings.on === true;
+                sel.value = String(fillSettings.year);
+                sel.disabled = fillSettings.on !== true;
+                box.classList.toggle('on', fillSettings.on === true);
+            }
+            const hint = document.getElementById('fill-hint');
+            if (hint) hint.classList.toggle('on', fillColorOn());
+        }
+
+        // 生效统计：多少只真的取到了预期，多少只因为没有预期仍走自填
+        function renderFillStat(list) {
+            const box = document.getElementById('fill-stat');
+            if (!box) return;
+            if (fillSettings.on !== true) {
+                box.textContent = '未开启，净利与营收都用你自己填的值';
+                return;
+            }
+            let both = 0, one = 0, none = 0;
+            (list || []).forEach((i) => {
+                const e = i && i.eff;
+                if (!e) return;
+                const k = (e.pSrc === 'auto' ? 1 : 0) + (e.rSrc === 'auto' ? 1 : 0);
+                if (k === 2) both++; else if (k === 1) one++; else none++;
+            });
+            box.textContent = `${fillSettings.year}E　取到预期 ${both + one} 只`
+                + (both ? `（两个字段都有 ${both} 只）` : '')
+                + (none ? `　没有预期仍用自填 ${none} 只` : '')
+                + (one ? `　只有单边取到 ${one} 只` : '');
+        }
+
+        function toggleFillSettings(on) {
+            fillSettings.on = !!on;
+            saveFillSettings();
+            syncFillControls();
+            if (stocks.length) updateTable(true);
+        }
+
+        function chooseFillYear(year) {
+            fillSettings.year = String(year || '');
+            saveFillSettings();
+            syncFillControls();
+            if (stocks.length) updateTable(true);
+        }
+
+        // 单元格显示值：取自券商预期时按两位小数收敛（均值算出来是 842.7445 这种长小数）；
+        // 自填时原样显示，和从前完全一致。
+        const fillShown = (i, kind) => {
+            const e = i.eff || null;
+            const src = e ? (kind === 'p' ? e.pSrc : e.rSrc) : 'self';
+            if (src === 'auto' && e) {
+                const v = kind === 'p' ? e.p : e.r;
+                return (v === null || v === undefined || !Number.isFinite(Number(v)))
+                    ? '-' : String(Number(Number(v).toFixed(2)));
+            }
+            const raw = kind === 'p' ? i.profit : i.revenue;
+            return (raw === undefined || raw === null || raw === '') ? '-' : raw;
+        };
+
+        // 净利/营收单元格。全局填充关着时就是素面数字（与从前一致）；
+        // 开着时按来源上色：淡蓝＝券商一致预期（角标写年度），淡黄＝你自己填的。点一下换来源。
+        function fillCell(i, kind) {
+            const shown = fillShown(i, kind);
+            const e = i.eff || null;
+            const src = e ? (kind === 'p' ? e.pSrc : e.rSrc) : 'self';
+            const isAuto = src === 'auto';
+            const yr = String((e && e.year) || '');
+            const colored = fillColorOn();
+            const cls = 'fill-cell' + (colored ? (isAuto ? ' fill-auto' : ' fill-self') : '');
+            const badge = !colored ? ''
+                : (isAuto ? `<span class="fill-yr">${yr ? yr.slice(2) + 'E' : '预期'}</span>`
+                          : '<span class="fill-ovr">自填</span>');
+            let tip;
+            if (!colored) {
+                tip = `${shown}　点击可选择净利与营收的来源：自己填，或取券商一致预期的某一年`;
+            } else if (isAuto) {
+                tip = `取自券商一致预期 ${yr}E　${shown} 亿\n近半年研报的逐年算术平均。点击可换年度或改回自填。`;
+            } else if (e.pinned) {
+                tip = `你自己填的 ${shown}，单只指定，不跟随全局\n点击可改用券商一致预期`;
+            } else {
+                tip = `你自己填的 ${shown}，这一只在 ${yr}E 没有可用的券商预期\n点击可换一个年度`;
+            }
+            return `<td class="${cls}" data-fillcode="${i.code}" title="${tip}">${shown}${badge}</td>`;
+        }
+
+        function closeFillMenu() {
+            const m = document.getElementById('fill-menu');
+            if (m) { m.classList.remove('on'); m.innerHTML = ''; delete m.dataset.code; }
+        }
+
+        // 净利/营收的来源选择器：跟随全局 / 强制自填 / 指定某一年的券商预期
+        function openFillMenu(el) {
+            const menu = document.getElementById('fill-menu');
+            if (!menu || !el) return;
+            const code = el.getAttribute('data-fillcode') || '';
+            const s = stocks.find((x) => x.code === code);
+            if (!s) return;
+            const e = fillResolve(s);
+            const g = fillGlobal();
+            const w = consensusData[code];
+            const num = (v) => {
+                if (v === null || v === undefined || !Number.isFinite(Number(v))) return '—';
+                const n = Number(v);
+                const dg = Math.abs(n) >= 10 ? 2 : (Math.abs(n) >= 1 ? 3 : 4);
+                return n.toLocaleString('zh-CN', { maximumFractionDigits: dg });
+            };
+            let h = `<div class="ym-hd">${escText(s.name)}　净利与营收取哪一年的数据<br>`
+                + `全局：${g.mode === 'auto' ? `跟随券商一致预期 ${g.year}E` : '未开启，全部用自填值'}`
+                + `　单只指定优先于全局设置</div>`;
+            h += `<div class="ym-item ym-auto${e.pinned ? '' : ' cur'}" onclick="setStockFill('${code}', '')">`
+                + `<span class="ym-y">跟随</span>`
+                + `<span class="ym-f">按全局设置（${g.mode === 'auto' ? g.year + 'E 券商一致预期' : '自填值'}）</span>`
+                + (e.pinned ? '<span class="ym-tag">点此恢复</span>' : '<span class="ym-tag">当前</span>')
+                + `</div>`;
+            h += `<div class="ym-item${s.fill === 'self' ? ' cur' : ''}" onclick="setStockFill('${code}', 'self')">`
+                + `<span class="ym-y">自填</span>`
+                + `<span class="ym-f">净利 ${num(selfNum(s.profit))} 亿</span>`
+                + `<span class="ym-f">营收 ${num(selfNum(s.revenue))} 亿</span>`
+                + (s.fill === 'self' ? '<span class="ym-tag">当前</span>' : '<span class="ym-tag">你自己录的值</span>')
+                + `</div>`;
+            const ys = autoYears(code);
+            if (ys.length) {
+                h += `<div class="ym-sep"></div>`;
+                ys.forEach((y) => {
+                    const a = autoYearVal(code, y);
+                    const active = (e.mode === 'auto' && String(e.year) === String(y));
+                    h += `<div class="ym-item${active ? ' cur' : ''}" onclick="setStockFill('${code}', '${y}')">`
+                        + `<span class="ym-y">${y}E</span>`
+                        + `<span class="ym-f">净利 ${a ? num(a.p) : '—'} 亿</span>`
+                        + `<span class="ym-f">营收 ${a ? num(a.r) : '—'} 亿</span>`
+                        + (active ? '<span class="ym-tag">当前</span>' : '')
+                        + `</div>`;
+                });
+                h += `<div class="ym-hd" style="border-top:1px solid #eef1f5;border-bottom:0;margin:4px 2px 0;padding-top:6px">`
+                    + `市场预期＝近半年研报的逐年算术平均${w && w.n ? `（这一只共 ${w.n} 篇）` : ''}，`
+                    + `缺的年度表示半年内没有券商覆盖。</div>`;
+            } else {
+                h += `<div class="ym-hd" style="border-top:1px solid #eef1f5;border-bottom:0;margin:4px 2px 0;padding-top:6px">`
+                    + `${escText((w && w.note) || '这一只没有券商一致预期数据')}，只能自己填。</div>`;
+            }
+            menu.dataset.code = code;
+            menu.innerHTML = h;
+            menu.classList.add('on');
+            const r = el.getBoundingClientRect(), m = menu.getBoundingClientRect();
+            let left = r.left + r.width / 2 - m.width / 2;
+            left = Math.max(8, Math.min(left, window.innerWidth - m.width - 8));
+            let top = r.bottom + 6;
+            if (top + m.height > window.innerHeight - 8) top = Math.max(8, r.top - m.height - 6);
+            menu.style.left = Math.round(left) + 'px';
+            menu.style.top = Math.round(top) + 'px';
+        }
 
         // 浮层内容：标题栏（含关闭键）+ 可滚动内容区，按年度分节，每节一张机构表。
         // 行结构 [券商, 发布日期, 营收, 净利]；老版本的 [券商, 营收, 净利] 也能读。
@@ -1774,10 +2091,13 @@
                 }
                 const dataValid = valid && !histMissing;
 
+                // 净利与营收的生效值：可能是自填，也可能来自券商一致预期，逐字段判定
+                const eff = fillResolve(s);
+
                 let pe = { down: '-', up: '-' }, ps = { down: '-', up: '-' };
                 if (dataValid) {
-                    if (s.profit && s.lowPE) { pe.down=((s.profit*s.lowPE/displayCap-1)*100).toFixed(2); pe.up=((s.profit*s.highPE-displayCap)/displayCap*100).toFixed(2); }
-                    if (s.revenue && s.lowPS) { ps.down=((s.revenue*s.lowPS/displayCap-1)*100).toFixed(2); ps.up=((s.revenue*s.highPS-displayCap)/displayCap*100).toFixed(2); }
+                    if (eff.p && s.lowPE) { pe.down=((eff.p*s.lowPE/displayCap-1)*100).toFixed(2); pe.up=((eff.p*s.highPE-displayCap)/displayCap*100).toFixed(2); }
+                    if (eff.r && s.lowPS) { ps.down=((eff.r*s.lowPS/displayCap-1)*100).toFixed(2); ps.up=((eff.r*s.highPS-displayCap)/displayCap*100).toFixed(2); }
                 }
                 
                 if (historyCache[s.code] === undefined && valid) {
@@ -1789,13 +2109,16 @@
                     ? StockScore.trend(histSeries)
                     : StockScore.trend(historyCache[s.code], currentPrice);
                 const trend = renderTrendIcon(trendState);
-                const score = StockScore.calculate(s, { cap:dataValid ? displayCap : null, trend:trendState });
+                const score = StockScore.calculate({ ...s, profit: eff.p, revenue: eff.r }, { cap:dataValid ? displayCap : null, trend:trendState });
                 const intervalChange = historicalMode ? getIntervalChangePct(histSeries, currentPrice) : null;
-                return { ...s, cap: displayCap, chg: displayChg, valid: dataValid, peRes:pe, psRes:ps, trend, score, intervalChange, reportDateInfo: getReportDateInfo(s.code) };
+                return { ...s, cap: displayCap, chg: displayChg, valid: dataValid, peRes:pe, psRes:ps, trend, score, intervalChange, reportDateInfo: getReportDateInfo(s.code), eff };
             });
             
             if(missingHistory > 0) updateProgress(stocks.length - missingHistory, stocks.length);
             renderTable(data); updateCompareBtn();
+            // 主题列与全局填充控件都要跟着这一轮算完的 eff 走，放在最后统一回填
+            syncFillControls();
+            renderFillStat(data);
         }
 
         let currentVisibleStocks = [];
@@ -1867,8 +2190,11 @@
                             (Array.isArray(w.cands) ? w.cands : []).forEach((c) => { byYear[c.y] = c; });
                             const y = (o.devYear && byYear[o.devYear]) ? String(o.devYear) : w.y;
                             const cy = byYear[y] || { p: w.curp, r: w.curr };
-                            const vals = [mag(selfFill(o, 'profit', w.p), cy.p),
-                                          mag(selfFill(o, 'revenue', w.r), cy.r)].filter(v => v !== null);
+                            // 取自券商预期的字段不参与对照，排序口径要和单元格显示一致
+                            const ef = o.eff || null;
+                            const pS = !ef || ef.pSrc !== 'auto', rS = !ef || ef.rSrc !== 'auto';
+                            const vals = [pS ? mag(selfFill(o, 'profit', w.p), cy.p) : null,
+                                          rS ? mag(selfFill(o, 'revenue', w.r), cy.r) : null].filter(v => v !== null);
                             return vals.length ? Math.max.apply(null, vals) : null;
                         };
                         const x = devOf(a), y = devOf(b);
@@ -1900,8 +2226,8 @@
                     const val = (o) => {
                         if(sortState.key=='chg') return parseFloat(o.chg);
                         if(sortState.key=='cap') return parseFloat(o.cap)||0;
-                        if(sortState.key=='profit') return parseFloat(o.profit)||0;
-                        if(sortState.key=='revenue') return parseFloat(o.revenue)||0;
+                        if(sortState.key=='profit') return parseFloat(o.eff && o.eff.p)||0;
+                        if(sortState.key=='revenue') return parseFloat(o.eff && o.eff.r)||0;
                         if(sortState.key.includes('pe')) return parseFloat(o.peRes[sortState.key.split('_')[1]])||-9999;
                         if(sortState.key.includes('ps')) return parseFloat(o.psRes[sortState.key.split('_')[1]])||-9999;
                         if(sortState.key=='broker') return bkCount(o.code);
@@ -1920,7 +2246,7 @@
                 <th class="th-basic" colspan="${4 + (historicalMode?1:0) + (viewSettings.showCode?1:0) + (viewSettings.showTags?1:0) + (viewSettings.showCap?1:0) + (viewSettings.showReport?1:0)}">📊 基础行情</th>
                 <th class="th-pe" colspan="4">💰 PE (利润)</th><th class="th-ps" colspan="4">🚀 PS (营收)</th>
                 <th rowspan="2" class="sortable ${show('update')} ${sk('last_update')}" onclick="setSort('last_update')" style="width:70px">📅 ${getSortIcon('last_update')}</th>
-                <th rowspan="2" class="sortable ${sk('consdev')}" onclick="setSort('consdev')" style="width:124px" title="你自填的预测值比券商一致预期高或低多少：以券商一致预期为基准。券商一致预期取近半年内发布的券商研报，逐年算术平均。2026E、2027E、2028E 三个年度都参与判定，按归母净利润的相对偏差取最小者，净利缺失或为占位值时才用营业收入。红色为高于预期 10% 以上，绿色为低于预期 10% 以上，黑色为正负 10% 以内。色块底色深浅表示偏离等级。自填值取池内当前录入，改了当场生效。点击任意一格可以自己指定对照年度，左侧有蓝线的是手动指定的。港美股没有免费的券商分机构明细，会显示为「—」">偏离券商预期 <span class="dev-refresh" onclick="event.stopPropagation();refreshConsensus(this)" title="重拉一次券商一致预期快照并重算这一列。券商预期由每周一刷新，此处用于随时拿到最新一次快照">⟳</span> ${getSortIcon('consdev')}</th>
+                <th rowspan="2" class="sortable ${sk('consdev')}" onclick="setSort('consdev')" style="width:124px" title="你自填的预测值比券商一致预期高或低多少：以券商一致预期为基准。券商一致预期取近半年内发布的券商研报，逐年算术平均。2026E、2027E、2028E 三个年度都参与判定，按归母净利润的相对偏差取最小者，净利缺失或为占位值时才用营业收入。红色为高于预期 10% 以上，绿色为低于预期 10% 以上，黑色为正负 10% 以内。色块底色深浅表示偏离等级。自填值取池内当前录入，改了当场生效。点击任意一格可以自己指定对照年度，左侧有蓝线的是手动指定的。港美股没有免费的券商分机构明细，会显示为「—」。如果用工具栏的「市场预期填充」把净利与营收换成了券商预期，这一格会显示「取自预期」——自己跟自己比没有偏离可言">偏离券商预期 <span class="dev-refresh" onclick="event.stopPropagation();refreshConsensus(this)" title="重拉一次券商一致预期快照并重算这一列。券商预期由每周一刷新，此处用于随时拿到最新一次快照">⟳</span> ${getSortIcon('consdev')}</th>
                 <th rowspan="2" class="sortable ${sk('broker')}" onclick="setSort('broker')" style="width:92px" title="各券商对该标的营业收入与归母净利润的预测明细，当年、第二年和第三年逐年列出，并标注该券商研报的发布日期。只保留一年以内发布的研报。单元格显示覆盖券商家数，取三年中覆盖最多的一年。点击展开逐券商明细（右上角 × 或 Esc 关闭），数据每周刷新一次，点 ⟳ 可手动重拉。">券商预期 <span class="bk-refresh" onclick="event.stopPropagation();refreshBrokerForecast(this)" title="重拉一次机构盈利预测明细快照">⟳</span> ${getSortIcon('broker')}</th>
                 <th class="th-basic ${show('action')}" rowspan="2">⚙️</th>
                 <th class="th-select" rowspan="2" onclick="toggleSelectAll()"><input type="checkbox" ${allSel?'checked':''}></th>
@@ -1961,6 +2287,15 @@
             };
             const devCell = (i) => {
                 const w = consensusData[i.code];
+                // 这一格的净利与营收是不是你自己填的。取自券商一致预期的那一边没有「自填 vs 预期」可比。
+                const eff = i.eff || null;
+                const pSelf = !eff || eff.pSrc !== 'auto';
+                const rSelf = !eff || eff.rSrc !== 'auto';
+                // 两个字段都取自预期 → 没有必要拿预期跟预期比，只留一个淡色出处说明，不假装成 0
+                if (eff && !pSelf && !rSelf) {
+                    const fy = String(eff.year || '').slice(2);
+                    return `<td class="dev-cell"><span class="dev-tag dev-auto" data-dev="${esc(`净利与营收都取自券商一致预期 ${eff.year}E，这一格是自己跟预期本身比，没有偏离可比。\n想把偏离看回来，把工具栏的「市场预期填充」关掉，或者在净利/营收格上点一下把这一只改回自填。`)}">取自预期 ${fy}E</span></td>`;
+                }
                 if (!w) return `<td class="dev-cell"><span class="dev-tag lv-na" data-dev="未取到券商一致预期数据">—</span></td>`;
                 if (w.lv === '无数据' || !w.y) return `<td class="dev-cell"><span class="dev-tag lv-na" data-dev="${esc(w.note || '无对照数据')}">—</span></td>`;
                 // 候选年度列表：新结构读 cands；旧结构回落到「另一候选年度」加更远年度，兼容缓存里的旧文件
@@ -1978,7 +2313,9 @@
                 const cy = byYear[y] || { p: w.curp, r: w.curr };
                 // 自填值取池内当前录入，券商预期取周频快照，两者解耦
                 const p = selfFill(i, 'profit', w.p), r = selfFill(i, 'revenue', w.r);
-                const curP = devRel(p, cy.p), curR = devRel(r, cy.r);
+                // 只有自填的那一边才参与偏离对照；取自券商预期的字段跳过，免得拿预期跟预期比
+                const curP = pSelf ? devRel(p, cy.p) : null;
+                const curR = rSelf ? devRel(r, cy.r) : null;
                 // 等级也按当前自填值现算，不读快照里的 lv，否则会出现数字与等级对不上
                 const mags = [curP, curR].filter(Boolean).map(x => Math.abs(x.d));
                 const worst = mags.length ? Math.max.apply(null, mags) : null;
@@ -1998,7 +2335,11 @@
                     });
                     return bi;
                 };
-                const nearP = nearest(p, 'p'), nearR = nearest(r, 'r');
+                const nearP = pSelf ? nearest(p, 'p') : null, nearR = rSelf ? nearest(r, 'r') : null;
+                // 取自预期的字段不去和预期比高低，直接说明这一边不参与对照
+                const sideTxt = (dev, isSelf) => !isSelf
+                    ? '取自券商一致预期，与预期本身无偏离可比'
+                    : (dev ? dev.text : '自填缺失，不可比');
                 const lines = [
                     `偏离券商预期｜数据源 近半年券商研报均值　券商预期快照 ${consensusMeta || '—'}${consensusWindow ? '　窗口 ' + consensusWindow : ''}`,
                     `自填口径 ${y}E（${manual ? '手动指定' : '自动判定'}）　偏离程度 ${lvShort}　${manual ? `算法判定 ${auto}E` : `年份判定 ${w.c}，按${w.jb || '净利'}`}`,
@@ -2008,20 +2349,26 @@
                     lines.push(``, `等级提示：快照那一轮算作 ${w.lv}，按当前自填值现算为 ${lv}`);
                 }
                 lines.push(``,
-                    `归母净利润：自填 ${devNum(p)} 亿　券商预期 ${y}E ${devNum(cy.p)} 亿　${curP ? curP.text : '自填缺失，不可比'}`,
-                    `营业收入：自填 ${devNum(r)} 亿　券商预期 ${y}E ${devNum(cy.r)} 亿　${curR ? curR.text : '自填缺失，不可比'}`
+                    `归母净利润：${pSelf ? '自填' : '当前值'} ${devNum(pSelf ? p : ((eff && eff.p != null) ? eff.p : p))} 亿　券商预期 ${y}E ${devNum(cy.p)} 亿　${sideTxt(curP, pSelf)}`,
+                    `营业收入：${rSelf ? '自填' : '当前值'} ${devNum(rSelf ? r : ((eff && eff.r != null) ? eff.r : r))} 亿　券商预期 ${y}E ${devNum(cy.r)} 亿　${sideTxt(curR, rSelf)}`
                 );
+                if (!pSelf || !rSelf) {
+                    lines.push(``,
+                        `来源提示：${!pSelf && !rSelf ? '净利与营收' : (!pSelf ? '净利' : '营收')}取自券商一致预期（${eff ? eff.year : ''}E），不参与偏离对照，等级只按自填的那一边算。`);
+                }
                 if (cands.length > 1) {
                     lines.push(``,
                         `候选年度全对照：判定只按${w.jb || '净利'}的相对偏差取最小者，营收不参与判定`,
                         `括号内是自填值比该年度预期的高低幅度`);
                     cands.forEach((c) => {
-                        const np = devRel(p, c.p), nr = devRel(r, c.r);
+                        // 取自预期的字段不参与对照，这里也不列它的高低幅度
+                        const np = pSelf ? devRel(p, c.p) : null, nr = rSelf ? devRel(r, c.r) : null;
                         // 逐字段判断有无数据，缺哪个就不列哪个；整年都没有时明确写出来
                         const parts = [];
-                        if (c.p !== null && c.p !== undefined) parts.push(`净利 ${devNum(c.p)} 亿${np ? '（' + np.dir + ' ' + devPct(np.d) + '%）' : ''}`);
-                        if (c.r !== null && c.r !== undefined) parts.push(`营收 ${devNum(c.r)} 亿${nr ? '（' + nr.dir + ' ' + devPct(nr.d) + '%）' : ''}`);
-                        const seg = parts.length ? `　${c.y}E　${parts.join('　')}` : `　${c.y}E　无券商一致预期数据`;
+                        if (pSelf && c.p !== null && c.p !== undefined) parts.push(`净利 ${devNum(c.p)} 亿${np ? '（' + np.dir + ' ' + devPct(np.d) + '%）' : ''}`);
+                        if (rSelf && c.r !== null && c.r !== undefined) parts.push(`营收 ${devNum(c.r)} 亿${nr ? '（' + nr.dir + ' ' + devPct(nr.d) + '%）' : ''}`);
+                        const seg = parts.length ? `　${c.y}E　${parts.join('　')}`
+                            : `　${c.y}E　无可对照的自填字段（那一边取的是预期）`;
                         lines.push(seg + (c.y === y ? '　← 当前对照' : '') + (c.y === auto && c.y !== y ? '　← 算法判定' : ''));
                     });
                 }
@@ -2031,13 +2378,13 @@
                         `若两者确实是同一年填的，多半有一个已经过时，核对后只留一个年度口径更清楚。`);
                 }
                 lines.push(``, `点击这一格可以自己指定对照年度（当前 ${manual ? `手动 ${y}E` : `自动 ${y}E`}），不必等算法猜。`);
-                const head = curP || curR;
+                const head = (pSelf ? curP : null) || (rSelf ? curR : null);
                 // 方向着色：高于预期 10% 以上为红，低于预期 10% 以上为绿，正负 10% 以内为黑
                 const dCol = !head ? '' : (head.d > 10 ? 'color:#d32f2f' : (head.d < -10 ? 'color:#2e7d32' : 'color:#111'));
                 // 年度选择器要用的展开数据：每个候选年度的券商预期值与偏离一起带上，菜单里直接比。
                 // 塞进 data-opts 而不是重新算一遍，避免菜单和浮层两处口径打架。
                 const opts = cands.map((c) => {
-                    const np = devRel(p, c.p), nr = devRel(r, c.r);
+                    const np = pSelf ? devRel(p, c.p) : null, nr = rSelf ? devRel(r, c.r) : null;
                     return {
                         y: c.y,
                         p: c.p === undefined ? null : c.p, r: c.r === undefined ? null : c.r,
@@ -2067,8 +2414,8 @@
                     ${historicalMode ? `<td class="interval-change" style="font-weight:bold;color:${i.intervalChange === null ? '#888' : i.intervalChange >= 0 ? '#d32f2f' : '#2e7d32'}">${i.intervalChange === null ? '—' : (Math.round(i.intervalChange * 100) / 100).toFixed(2) + '%'}</td>` : ''}
                     <td class="${show('cap')}" style="font-family:monospace">${i.cap?i.cap.toFixed(2):'-'}</td>
                     <td class="${show('report')}">${formatReportDateCell(i.reportDateInfo)}</td>
-                    <td>${i.profit||'-'}</td><td style="font-size:12px">${i.lowPE||'-'}~${i.highPE||'-'}</td><td>${p(i.peRes.down)}</td><td>${p(i.peRes.up)}</td>
-                    <td>${i.revenue||'-'}</td><td style="font-size:12px">${i.lowPS||'-'}~${i.highPS||'-'}</td><td>${p(i.psRes.down)}</td><td>${p(i.psRes.up)}</td>
+                    ${fillCell(i,'p')}<td style="font-size:12px">${i.lowPE||'-'}~${i.highPE||'-'}</td><td>${p(i.peRes.down)}</td><td>${p(i.peRes.up)}</td>
+                    ${fillCell(i,'r')}<td style="font-size:12px">${i.lowPS||'-'}~${i.highPS||'-'}</td><td>${p(i.psRes.down)}</td><td>${p(i.psRes.up)}</td>
                     <td class="${show('update')}">${u}</td>
                     ${devCell(i)}
                     ${bkCell(i)}
@@ -2615,8 +2962,30 @@
             window.addEventListener('resize', follow);
         })();
 
+        // 净利/营收的来源菜单：点单元格打开（再点同一格收起），点别处、滚动或 Esc 关闭
+        (function initFillMenu() {
+            document.addEventListener('click', (e) => {
+                const el = e.target;
+                if (!el || !el.closest) return;
+                if (el.closest('#fill-menu')) return;        // 菜单里点选项不关，交给 onclick
+                const cell = el.closest('.fill-cell[data-fillcode]');
+                if (!cell) { closeFillMenu(); return; }
+                const menu = document.getElementById('fill-menu');
+                const code = cell.getAttribute('data-fillcode');
+                if (menu && menu.classList.contains('on') && menu.dataset.code === code) {
+                    closeFillMenu();                          // 再点同一格收起
+                    return;
+                }
+                openFillMenu(cell);
+            });
+            window.addEventListener('scroll', () => { closeFillMenu(); }, true);
+            window.addEventListener('resize', () => { closeFillMenu(); });
+        })();
+
+        syncFillControls();
+
         document.addEventListener('keydown', (event) => {
-            if (event.key === 'Escape') { closeWatchlistModal(); closeScoreDetails(); closeDevYearPicker(); closeBrokerTip(); }
+            if (event.key === 'Escape') { closeWatchlistModal(); closeScoreDetails(); closeDevYearPicker(); closeBrokerTip(); closeFillMenu(); }
         });
     </script>
 </body>
