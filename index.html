@@ -280,7 +280,12 @@
         #bk-tip th.bk-num, #bk-tip td.bk-num { text-align:right; }
         #bk-tip tbody tr:last-child td { border-bottom:0; }
         #bk-tip td.bk-org { color:#e8eef7; }
-        #bk-tip tr.bk-alt td { background:rgba(255,255,255,.035); }
+        /* 全局规则 tbody tr:nth-child(even){background:#f8f9fa} 与 tbody tr:hover td 会透过
+           浮层里 transparent 的 td 显示出来，把深色浮层的偶数行刷成浅灰、文字看不见。
+           浮层内的 tr 层背景必须一并清掉，斑马纹改由下面这条浅色叠加实现。 */
+        #bk-tip tbody tr, #bk-tip tbody tr:nth-child(even) { background-color:transparent; }
+        #bk-tip tbody tr:hover td { background-color:transparent; }
+        #bk-tip tr.bk-alt td { background:rgba(255,255,255,.06); }
         #bk-tip .bk-foot { margin-top:8px; padding-top:6px; border-top:1px solid #3d4959; color:#93a0b2; }
         #dev-year-menu { position:fixed; display:none; z-index:10000; min-width:440px; padding:6px; background:#fff; border:1px solid #d8dee9; border-radius:8px; box-shadow:0 10px 30px rgba(0,0,0,.18); font-size:12px; }
         #dev-year-menu.on { display:block; }
@@ -582,7 +587,7 @@
         let viewSettings = { showCode: true, showTags: true, showReport: true, showUpdate: true, showAction: true, showCap: false, ...JSON.parse(APP_STORAGE.getItem('stock_sys_view')) };
         // 业绩预测偏离：独立从私有仓库 wind.json 读取，仅在本机渲染，不写入 stocks
         let windDeviation = {}, windDeviationMeta = '';
-        let brokerForecast = {}, brokerMeta = '';
+        let brokerForecast = {}, brokerMeta = '', brokerBasis = '';
         
         let intervalId = null, sortState = { key: 'pe_up', dir: 'desc' }, isPanelOpen = false, pendingDeleteCode = null, pendingLogIndex = null, pendingSyncData = null, cachedMarketData = {}, selectedCodes = new Set(), columnFilters = {}, onlySelectedMode = false;
         
@@ -1008,6 +1013,7 @@
                 const payload = JSON.parse(b64_to_utf8((await res.json()).content));
                 brokerForecast = payload && payload.items ? payload.items : {};
                 brokerMeta = payload && payload.updatedAt ? payload.updatedAt : '';
+                brokerBasis = payload && payload.basis ? payload.basis : '';
                 return Object.keys(brokerForecast).length > 0;
             } catch (e) {
                 console.log("机构盈利预测明细读取失败:", e);
@@ -1050,8 +1056,8 @@
             const fmt = (v) => (v === null || v === undefined) ? '—'
                 : Number(v).toLocaleString('zh-CN', { maximumFractionDigits: Math.abs(Number(v)) >= 10 ? 2 : 3 });
             const total = years.reduce((a, y) => a + b[y].length, 0);
-            let h = `<div class="bk-hd">机构盈利预测明细｜数据源 万得 Wind　快照 ${brokerMeta || '—'}<br>`
-                + `每行一家机构，取该机构最近一次预测，单位与标的记账本位币一致。三年合计 ${total} 条。</div>`;
+            let h = `<div class="bk-hd">机构盈利预测明细｜数据源 ${escText(brokerBasis || '机构研报')}　快照 ${brokerMeta || '—'}<br>`
+                + `每行一家机构，取该机构最近一次预测，单位亿元。缺的字段以「—」表示。三年合计 ${total} 条。</div>`;
             years.forEach((y) => {
                 const list = b[y];
                 h += `<div class="bk-sec">${y}E　${list.length} 家</div>`;
@@ -2008,7 +2014,7 @@
             // 券商预期单元格：显示覆盖机构家数，悬停展开三年逐机构明细
             const bkCell = (i) => {
                 const n = bkCount(i.code);
-                if (!n) return `<td class="bk-cell"><span class="bk-tag bk-na" title="Wind 无该标的的机构盈利预测明细">—</span></td>`;
+                if (!n) return `<td class="bk-cell"><span class="bk-tag bk-na" title="暂无该标的的机构盈利预测明细">—</span></td>`;
                 return `<td class="bk-cell"><span class="bk-tag" data-bkcode="${i.code}" title="悬停查看各机构对营收与归母净利润的逐年预测">${n} 家</span></td>`;
             };
             if(rows.length===0) html+=`<tr><td colspan="${15 + (historicalMode?1:0) + ['code','tags','cap','report','update','action'].filter(k=>viewSettings['show'+k.charAt(0).toUpperCase()+k.slice(1)]).length}" style="text-align:center;padding:20px;color:#ccc">无数据</td></tr>`;
