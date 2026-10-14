@@ -2044,7 +2044,7 @@
             const el = document.getElementById('result');
             renderWatchlistControls();
             
-            if (stocks.length === 0) { currentVisibleStocks = []; el.innerHTML = '<div style="padding:40px;text-align:center;color:#999;">📭 列表为空</div>'; return; }
+            if (stocks.length === 0) { currentVisibleStocks = []; el.innerHTML = '<div style="padding:40px;text-align:center;color:#999;">📭 列表为空</div>'; syncFillControls(); renderFillStat([]); return; }
             ensureReportDates();
             
             if (!skipFetch) {
