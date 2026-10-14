@@ -262,27 +262,16 @@
         .dev-tag.dev-manual { box-shadow:inset 3px 0 0 #1a73e8; padding-left:7px; }
         .dev-refresh { cursor:pointer; color:#9aa5b4; font-weight:700; padding:0 2px; margin-left:1px; font-size:12px; }
         .dev-refresh:hover { color:#1a73e8; }
-        /* 净利与营收都取自券商预期时，这一格没有「自填 vs 预期」的偏离可比，只留一个淡色出处 */
-        .dev-tag.dev-auto { background:transparent; color:#8a94a6; font-weight:400; cursor:default; box-shadow:inset 2px 0 0 #cdd8e5; padding-left:7px; }
-        /* 净利与营收的来源标识。只有「市场预期填充」打开时才上色，关着时全表都是自填、上色没有区分意义。
-           淡蓝＝取自券商一致预期，右上角小字是年度；淡黄＝你自己填的。点一下可换来源。 */
+        /* 净利与营收的来源标识：取自券商一致预期的格子**一律素面**——与别的列长得一样，
+           才表示这一格没有你的加工；只有你自己填的格子才上淡黄底作区分。
+           下拉框关着时全表都是自填，上色没有区分意义，也一律素面。点一下可换来源。 */
         .fill-cell { cursor:pointer; font-variant-numeric:tabular-nums; }
-        .fill-cell.fill-auto { background-color:#e6f0fd; box-shadow:inset 2px 0 0 #1a73e8; }
-        .fill-cell.fill-self { background-color:#fff6e0; box-shadow:inset 2px 0 0 #dfa125; }
-        /* 全局规则 tbody tr:hover td 会给整行刷底色，这里按同一选择器覆盖回来，免得悬停时来源色被冲掉 */
-        tbody tr:hover td.fill-cell.fill-auto { background-color:#d8e8fb; }
+        .fill-cell.fill-self { background-color:#fff6e0; }
+        /* 全局规则 tbody tr:hover td 会给整行刷底色，这里按同一选择器覆盖回来，免得悬停时底色被冲掉 */
         tbody tr:hover td.fill-cell.fill-self { background-color:#fdeecd; }
-        .fill-cell .fill-yr, .fill-cell .fill-ovr { font-size:9px; font-weight:700; vertical-align:super; margin-left:3px; padding:0 2px; border-radius:2px; line-height:1.1; }
-        .fill-cell .fill-yr { color:#1a5fb4; background:#cfe2fb; }
-        .fill-cell .fill-ovr { color:#8a5c10; background:#f6dfae; }
-        /* 全局开关：市场预期填充（开关 + 年度 + 生效统计） */
-        .fill-global { display:flex; align-items:center; gap:7px; padding:5px 9px; border:1px solid #d8e2ef; border-radius:6px; background:#f7fafd; font-size:12px; color:#41506b; white-space:nowrap; }
-        .fill-global.on { border-color:#9cc3f0; background:#eef6ff; }
-        .fill-global .fg-sw { display:inline-flex; align-items:center; gap:4px; cursor:pointer; font-weight:600; margin:0; }
-        .fill-global .fg-sw input { width:auto; margin:0; }
-        .fill-global select { height:26px; padding:2px 4px; font-size:12px; border:1px solid #ced4da; border-radius:4px; background:#fff; }
-        .fill-global .fg-stat { color:#6b7785; font-size:11px; }
-        .fill-global.on .fg-stat { color:#2b6cb0; }
+        /* 净利与营收的数据来源：自填 / 取某一年券商一致预期。只有一个下拉框，参数写进 title。 */
+        #fill-year { height:30px; padding:3px 6px; font-size:12px; border:1px solid #ced4da; border-radius:4px; background:#fff; color:#495057; box-sizing:border-box; }
+        #fill-year.auto { border-color:#9cc3f0; background:#eef6ff; color:#1a5fb4; font-weight:600; }
         #fill-hint { display:none; margin:0 0 8px; padding:6px 10px; background:#eef6ff; border:1px solid #cde0f7; border-radius:6px; font-size:12px; line-height:1.6; color:#2b5c9b; }
         #fill-hint.on { display:block; }
         #dev-tip { position:fixed; display:none; z-index:9999; max-width:540px; padding:8px 11px; background:#2b3440; color:#f5f7fa; font-size:12px; line-height:1.75; border-radius:6px; box-shadow:0 8px 24px rgba(0,0,0,.28); white-space:pre-line; pointer-events:none; }
@@ -444,15 +433,8 @@
             <!-- 录入按钮放在中间 -->
             <button class="btn-toggle" onclick="toggleInputPanel()" id="toggle-btn">➕ 录入/管理</button>
 
-            <!-- 市场预期填充：把券商一致预期直接填进净利/营收列，用哪一年由你选 -->
-            <div class="fill-global" id="fill-global">
-                <label class="fg-sw" title="打开后，净利与营收默认取券商一致预期（近半年研报的逐年算术平均）。你自己填的值仍留在池里，随时可以切回。">
-                    <input type="checkbox" id="fill-on" onchange="toggleFillSettings(this.checked)">
-                    <span>市场预期填充</span>
-                </label>
-                <select id="fill-year" onchange="chooseFillYear(this.value)" title="选择用哪一年的券商一致预期填进净利与营收列"></select>
-                <span class="fg-stat" id="fill-stat"></span>
-            </div>
+            <!-- 净利与营收的数据来源：自填，或取某一年的券商一致预期。只用这一个下拉框，不占地方。 -->
+            <select id="fill-year" onchange="chooseFillYear(this.value)"></select>
             
             <div class="spacer"></div> <!-- 右侧弹簧 -->
             
@@ -476,8 +458,8 @@
             <div id="input-panel">
                 <input type="hidden" id="editCode" value="">
                 <div id="fill-hint">
-                    ⓘ 「市场预期填充」开着，表格里的净利与营收默认取自券商一致预期；下面这两个框里是<b>你自己录的值</b>，
-                    只在这只股票改回自填（或全局关掉）之后才生效。
+                    ⓘ 表格里的净利与营收现在取自券商一致预期；下面这两个框里是<b>你自己录的值</b>，
+                    只在下拉框改回「自填」之后才生效。
                 </div>
                 <div class="input-row">
                     <div class="group-box" style="background: #fff; border-color: #ddd; flex: 1.2;">
@@ -1108,6 +1090,8 @@
             (() => { try { return JSON.parse(APP_STORAGE.getItem('stock_sys_fill') || '{}'); } catch (e) { return {}; } })()
         );
         function saveFillSettings() { APP_STORAGE.setItem('stock_sys_fill', JSON.stringify(fillSettings)); }
+        // 最近一轮算完的生效数据，只给下拉框的 title 统计用
+        let fillStatList = [];
 
         // 券商一致预期里这一只股票**真正有值**的候选年度（升序）。
         // cands 里港美股与部分 A 股的年度是占位的 null，必须剔掉，否则下拉与菜单会出现空年度。
@@ -1174,12 +1158,12 @@
             return out;
         };
 
-        // 全局开关打开时，自填的格子才需要标色——提示「这个数是我自己填的」。
-        // 开关没打开时全表都是自填，上色没有区分意义，一律素面，保持与从前一致。
+        // 下拉框选了某个年度时，自填的格子才需要标色——提示「这个数是我自己填的」。
+        // 选「自填」时全表都是自填，上色没有区分意义，一律素面，保持与从前一致。
         const fillColorOn = () => fillSettings.on === true;
 
         // 写作 stocks[i].fill，随 data.json 一起同步，换台机器也带着。
-        // val 传 '' 表示跟随全局，传 'self' 表示强制自填，传 'YYYY' 表示强制自动取该年。
+        // val 传 '' 表示跟随下拉框，传 'self' 表示强制自填，传 'YYYY' 表示强制取该年预期。
         function setStockFill(code, val) {
             const s = stocks.find((x) => x.code === code);
             if (!s) return;
@@ -1189,7 +1173,7 @@
             closeFillMenu();
             updateTable(true);
             const label = val === 'self' ? '改回自己填'
-                : val ? `改用市场预期 ${val}E` : '改回跟随全局';
+                : val ? `改用券商一致预期 ${val}E` : '改回跟随下拉框';
             updateStatus('ok', `${s.name} 的净利与营收来源已${label}，改动存在本地，可点右上角保存到 GitHub`);
         }
 
@@ -1210,60 +1194,59 @@
             return hit || ys[ys.length - 1] || '';
         };
 
-        // 全局控件回填：开关、年度下拉、生效统计、录入面板的提示条。数据一变就要同步一次。
+        // 来源下拉框回填：选项＝「自填」加池内真正有券商预期的年度；已开时整个框变蓝。
+        // 参数（覆盖多少只、多少只回落）写进 title，不占地方。
         function syncFillControls() {
-            const box = document.getElementById('fill-global');
-            const on = document.getElementById('fill-on');
             const sel = document.getElementById('fill-year');
-            if (box && on && sel) {
+            if (sel) {
                 const ys = fillYearOptions();
                 if (String(sel.dataset.years || '') !== ys.join(',')) {
-                    sel.innerHTML = ys.map((y) => `<option value="${y}">${y}E</option>`).join('');
+                    sel.innerHTML = '<option value="">自填</option>'
+                        + ys.map((y) => `<option value="${y}">${y}E</option>`).join('');
                     sel.dataset.years = ys.join(',');
                 }
                 if (!fillSettings.year || ys.indexOf(String(fillSettings.year)) < 0) {
                     fillSettings.year = fillDefaultYear(ys);
                     saveFillSettings();
                 }
-                on.checked = fillSettings.on === true;
-                sel.value = String(fillSettings.year);
-                sel.disabled = fillSettings.on !== true;
-                box.classList.toggle('on', fillSettings.on === true);
+                const isAuto = fillSettings.on === true;
+                sel.value = isAuto ? String(fillSettings.year) : '';
+                sel.classList.toggle('auto', isAuto);
+                sel.title = isAuto
+                    ? `净利与营收取 ${fillSettings.year}E 券商一致预期。${fillStatText()}`
+                    : '净利与营收用你自己填的值。选中某个年度即改为取该年的券商一致预期。';
             }
             const hint = document.getElementById('fill-hint');
-            if (hint) hint.classList.toggle('on', fillColorOn());
+            if (hint) {
+                const isAuto = fillColorOn();
+                hint.classList.toggle('on', isAuto);
+                if (isAuto) {
+                    hint.innerHTML = `ⓘ 表格里的净利与营收现在取的是 <b>${fillSettings.year}E 券商一致预期</b>；`
+                        + '下面这两个框里是<b>你自己录的值</b>，只在下拉框改回「自填」之后才生效。';
+                }
+            }
         }
 
-        // 生效统计：多少只真的取到了预期，多少只因为没有预期仍走自填
-        function renderFillStat(list) {
-            const box = document.getElementById('fill-stat');
-            if (!box) return;
-            if (fillSettings.on !== true) {
-                box.textContent = '未开启，净利与营收都用你自己填的值';
-                return;
-            }
-            let both = 0, one = 0, none = 0;
-            (list || []).forEach((i) => {
+        // 生效概况：多少只取到了预期、多少只因为没有预期仍走自填。只进 title，不占界面。
+        const fillStatText = () => {
+            if (fillSettings.on !== true) return '';
+            let both = 0, one = 0, zero = 0;
+            fillStatList.forEach((i) => {
                 const e = i && i.eff;
                 if (!e) return;
                 const k = (e.pSrc === 'auto' ? 1 : 0) + (e.rSrc === 'auto' ? 1 : 0);
-                if (k === 2) both++; else if (k === 1) one++; else none++;
+                if (k === 2) both++; else if (k === 1) one++; else zero++;
             });
-            box.textContent = `${fillSettings.year}E　取到预期 ${both + one} 只`
-                + (both ? `（两个字段都有 ${both} 只）` : '')
-                + (none ? `　没有预期仍用自填 ${none} 只` : '')
-                + (one ? `　只有单边取到 ${one} 只` : '');
-        }
+            return `共 ${both + one} 只取到`
+                + (one ? `（其中 ${one} 只只有一个字段有预期）` : '')
+                + `，${zero} 只没有预期仍用自填。`;
+        };
 
-        function toggleFillSettings(on) {
-            fillSettings.on = !!on;
-            saveFillSettings();
-            syncFillControls();
-            if (stocks.length) updateTable(true);
-        }
-
+        // 下拉框只有一个选择：自填（value 空），或某个年度的券商一致预期
         function chooseFillYear(year) {
-            fillSettings.year = String(year || '');
+            const y = String(year || '');
+            if (y) { fillSettings.on = true; fillSettings.year = y; }
+            else { fillSettings.on = false; }   // 年度记着，下次切回来还是这一档
             saveFillSettings();
             syncFillControls();
             if (stocks.length) updateTable(true);
@@ -1283,30 +1266,23 @@
             return (raw === undefined || raw === null || raw === '') ? '-' : raw;
         };
 
-        // 净利/营收单元格。全局填充关着时就是素面数字（与从前一致）；
-        // 开着时按来源上色：淡蓝＝券商一致预期（角标写年度），淡黄＝你自己填的。点一下换来源。
+        // 净利/营收单元格。取自券商一致预期的一律素面——与别的列长得一样，
+        // 才表示「这一格没有你的加工」；只有你自己填的格子在下拉框打开时才上淡黄底。
+        // 两种格子都可以点，点开来源菜单单独指定这一只。
         function fillCell(i, kind) {
             const shown = fillShown(i, kind);
             const e = i.eff || null;
             const src = e ? (kind === 'p' ? e.pSrc : e.rSrc) : 'self';
-            const isAuto = src === 'auto';
             const yr = String((e && e.year) || '');
-            const colored = fillColorOn();
-            const cls = 'fill-cell' + (colored ? (isAuto ? ' fill-auto' : ' fill-self') : '');
-            const badge = !colored ? ''
-                : (isAuto ? `<span class="fill-yr">${yr ? yr.slice(2) + 'E' : '预期'}</span>`
-                          : '<span class="fill-ovr">自填</span>');
-            let tip;
-            if (!colored) {
-                tip = `${shown}　点击可选择净利与营收的来源：自己填，或取券商一致预期的某一年`;
-            } else if (isAuto) {
-                tip = `取自券商一致预期 ${yr}E　${shown} 亿\n近半年研报的逐年算术平均。点击可换年度或改回自填。`;
-            } else if (e.pinned) {
-                tip = `你自己填的 ${shown}，单只指定，不跟随全局\n点击可改用券商一致预期`;
-            } else {
-                tip = `你自己填的 ${shown}，这一只在 ${yr}E 没有可用的券商预期\n点击可换一个年度`;
+            if (src === 'auto' && e) {
+                return `<td class="fill-cell" data-fillcode="${i.code}" ` +
+                    `title="${shown}　取自券商一致预期 ${yr}E（近半年研报的逐年算术平均）。点击可换年度或改回自己填。">${shown}</td>`;
             }
-            return `<td class="${cls}" data-fillcode="${i.code}" title="${tip}">${shown}${badge}</td>`;
+            const cls = fillColorOn() ? 'fill-cell fill-self' : 'fill-cell';
+            const tip = autoYears(i.code).length
+                ? `${shown}　你自己填的。点击可改用券商一致预期。`
+                : `${shown}　你自己填的，这一只没有券商一致预期可对照。点击可查看说明。`;
+            return `<td class="${cls}" data-fillcode="${i.code}" title="${tip}">${shown}</td>`;
         }
 
         function closeFillMenu() {
@@ -1314,7 +1290,7 @@
             if (m) { m.classList.remove('on'); m.innerHTML = ''; delete m.dataset.code; }
         }
 
-        // 净利/营收的来源选择器：跟随全局 / 强制自填 / 指定某一年的券商预期
+        // 净利/营收的来源选择器：跟随下拉框 / 强制自填 / 指定某一年的券商预期
         function openFillMenu(el) {
             const menu = document.getElementById('fill-menu');
             if (!menu || !el) return;
@@ -1331,11 +1307,11 @@
                 return n.toLocaleString('zh-CN', { maximumFractionDigits: dg });
             };
             let h = `<div class="ym-hd">${escText(s.name)}　净利与营收取哪一年的数据<br>`
-                + `全局：${g.mode === 'auto' ? `跟随券商一致预期 ${g.year}E` : '未开启，全部用自填值'}`
-                + `　单只指定优先于全局设置</div>`;
+                + `下拉框：${g.mode === 'auto' ? `取 ${g.year}E 券商一致预期` : '自填值'}`
+                + `　单只指定优先于下拉框</div>`;
             h += `<div class="ym-item ym-auto${e.pinned ? '' : ' cur'}" onclick="setStockFill('${code}', '')">`
                 + `<span class="ym-y">跟随</span>`
-                + `<span class="ym-f">按全局设置（${g.mode === 'auto' ? g.year + 'E 券商一致预期' : '自填值'}）</span>`
+                + `<span class="ym-f">按下拉框（${g.mode === 'auto' ? g.year + 'E 券商一致预期' : '自填值'}）</span>`
                 + (e.pinned ? '<span class="ym-tag">点此恢复</span>' : '<span class="ym-tag">当前</span>')
                 + `</div>`;
             h += `<div class="ym-item${s.fill === 'self' ? ' cur' : ''}" onclick="setStockFill('${code}', 'self')">`
@@ -1358,7 +1334,7 @@
                         + `</div>`;
                 });
                 h += `<div class="ym-hd" style="border-top:1px solid #eef1f5;border-bottom:0;margin:4px 2px 0;padding-top:6px">`
-                    + `市场预期＝近半年研报的逐年算术平均${w && w.n ? `（这一只共 ${w.n} 篇）` : ''}，`
+                    + `券商一致预期＝近半年研报的逐年算术平均${w && w.n ? `（这一只共 ${w.n} 篇）` : ''}，`
                     + `缺的年度表示半年内没有券商覆盖。</div>`;
             } else {
                 h += `<div class="ym-hd" style="border-top:1px solid #eef1f5;border-bottom:0;margin:4px 2px 0;padding-top:6px">`
@@ -2044,7 +2020,7 @@
             const el = document.getElementById('result');
             renderWatchlistControls();
             
-            if (stocks.length === 0) { currentVisibleStocks = []; el.innerHTML = '<div style="padding:40px;text-align:center;color:#999;">📭 列表为空</div>'; syncFillControls(); renderFillStat([]); return; }
+            if (stocks.length === 0) { currentVisibleStocks = []; el.innerHTML = '<div style="padding:40px;text-align:center;color:#999;">📭 列表为空</div>'; syncFillControls(); return; }
             ensureReportDates();
             
             if (!skipFetch) {
@@ -2116,9 +2092,9 @@
             
             if(missingHistory > 0) updateProgress(stocks.length - missingHistory, stocks.length);
             renderTable(data); updateCompareBtn();
-            // 主题列与全局填充控件都要跟着这一轮算完的 eff 走，放在最后统一回填
+            // 来源下拉框与录入面板的提示条要跟着这一轮算完的 eff 走，放在最后统一回填
+            fillStatList = data;
             syncFillControls();
-            renderFillStat(data);
         }
 
         let currentVisibleStocks = [];
@@ -2246,7 +2222,7 @@
                 <th class="th-basic" colspan="${4 + (historicalMode?1:0) + (viewSettings.showCode?1:0) + (viewSettings.showTags?1:0) + (viewSettings.showCap?1:0) + (viewSettings.showReport?1:0)}">📊 基础行情</th>
                 <th class="th-pe" colspan="4">💰 PE (利润)</th><th class="th-ps" colspan="4">🚀 PS (营收)</th>
                 <th rowspan="2" class="sortable ${show('update')} ${sk('last_update')}" onclick="setSort('last_update')" style="width:70px">📅 ${getSortIcon('last_update')}</th>
-                <th rowspan="2" class="sortable ${sk('consdev')}" onclick="setSort('consdev')" style="width:124px" title="你自填的预测值比券商一致预期高或低多少：以券商一致预期为基准。券商一致预期取近半年内发布的券商研报，逐年算术平均。2026E、2027E、2028E 三个年度都参与判定，按归母净利润的相对偏差取最小者，净利缺失或为占位值时才用营业收入。红色为高于预期 10% 以上，绿色为低于预期 10% 以上，黑色为正负 10% 以内。色块底色深浅表示偏离等级。自填值取池内当前录入，改了当场生效。点击任意一格可以自己指定对照年度，左侧有蓝线的是手动指定的。港美股没有免费的券商分机构明细，会显示为「—」。如果用工具栏的「市场预期填充」把净利与营收换成了券商预期，这一格会显示「取自预期」——自己跟自己比没有偏离可言">偏离券商预期 <span class="dev-refresh" onclick="event.stopPropagation();refreshConsensus(this)" title="重拉一次券商一致预期快照并重算这一列。券商预期由每周一刷新，此处用于随时拿到最新一次快照">⟳</span> ${getSortIcon('consdev')}</th>
+                <th rowspan="2" class="sortable ${sk('consdev')}" onclick="setSort('consdev')" style="width:124px" title="你自填的预测值比券商一致预期高或低多少：以券商一致预期为基准。券商一致预期取近半年内发布的券商研报，逐年算术平均。2026E、2027E、2028E 三个年度都参与判定，按归母净利润的相对偏差取最小者，净利缺失或为占位值时才用营业收入。红色为高于预期 10% 以上，绿色为低于预期 10% 以上，黑色为正负 10% 以内。色块底色深浅表示偏离等级。自填值取池内当前录入，改了当场生效。点击任意一格可以自己指定对照年度，左侧有蓝线的是手动指定的。港美股没有免费的券商分机构明细，会显示为「—」。如果工具栏的下拉框选了某个年度、净利与营收都取自券商一致预期，这一格会留空——自己跟自己比没有偏离可言">偏离券商预期 <span class="dev-refresh" onclick="event.stopPropagation();refreshConsensus(this)" title="重拉一次券商一致预期快照并重算这一列。券商预期由每周一刷新，此处用于随时拿到最新一次快照">⟳</span> ${getSortIcon('consdev')}</th>
                 <th rowspan="2" class="sortable ${sk('broker')}" onclick="setSort('broker')" style="width:92px" title="各券商对该标的营业收入与归母净利润的预测明细，当年、第二年和第三年逐年列出，并标注该券商研报的发布日期。只保留一年以内发布的研报。单元格显示覆盖券商家数，取三年中覆盖最多的一年。点击展开逐券商明细（右上角 × 或 Esc 关闭），数据每周刷新一次，点 ⟳ 可手动重拉。">券商预期 <span class="bk-refresh" onclick="event.stopPropagation();refreshBrokerForecast(this)" title="重拉一次机构盈利预测明细快照">⟳</span> ${getSortIcon('broker')}</th>
                 <th class="th-basic ${show('action')}" rowspan="2">⚙️</th>
                 <th class="th-select" rowspan="2" onclick="toggleSelectAll()"><input type="checkbox" ${allSel?'checked':''}></th>
@@ -2291,11 +2267,8 @@
                 const eff = i.eff || null;
                 const pSelf = !eff || eff.pSrc !== 'auto';
                 const rSelf = !eff || eff.rSrc !== 'auto';
-                // 两个字段都取自预期 → 没有必要拿预期跟预期比，只留一个淡色出处说明，不假装成 0
-                if (eff && !pSelf && !rSelf) {
-                    const fy = String(eff.year || '').slice(2);
-                    return `<td class="dev-cell"><span class="dev-tag dev-auto" data-dev="${esc(`净利与营收都取自券商一致预期 ${eff.year}E，这一格是自己跟预期本身比，没有偏离可比。\n想把偏离看回来，把工具栏的「市场预期填充」关掉，或者在净利/营收格上点一下把这一只改回自填。`)}">取自预期 ${fy}E</span></td>`;
-                }
+                // 两个字段都取自预期 → 自己跟自己比没有偏离可言，这一格留空
+                if (eff && !pSelf && !rSelf) return `<td class="dev-cell"></td>`;
                 if (!w) return `<td class="dev-cell"><span class="dev-tag lv-na" data-dev="未取到券商一致预期数据">—</span></td>`;
                 if (w.lv === '无数据' || !w.y) return `<td class="dev-cell"><span class="dev-tag lv-na" data-dev="${esc(w.note || '无对照数据')}">—</span></td>`;
                 // 候选年度列表：新结构读 cands；旧结构回落到「另一候选年度」加更远年度，兼容缓存里的旧文件
