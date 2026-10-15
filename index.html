@@ -274,6 +274,12 @@
         #fill-year.auto { border-color:#9cc3f0; background:#eef6ff; color:#1a5fb4; font-weight:600; }
         #fill-hint { display:none; margin:0 0 8px; padding:6px 10px; background:#eef6ff; border:1px solid #cde0f7; border-radius:6px; font-size:12px; line-height:1.6; color:#2b5c9b; }
         #fill-hint.on { display:block; }
+        /* 编辑面板里取自券商预期的字段：置灰只读，下面挂一条单独放开的入口 */
+        input.fill-locked, input.fill-locked:focus { background:#f1f3f5; color:#98a2b3; border-color:#e3e6ea; cursor:not-allowed; }
+        .fill-note { display:none; margin:0 0 5px; font-size:11px; line-height:1.55; color:#8a94a6; }
+        .fill-note.on { display:block; }
+        .fill-note b { color:#2b5c9b; font-weight:600; font-variant-numeric:tabular-nums; }
+        .fill-note a { color:#1a73e8; text-decoration:underline; cursor:pointer; margin-left:4px; white-space:nowrap; }
         #dev-tip { position:fixed; display:none; z-index:9999; max-width:540px; padding:8px 11px; background:#2b3440; color:#f5f7fa; font-size:12px; line-height:1.75; border-radius:6px; box-shadow:0 8px 24px rgba(0,0,0,.28); white-space:pre-line; pointer-events:none; }
         #dev-tip.on { display:block; }
         .bk-cell { text-align:center; }
@@ -458,8 +464,8 @@
             <div id="input-panel">
                 <input type="hidden" id="editCode" value="">
                 <div id="fill-hint">
-                    ⓘ 表格里的净利与营收现在取自券商一致预期；下面这两个框里是<b>你自己录的值</b>，
-                    只在下拉框改回「自填」之后才生效。
+                    ⓘ 表格里的净利与营收现在取自券商一致预期。下面这两个框里是<b>你自己录的值</b>，
+                    当前不参与计算、按来源置灰；点框下的「改为自填」可以把这一只单独放开。
                 </div>
                 <div class="input-row">
                     <div class="group-box" style="background: #fff; border-color: #ddd; flex: 1.2;">
@@ -470,7 +476,7 @@
                         </div>
                         <div style="display:flex; gap:5px; width:100%; align-items:center; margin-top:5px;">
                             <label style="width:40px">代码</label>
-                            <input type="text" id="inCode" placeholder="自动/手输" style="flex:1;">
+                            <input type="text" id="inCode" placeholder="自动/手输" style="flex:1;" onchange="syncEditFillFields()">
                         </div>
                     </div>
                     <div class="group-box" style="background: #fff; border-color: #ddd; flex: 2; flex-direction: column;">
@@ -492,6 +498,7 @@
                             <label style="width:60px">净利(亿)</label>
                             <input type="number" id="inProfit" step="0.1" style="flex:1">
                         </div>
+                        <div id="inProfit-note" class="fill-note"></div>
                         <div style="display:flex; gap:10px;">
                             <div style="display:flex; gap:5px; align-items:center; flex:1;">
                                 <label style="white-space:nowrap">PE下限</label>
@@ -510,6 +517,7 @@
                             <label style="width:60px">营收(亿)</label>
                             <input type="number" id="inRevenue" step="0.1" style="flex:1">
                         </div>
+                        <div id="inRevenue-note" class="fill-note"></div>
                         <div style="display:flex; gap:10px;">
                             <div style="display:flex; gap:5px; align-items:center; flex:1;">
                                 <label style="white-space:nowrap">PS下限</label>
@@ -1224,6 +1232,41 @@
             const label = val === 'self' ? '改回自己填'
                 : val ? `改用券商一致预期 ${val}E` : '改回跟随下拉框';
             updateStatus('ok', `${s.name} 的净利与营收来源已${label}，改动存在本地，可点右上角保存到 GitHub`);
+            syncEditFillFields();
+        }
+
+        // 编辑面板里净利、营收两格的可编辑状态。
+        // 表格里这两个数取自券商预期时，它们就不是你录的值了；这时候把输入框置灰只读，
+        // 免得在面板里改了却看不到任何变化（数值被一致预期盖住）。
+        // 逐字段判定，与 fillResolve 同一口径：某一年只有营收没有净利时，只有营收被锁。
+        // 框里始终放**你自己录的值**——置灰只表示它当前不参与计算，保存回去不会覆盖掉记录。
+        function syncEditFillFields() {
+            const code = document.getElementById('inCode').value.trim();
+            const s = stocks.find((x) => x.code === code);
+            const eff = s ? fillResolve(s) : null;
+            const view = s ? Object.assign({}, s, { eff: eff }) : null;
+            [['p', 'inProfit', 'inProfit-note'], ['r', 'inRevenue', 'inRevenue-note']].forEach((pair) => {
+                const kind = pair[0], inputId = pair[1], noteId = pair[2];
+                const input = document.getElementById(inputId);
+                const note = document.getElementById(noteId);
+                if (!input || !note) return;
+                const on = !!(eff && (kind === 'p' ? eff.pSrc : eff.rSrc) === 'auto');
+                input.disabled = on;
+                input.classList.toggle('fill-locked', on);
+                note.classList.toggle('on', on);
+                if (!on) { note.innerHTML = ''; return; }
+                note.innerHTML = `表格现在取 ${eff.year}E 券商预期 <b>${fillShown(view, kind)}</b>，`
+                    + '这一格是你的记录、当前不参与计算，所以只读。'
+                    + `<a onclick="unlockFillField('${code}')">改为自填</a>`;
+            });
+        }
+
+        // 面板里的「改为自填」：把这一只改回自填，两个框一起放开。
+        // 个股来源在数据里是整只的（s.fill 只有 self / YYYY / 跟随三种），没有「只让净利自填」这种状态，
+        // 所以点其中一个字段会放开两个——和你「在净利或营收上点自填」的效果一致。
+        function unlockFillField(code) {
+            setStockFill(code, 'self');
+            syncEditFillFields();
         }
 
         // 池子里真正有券商预期的年度（升序）。一只都没有时兜底给出后三年，免得下拉是空的。
@@ -1271,7 +1314,8 @@
                 hint.classList.toggle('on', isAuto);
                 if (isAuto) {
                     hint.innerHTML = `ⓘ 表格里的净利与营收现在取的是 <b>${fillSettings.year}E 券商一致预期</b>；`
-                        + '下面这两个框里是<b>你自己录的值</b>，只在下拉框改回「自填」之后才生效。';
+                        + '下面这两个框里是<b>你自己录的值</b>，当前不参与计算，取预期的那一格已置灰。'
+                        + '点框下的「改为自填」可以把这一只单独放开。';
                 }
             }
         }
@@ -2716,6 +2760,7 @@
                     }
                     document.getElementById('inCode').value = finalCode; 
                     document.getElementById('inName').value = r.Name; 
+                    syncEditFillFields();
                 } else alert("未找到"); 
                 sc.remove(); 
             };
@@ -2734,10 +2779,12 @@
             document.getElementById('inProfit').value=s.profit||''; document.getElementById('inLowPE').value=s.lowPE||''; document.getElementById('inHighPE').value=s.highPE||'';
             document.getElementById('inRevenue').value=s.revenue||''; document.getElementById('inLowPS').value=s.lowPS||''; document.getElementById('inHighPS').value=s.highPS||''; 
             document.getElementById('btn-save-text').innerText="💾 修改";
+            // 这一只的净利/营收如果来自券商预期，面板里两格要置灰——PE、PS 仍然可以照常改
+            syncEditFillFields();
         }
 
         function toggleInputPanel() { const c=document.getElementById('input-container'); isPanelOpen=!isPanelOpen; c.style.display=isPanelOpen?'block':'none'; document.getElementById('toggle-btn').innerText=isPanelOpen?'🔼 收起':'➕ 录入/管理'; }
-        function clearInput() { document.querySelectorAll('#input-panel input').forEach(i=> { if(i.type === 'checkbox') i.checked = false; else i.value=''; }); document.getElementById('btn-save-text').innerText="💾 保存"; }
+        function clearInput() { document.querySelectorAll('#input-panel input').forEach(i=> { if(i.type === 'checkbox') i.checked = false; else i.value=''; }); document.getElementById('btn-save-text').innerText="💾 保存"; syncEditFillFields(); }
         function showLogs(c) { const s=stocks.find(i=>i.code===c); document.getElementById('modal-body').innerHTML=s?.logs?.map((l,i)=>`<div class="log-entry"><div style="display:flex;justify-content:space-between"><span class="log-time">${l.date}</span><span class="log-del-btn" onclick="deleteLog('${c}',${i})">🗑️</span></div><div style="font-weight:600">${l.content}</div>${l.note?`<div class="log-note">${l.note}</div>`:''}</div>`).join('')||'无'; document.getElementById('log-modal').style.display='flex'; }
         function deleteLog(c,i) { pendingDeleteCode=c; pendingLogIndex=i; document.getElementById('delete-msg').innerText="删日志?"; document.getElementById('delete-modal').style.display='flex'; }
         window.openDeleteModal=function(c){pendingDeleteCode=c;pendingLogIndex=null;document.getElementById('delete-msg').innerText=`删 ${c}?`;document.getElementById('delete-modal').style.display='flex';};
