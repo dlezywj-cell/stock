@@ -357,9 +357,27 @@
             .watchlist-bar select { grid-column:2 / 4; grid-row:1; width:100%; min-width:0; max-width:none; }
             .watchlist-bar button { justify-content:center; }
         }
+        /* ===== 估值区间异常标注：红点贴单元格右上角，点整格看理由 ===== */
+        td.val-cell { position:relative; font-size:12px; cursor:pointer; }
+        td.val-cell:hover { background:#fff5f5; }
+        td.val-cell .vdot { position:absolute; top:3px; right:3px; width:7px; height:7px;
+                            border-radius:50%; background:#e53935; box-shadow:0 0 0 1.5px #fff; }
+        td.val-cell .vdot.y { background:#f0a000; }
+        td.val-cell.has-warn { background:#fffafa; }
+        tbody tr:hover td.val-cell.has-warn { background:#fff0f0; }
+        #val-tip { position:fixed; display:none; z-index:9999; max-width:430px; padding:9px 13px;
+                   background:#1f2430; color:#e8edf5; border:1px solid #39435a; border-radius:8px;
+                   box-shadow:0 8px 24px rgba(0,0,0,.30); font-size:12px; line-height:1.65;
+                   text-align:left; white-space:normal; }
+        #val-tip.on { display:block; }
+        #val-tip .vt-h { font-weight:700; margin-bottom:6px; color:#fff; }
+        #val-tip ul { margin:0; padding-left:16px; }
+        #val-tip li { margin:4px 0; }
+        #val-tip .vt-ok { color:#9fb0c6; }
     </style>
 </head>
 <body>
+    <div id="val-tip"></div>
     <div id="mobile-nav">
         <h3>📈 估值系统</h3>
         <div class="mobile-status-group" onclick="toggleRealtime()">
@@ -2480,8 +2498,8 @@
                     ${historicalMode ? `<td class="interval-change" style="font-weight:bold;color:${i.intervalChange === null ? '#888' : i.intervalChange >= 0 ? '#d32f2f' : '#2e7d32'}">${i.intervalChange === null ? '—' : (Math.round(i.intervalChange * 100) / 100).toFixed(2) + '%'}</td>` : ''}
                     <td class="${show('cap')}" style="font-family:monospace">${i.cap?i.cap.toFixed(2):'-'}</td>
                     <td class="${show('report')}">${formatReportDateCell(i.reportDateInfo)}</td>
-                    ${fillCell(i,'p')}<td style="font-size:12px">${i.lowPE||'-'}~${i.highPE||'-'}</td><td>${p(i.peRes.down)}</td><td>${p(i.peRes.up)}</td>
-                    ${fillCell(i,'r')}<td style="font-size:12px">${i.lowPS||'-'}~${i.highPS||'-'}</td><td>${p(i.psRes.down)}</td><td>${p(i.psRes.up)}</td>
+                    ${fillCell(i,'p')}${valCell(i,'pe')}<td>${p(i.peRes.down)}</td><td>${p(i.peRes.up)}</td>
+                    ${fillCell(i,'r')}${valCell(i,'ps')}<td>${p(i.psRes.down)}</td><td>${p(i.psRes.up)}</td>
                     <td class="${show('update')}">${u}</td>
                     ${devCell(i)}
                     ${bkCell(i)}
@@ -2489,6 +2507,7 @@
                     <td class="td-select" onclick="toggleSelectRow('${i.code}')"><input type="checkbox" class="row-checkbox" ${selectedCodes.has(i.code)?'checked':''}></td>
                 </tr>`;
             });
+            closeValTip();
             document.getElementById('result').innerHTML = html + '</tbody></table>';
         }
 
@@ -3053,8 +3072,134 @@
 
         syncFillControls();
 
+
+        /* ===== 估值区间异常标注（2026-10-25 自动生成，由批量估值脚本注入） =====
+           PE / PS 区间单元格右上角的红点 = 这一格有需要你看一眼的情况，点整格弹出理由。
+           理由两路：实时算（跟价格走）+ 离线诊断 VAL_DIAG（页面算不出来的）。 */
+        const VAL_DIAG = {"0.002158":{"pe":[["y","市值分位 57%、PE 分位 21%，差 36 个点：PE 相对市值偏低，说明 2027E 预期被上修过一轮。"]]},"0.300415":{"pe":[["y","市值分位 20%、PE 分位 1%，差 19 个点。PE 比市值更靠底部，多出来的那部分是 2027E 盈利预期上修推出来的，不是股价又跌了一轮——市值分位也低，属于双低。"],["y","口径提示：这个区间的分母是 2027E 一致预期净利 9.7 亿，池子里净利填的是 7.32 亿，两者差 32%。算目标市值时别混用。"]]},"0.002080":{"pe":[["r","这次批量更新<b>没有写入 PE 区间</b>：区间宽度 4.1× 超过 4×，跨业绩台阶不可比。现在显示的还是原值 20~35，需要你自己定一个。"],["y","2027E 净利券商分歧偏大：5 家预测极差占中值 49%，区间会随预期摆动。"],["y","口径提示：这个区间的分母是 2027E 一致预期净利 48.2 亿，池子里净利填的是 35 亿，两者差 38%。算目标市值时别混用。"]]},"1.600426":{"pe":[["y","市值分位 40%、PE 分位 14%，差 26 个点：PE 相对市值偏低，说明 2027E 预期被上修过一轮。"],["y","2027E 净利券商分歧偏大：18 家预测极差占中值 32%，区间会随预期摆动。"]]},"0.300054":{"pe":[["y","2027E 净利券商分歧偏大：15 家预测极差占中值 46%，区间会随预期摆动。"],["y","口径提示：这个区间的分母是 2027E 一致预期净利 14.4 亿，池子里净利填的是 10 亿，两者差 44%。算目标市值时别混用。"]]},"0.002271":{"pe":[["r","这次批量更新<b>没有写入 PE 区间</b>：PE 上限 453.8× 超过 120×，历史净利曾接近零。现在显示的还是原值 10~15，需要你自己定一个。"],["y","市值分位 6%、PE 分位 2%，两者只差 4 个点、基本同步——这个低位是股价真跌出来的。"],["y","2027E 净利券商分歧偏大：13 家预测极差占中值 32%，区间会随预期摆动。"],["y","口径提示：这个区间的分母是 2027E 一致预期净利 23.6 亿，池子里净利填的是 17 亿，两者差 39%。算目标市值时别混用。"]]},"0.301200":{"pe":[["r","这次批量更新<b>没有写入 PE 区间</b>：区间宽度 6.5× 超过 4×，跨业绩台阶不可比。现在显示的还是原值 40~65，需要你自己定一个。"],["y","口径提示：这个区间的分母是 2027E 一致预期净利 30.9 亿，池子里净利填的是 17 亿，两者差 82%。算目标市值时别混用。"]],"ps":[["r","这次批量更新<b>没有写入 PS 区间</b>：PS 区间宽度 5.9× 超过 5×，保留原值。"]]},"0.002171":{"pe":[["y","市值分位 59%、PE 分位 26%，差 33 个点：PE 相对市值偏低，说明 2027E 预期被上修过一轮。"],["y","口径提示：这个区间的分母是 2027E 一致预期净利 5.5 亿，池子里净利填的是 7.9 亿，两者差 31%。算目标市值时别混用。"]],"ps":[["y","2027E 仅 1 家券商覆盖，样本偏薄。"]]},"1.688235":{"pe":[["r","这次批量更新<b>没有写入 PE 区间</b>：PE 上限 160.3× 超过 120×，历史净利曾接近零。现在显示的还是原值 0~0，需要你自己定一个。"],["y","市值分位 86%、PE 分位 26%，差 60 个点：PE 相对市值偏低，说明 2027E 预期被上修过一轮。"],["y","口径提示：这个区间的分母是 2027E 一致预期净利 85.8 亿，池子里净利填的是 52 亿，两者差 65%。算目标市值时别混用。"]]},"1.600089":{"pe":[["y","市值分位 66%、PE 分位 23%，差 43 个点：PE 相对市值偏低，说明 2027E 预期被上修过一轮。"]],"ps":[["y","2027E 仅 3 家券商覆盖，样本偏薄。"]]},"1.688308":{"pe":[["r","这次批量更新<b>没有写入 PE 区间</b>：区间宽度 16.8× 超过 4×，跨业绩台阶不可比。现在显示的还是原值 30~60，需要你自己定一个。"],["y","市值分位 78%、PE 分位 38%，差 40 个点：PE 相对市值偏低，说明 2027E 预期被上修过一轮。"],["y","2027E 净利券商分歧偏大：6 家预测极差占中值 36%，区间会随预期摆动。"],["y","口径提示：这个区间的分母是 2027E 一致预期净利 7.5 亿，池子里净利填的是 1.64 亿，两者差 354%。算目标市值时别混用。"]]},"0.000703":{"pe":[["r","这次批量更新<b>没有写入 PE 区间</b>：区间宽度 43.5× 超过 4×，跨业绩台阶不可比。现在显示的还是原值 10~15，需要你自己定一个。"],["y","市值分位 85%、PE 分位 45%，差 40 个点：PE 相对市值偏低，说明 2027E 预期被上修过一轮。"],["y","2027E 净利券商分歧偏大：7 家预测极差占中值 48%，区间会随预期摆动。"],["y","口径提示：这个区间的分母是 2027E 一致预期净利 85.3 亿，池子里净利填的是 18 亿，两者差 374%。算目标市值时别混用。"]]},"0.000301":{"pe":[["r","这次批量更新<b>没有写入 PE 区间</b>：PE 上限 511.1× 超过 120×，历史净利曾接近零。现在显示的还是原值 13~22，需要你自己定一个。"],["y","市值分位 81%、PE 分位 45%，差 36 个点：PE 相对市值偏低，说明 2027E 预期被上修过一轮。"],["y","2027E 净利券商分歧偏大：5 家预测极差占中值 53%，区间会随预期摆动。"],["y","口径提示：这个区间的分母是 2027E 一致预期净利 60.7 亿，池子里净利填的是 21 亿，两者差 189%。算目标市值时别混用。"]]},"0.002064":{"pe":[["y","市值分位 65%、PE 分位 13%，差 52 个点：PE 相对市值偏低，说明 2027E 预期被上修过一轮。"],["y","2027E 净利券商分歧偏大：12 家预测极差占中值 56%，区间会随预期摆动。"]]},"0.000949":{"pe":[["r","这次批量更新<b>没有写入 PE 区间</b>：区间宽度 4.1× 超过 4×，跨业绩台阶不可比。现在显示的还是原值 40~60，需要你自己定一个。"],["y","市值分位 72%、PE 分位 17%，差 55 个点：PE 相对市值偏低，说明 2027E 预期被上修过一轮。"],["y","口径提示：这个区间的分母是 2027E 一致预期净利 9.8 亿，池子里净利填的是 3.1 亿，两者差 216%。算目标市值时别混用。"]],"ps":[["y","2027E 仅 2 家券商覆盖，样本偏薄。"]]},"0.300750":{"pe":[["y","市值分位 38%、PE 分位 1%，差 37 个点。PE 比市值更靠底部，多出来的那部分是 2027E 盈利预期上修推出来的，不是股价又跌了一轮——市值分位也低，属于双低。"],["y","口径提示：这个区间的分母是 2027E 一致预期净利 1204.8 亿，池子里净利填的是 680 亿，两者差 77%。算目标市值时别混用。"]]},"0.002837":{"pe":[["y","市值分位 61%、PE 分位 23%，差 38 个点：PE 相对市值偏低，说明 2027E 预期被上修过一轮。"],["y","2027E 净利券商分歧偏大：9 家预测极差占中值 38%，区间会随预期摆动。"],["y","口径提示：这个区间的分母是 2027E 一致预期净利 19.4 亿，池子里净利填的是 6.3 亿，两者差 208%。算目标市值时别混用。"]]},"0.002222":{"pe":[["y","市值分位 69%、PE 分位 30%，差 39 个点：PE 相对市值偏低，说明 2027E 预期被上修过一轮。"],["y","口径提示：这个区间的分母是 2027E 一致预期净利 5.7 亿，池子里净利填的是 2.9 亿，两者差 97%。算目标市值时别混用。"]],"ps":[["y","2027E 仅 2 家券商覆盖，样本偏薄。"]]},"0.301123":{"ps":[["y","2027E 仅 1 家券商覆盖，样本偏薄。"]]},"1.605088":{"pe":[["y","市值分位 37%、PE 分位 4%，差 33 个点。PE 比市值更靠底部，多出来的那部分是 2027E 盈利预期上修推出来的，不是股价又跌了一轮——市值分位也低，属于双低。"]],"ps":[["y","2027E 仅 2 家券商覆盖，样本偏薄。"]]},"0.000425":{"pe":[["y","市值分位 26%、PE 分位 1%，差 25 个点。PE 比市值更靠底部，多出来的那部分是 2027E 盈利预期上修推出来的，不是股价又跌了一轮——市值分位也低，属于双低。"]]},"1.603005":{"pe":[["y","市值分位 30%、PE 分位 1%，差 29 个点。PE 比市值更靠底部，多出来的那部分是 2027E 盈利预期上修推出来的，不是股价又跌了一轮——市值分位也低，属于双低。"]],"ps":[["y","2027E 仅 1 家券商覆盖，样本偏薄。"]]},"1.600031":{"pe":[["y","市值分位 62%、PE 分位 5%，差 57 个点。PE 比市值更靠底部，多出来的那部分是 2027E 盈利预期上修推出来的，不是股价又跌了一轮——但市值分位还有 62%，并没跌到 5% 分位。"],["y","口径提示：这个区间的分母是 2027E 一致预期净利 135.9 亿，池子里净利填的是 90 亿，两者差 51%。算目标市值时别混用。"]]},"1.600114":{"pe":[["y","口径提示：这个区间的分母是 2027E 一致预期净利 7.6 亿，池子里净利填的是 5.2 亿，两者差 46%。算目标市值时别混用。"]],"ps":[["y","2027E 仅 3 家券商覆盖，样本偏薄。"]]},"0.002202":{"pe":[["y","市值分位 66%、PE 分位 28%，差 38 个点：PE 相对市值偏低，说明 2027E 预期被上修过一轮。"],["y","2027E 净利券商分歧偏大：12 家预测极差占中值 32%，区间会随预期摆动。"],["y","口径提示：这个区间的分母是 2027E 一致预期净利 56.4 亿，池子里净利填的是 41 亿，两者差 38%。算目标市值时别混用。"]]},"0.300627":{"pe":[["y","市值分位 31%、PE 分位 0%，差 31 个点。PE 比市值更靠底部，多出来的那部分是 2027E 盈利预期上修推出来的，不是股价又跌了一轮——市值分位也低，属于双低。"],["y","口径提示：这个区间的分母是 2027E 一致预期净利 10.5 亿，池子里净利填的是 7.6 亿，两者差 38%。算目标市值时别混用。"]],"ps":[["y","2027E 仅 2 家券商覆盖，样本偏薄。"]]},"1.688518":{"pe":[["y","市值分位 42%、PE 分位 1%，差 41 个点。PE 比市值更靠底部，多出来的那部分是 2027E 盈利预期上修推出来的，不是股价又跌了一轮——但市值分位还有 42%，并没跌到 5% 分位。"],["y","口径提示：这个区间的分母是 2027E 一致预期净利 5.1 亿，池子里净利填的是 3 亿，两者差 71%。算目标市值时别混用。"]],"ps":[["y","2027E 仅 3 家券商覆盖，样本偏薄。"]]},"1.603179":{"pe":[["y","市值分位 67%、PE 分位 14%，差 53 个点：PE 相对市值偏低，说明 2027E 预期被上修过一轮。"]]},"1.603997":{"pe":[["y","市值分位 17%、PE 分位 0%，差 17 个点。PE 比市值更靠底部，多出来的那部分是 2027E 盈利预期上修推出来的，不是股价又跌了一轮——市值分位也低，属于双低。"],["y","2027E 净利券商分歧偏大：12 家预测极差占中值 32%，区间会随预期摆动。"],["y","口径提示：这个区间的分母是 2027E 一致预期净利 11.4 亿，池子里净利填的是 3.9 亿，两者差 193%。算目标市值时别混用。"]]},"1.601799":{"pe":[["y","市值分位 0%、PE 分位 0%，两者只差 0 个点、基本同步——这个低位是股价真跌出来的。"],["y","2027E 净利券商分歧偏大：6 家预测极差占中值 42%，区间会随预期摆动。"]]},"0.002444":{"pe":[["y","市值分位 32%、PE 分位 1%，差 31 个点。PE 比市值更靠底部，多出来的那部分是 2027E 盈利预期上修推出来的，不是股价又跌了一轮——市值分位也低，属于双低。"],["y","口径提示：这个区间的分母是 2027E 一致预期净利 35.8 亿，池子里净利填的是 24 亿，两者差 49%。算目标市值时别混用。"]]},"0.300777":{"pe":[["y","口径提示：这个区间的分母是 2027E 一致预期净利 2.9 亿，池子里净利填的是 5.6 亿，两者差 48%。算目标市值时别混用。"]],"ps":[["y","2027E 仅 1 家券商覆盖，样本偏薄。"]]},"0.002594":{"pe":[["y","市值分位 30%、PE 分位 3%，差 27 个点。PE 比市值更靠底部，多出来的那部分是 2027E 盈利预期上修推出来的，不是股价又跌了一轮——市值分位也低，属于双低。"],["y","2027E 净利券商分歧偏大：24 家预测极差占中值 51%，区间会随预期摆动。"]]},"0.301345":{"pe":[["y","口径提示：这个区间的分母是 2027E 一致预期净利 16.7 亿，池子里净利填的是 7.5 亿，两者差 123%。算目标市值时别混用。"]]},"1.603596":{"pe":[["y","口径提示：这个区间的分母是 2027E 一致预期净利 19.6 亿，池子里净利填的是 14.2 亿，两者差 38%。算目标市值时别混用。"]]},"0.002600":{"pe":[["y","2027E 净利券商分歧偏大：6 家预测极差占中值 31%，区间会随预期摆动。"],["y","口径提示：这个区间的分母是 2027E 一致预期净利 43.6 亿，池子里净利填的是 25 亿，两者差 74%。算目标市值时别混用。"]]},"0.301656":{"pe":[["r","这次批量更新<b>没有写入 PE 区间</b>：PE 上限 659.8× 超过 120×，历史净利曾接近零。现在显示的还是原值 0~0，需要你自己定一个。"],["y","市值分位 4%、PE 分位 4%，两者只差 0 个点、基本同步——这个低位是股价真跌出来的。"]],"ps":[["y","2027E 仅 1 家券商覆盖，样本偏薄。"]]},"1.603486":{"pe":[["y","市值分位 32%、PE 分位 2%，差 30 个点。PE 比市值更靠底部，多出来的那部分是 2027E 盈利预期上修推出来的，不是股价又跌了一轮——市值分位也低，属于双低。"]]},"1.688411":{"pe":[["r","这次批量更新<b>没有写入 PE 区间</b>：区间宽度 4.4× 超过 4×，跨业绩台阶不可比。现在显示的还是原值 20~30，需要你自己定一个。"],["y","2027E 净利券商分歧偏大：12 家预测极差占中值 38%，区间会随预期摆动。"]]},"1.688305":{"pe":[["y","市值分位 7%、PE 分位 1%，两者只差 6 个点、基本同步——这个低位是股价真跌出来的。"],["y","2027E 净利券商分歧偏大：5 家预测极差占中值 48%，区间会随预期摆动。"]]},"0.002920":{"pe":[["y","市值分位 1%、PE 分位 1%，两者只差 0 个点、基本同步——这个低位是股价真跌出来的。"]]},"1.688052":{"pe":[["r","这次批量更新<b>没有写入 PE 区间</b>：PE 上限 174.1× 超过 120×，历史净利曾接近零。现在显示的还是原值 0~0，需要你自己定一个。"],["y","市值分位 77%、PE 分位 21%，差 56 个点：PE 相对市值偏低，说明 2027E 预期被上修过一轮。"],["r","2027E 净利券商分歧极大：5 家预测极差占中值 162%，分母不稳，区间可信度低。"],["y","口径提示：这个区间的分母是 2027E 一致预期净利 4.7 亿，池子里净利填的是 2 亿，两者差 134%。算目标市值时别混用。"]]},"1.600563":{"pe":[["y","市值分位 40%、PE 分位 2%，差 38 个点。PE 比市值更靠底部，多出来的那部分是 2027E 盈利预期上修推出来的，不是股价又跌了一轮——但市值分位还有 40%，并没跌到 5% 分位。"]]},"0.002493":{"pe":[["r","这次批量更新<b>没有写入 PE 区间</b>：PE 上限 143.4× 超过 120×，历史净利曾接近零。现在显示的还是原值 13~22，需要你自己定一个。"],["y","市值分位 79%、PE 分位 37%，差 42 个点：PE 相对市值偏低，说明 2027E 预期被上修过一轮。"],["y","2027E 净利券商分歧偏大：16 家预测极差占中值 44%，区间会随预期摆动。"],["y","口径提示：这个区间的分母是 2027E 一致预期净利 96.0 亿，池子里净利填的是 70 亿，两者差 37%。算目标市值时别混用。"]]},"1.600346":{"pe":[["y","市值分位 51%、PE 分位 1%，差 50 个点。PE 比市值更靠底部，多出来的那部分是 2027E 盈利预期上修推出来的，不是股价又跌了一轮——但市值分位还有 51%，并没跌到 5% 分位。"],["y","2027E 净利券商分歧偏大：16 家预测极差占中值 36%，区间会随预期摆动。"]]},"0.000811":{"pe":[["r","2027E 净利券商分歧极大：12 家预测极差占中值 75%，分母不稳，区间可信度低。"],["y","口径提示：这个区间的分母是 2027E 一致预期净利 14.2 亿，池子里净利填的是 8.5 亿，两者差 67%。算目标市值时别混用。"]]},"0.002980":{"pe":[["y","市值分位 88%、PE 分位 56%，差 32 个点：PE 相对市值偏低，说明 2027E 预期被上修过一轮。"],["y","口径提示：这个区间的分母是 2027E 一致预期净利 5.9 亿，池子里净利填的是 9 亿，两者差 34%。算目标市值时别混用。"]]},"0.002810":{"pe":[["y","市值分位 66%、PE 分位 32%，差 34 个点：PE 相对市值偏低，说明 2027E 预期被上修过一轮。"],["y","2027E 净利券商分歧偏大：2 家预测极差占中值 31%，区间会随预期摆动。"]],"ps":[["y","2027E 仅 2 家券商覆盖，样本偏薄。"]]}};
+        const VAL_TIP_CACHE = {};
+
+        function vDiagItems(i, k) {
+            const d = VAL_DIAG[i.code];
+            if (!d || !d[k]) return [];
+            return d[k].map(function (x) { return { s: x[0], t: x[1] }; });
+        }
+
+        function vLiveWhy(i, k) {
+            const out = [];
+            const nm = k === 'pe' ? 'PE' : 'PS';
+            const lo = k === 'pe' ? i.lowPE : i.lowPS;
+            const hi = k === 'pe' ? i.highPE : i.highPS;
+            const res = (k === 'pe' ? i.peRes : i.psRes) || {};
+            const base = k === 'pe' ? (i.eff && i.eff.p) : (i.eff && i.eff.r);
+            const baseNm = k === 'pe' ? '净利' : '营收';
+
+            if (!lo || !hi) {
+                out.push({ s: 'y', t: nm + ' 区间没设置（' + (lo || 0) + '~' + (hi || 0) + '），这一列没有判断依据。' });
+                return out;
+            }
+            if (hi < lo) out.push({ s: 'r', t: nm + ' 上限 ' + hi + ' 小于下限 ' + lo + '，两格填反了。' });
+            if (k === 'pe' && hi > 120) {
+                out.push({ s: 'r', t: 'PE 上限 ' + hi + '× 超过 120×，多半是历史上有某年净利接近零，'
+                                    + '这个上限不能拿去算目标市值。' });
+            }
+            const ratio = hi / lo;
+            if (ratio > (k === 'pe' ? 4 : 5)) {
+                out.push({ s: 'r', t: nm + ' 区间宽 ' + ratio.toFixed(1) + ' 倍（' + lo + '~' + hi
+                                    + '），跨了业绩台阶，上下限不在同一把尺子上。' });
+            }
+            const d = parseFloat(res.down), u = parseFloat(res.up);
+            if (!base) {
+                out.push({ s: 'y', t: baseNm + ' 没取到值，' + nm + ' 的市值空间算不出来。' });
+            } else if (Number.isFinite(d) && Number.isFinite(u) && i.cap) {
+                const capNow = i.cap, capLo = base * lo, capHi = base * hi;
+                if (d > 0) {
+                    out.push({ s: 'r', t: '现市值 ' + capNow.toFixed(0) + ' 亿已跌破下限对应市值 '
+                                        + capLo.toFixed(0) + ' 亿，低 ' + d.toFixed(1) + '%。' });
+                } else if (d > -10) {
+                    out.push({ s: 'y', t: '现市值 ' + capNow.toFixed(0) + ' 亿离下限对应 ' + capLo.toFixed(0)
+                                        + ' 亿只差 ' + (-d).toFixed(1) + '%，贴近底部。' });
+                }
+                if (u < 0) {
+                    out.push({ s: 'r', t: '现市值 ' + capNow.toFixed(0) + ' 亿已冲破上限对应市值 '
+                                        + capHi.toFixed(0) + ' 亿，超 ' + (-u).toFixed(1) + '%。' });
+                } else if (u < 15) {
+                    out.push({ s: 'y', t: '现市值 ' + capNow.toFixed(0) + ' 亿离上限对应 ' + capHi.toFixed(0)
+                                        + ' 亿只差 ' + u.toFixed(1) + '%，接近顶部。' });
+                }
+            }
+            return out;
+        }
+
+        function vItems(i, k) {
+            return vDiagItems(i, k).concat(vLiveWhy(i, k));
+        }
+
+        // PE / PS 区间单元格。有异常就把红点贴到右上角，整格可点。
+        function valCell(i, k) {
+            const items = vItems(i, k);
+            VAL_TIP_CACHE[i.code + '|' + k] = items;
+            const lo = k === 'pe' ? i.lowPE : i.lowPS;
+            const hi = k === 'pe' ? i.highPE : i.highPS;
+            const txt = (lo || '-') + '~' + (hi || '-');
+            const hard = items.some(function (x) { return x.s === 'r'; });
+            const cls = 'val-cell' + (items.length ? ' has-warn' : '');
+            const dot = items.length ? '<span class="vdot' + (hard ? '' : ' y') + '"></span>' : '';
+            // title 里也放一份纯文本理由，作为原生悬停提示的兜底
+            const plain = items.length
+                ? (k === 'pe' ? 'PE ' : 'PS ') + txt + '：' + items.map(function (x) {
+                      return x.t.replace(/<[^>]+>/g, '');
+                  }).join(' ／ ')
+                : (k === 'pe' ? 'PE ' : 'PS ') + txt + '：无异常。点击查看说明。';
+            return '<td class="' + cls + '" data-vcode="' + i.code + '" data-vkind="' + k
+                 + '" data-vrange="' + txt + '" title="' + plain.replace(/"/g, '&quot;') + '">'
+                 + txt + dot + '</td>';
+        }
+
+        function openValTip(ev, el) {
+            if (ev) ev.stopPropagation();
+            const tip = document.getElementById('val-tip');
+            if (!tip) return;
+            const key = el.getAttribute('data-vcode') + '|' + el.getAttribute('data-vkind');
+            const items = VAL_TIP_CACHE[key] || [];
+            const kind = el.getAttribute('data-vkind') === 'pe' ? 'PE' : 'PS';
+            const range = el.getAttribute('data-vrange') || '';
+            const body = items.length
+                ? '<ul>' + items.map(function (x) {
+                      return '<li>' + x.t + '</li>';
+                  }).join('') + '</ul>'
+                : '<div class="vt-ok">这个区间没发现异常。红点只在跌破或贴近上下限、'
+                  + '区间过宽、分母不稳这类情况下出现。</div>';
+            tip.innerHTML = '<div class="vt-h">' + kind + ' 区间 ' + range
+                + (items.length ? ' · ' + items.length + ' 条提示' : ' · 正常') + '</div>' + body;
+            tip.classList.add('on');
+            const r = el.getBoundingClientRect(), t = tip.getBoundingClientRect();
+            let left = r.left + r.width / 2 - t.width / 2;
+            left = Math.max(8, Math.min(left, window.innerWidth - t.width - 8));
+            let top = r.bottom + 8;
+            if (top + t.height > window.innerHeight - 8) top = Math.max(8, r.top - t.height - 8);
+            tip.style.left = Math.round(left) + 'px';
+            tip.style.top = Math.round(top) + 'px';
+        }
+
+        function closeValTip() {
+            const t = document.getElementById('val-tip');
+            if (t) t.classList.remove('on');
+        }
+
+        (function initValTip() {
+            document.addEventListener('click', function (e) {
+                const cell = e.target.closest ? e.target.closest('td.val-cell') : null;
+                if (cell) { openValTip(e, cell); return; }
+                if (e.target.closest && e.target.closest('#val-tip')) return;
+                closeValTip();
+            }, true);
+            window.addEventListener('scroll', closeValTip, true);
+            window.addEventListener('resize', closeValTip);
+        })();
+
         document.addEventListener('keydown', (event) => {
-            if (event.key === 'Escape') { closeWatchlistModal(); closeScoreDetails(); closeDevYearPicker(); closeBrokerTip(); closeFillMenu(); }
+            if (event.key === 'Escape') { closeWatchlistModal(); closeScoreDetails(); closeDevYearPicker(); closeBrokerTip(); closeFillMenu(); closeValTip(); }
         });
     </script>
 </body>
