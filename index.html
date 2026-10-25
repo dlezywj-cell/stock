@@ -3101,7 +3101,10 @@
             const baseNm = k === 'pe' ? '净利' : '营收';
 
             if (!lo || !hi) {
-                out.push({ s: 'y', t: nm + ' 区间没设置（' + (lo || 0) + '~' + (hi || 0) + '），这一列没有判断依据。' });
+                // 程序把 PE 写成 0 表示「不适用」时，离线理由里已经解释过，别再重复一句「没设置」
+                if (!(k === 'pe' && vDiagItems(i, k).length)) {
+                    out.push({ s: 'y', t: nm + ' 区间没设置（' + (lo || 0) + '~' + (hi || 0) + '），这一列没有判断依据。' });
+                }
                 return out;
             }
             if (hi < lo) out.push({ s: 'r', t: nm + ' 上限 ' + hi + ' 小于下限 ' + lo + '，两格填反了。' });
