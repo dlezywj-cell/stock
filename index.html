@@ -3199,20 +3199,31 @@
         })();
 
         /* ===== 打开页面时自动拉一次云端估值 =====
-           后台程序（批量估值脚本）会改 data.json 里的 lowPE/highPE/lowPS/highPS，
-           这里自动把这些四个字段合并进来，不用手动点「拉取数据」。
-           只合并估值四字段 + 追加云端新增的标的，绝不覆盖本地的净利/营收/日志/tags，
-           所以即使本地有没上传的改动也不会被冲掉。 */
+           后台程序（批量估值脚本）只改「6 个月以上没维护」的标的的
+           lowPE/highPE/lowPS/highPS，这里按同一条规则合并：
+             · 半年内你自己维护过的 → 一律保留你填的值，不覆盖
+             · 半年以上没动过 / 从没维护过 → 用云端算出来的
+             · 只碰估值四字段，绝不覆盖本地的净利/营收/日志/tags
+             · 云端有、本地没有的标的按新增追加 */
+        function valIsStale(s) {
+            const d = s && s.logs && s.logs[0] && s.logs[0].date;
+            if (!d) return true;                       // 从没写过日志，视为陈旧
+            const t = new Date(String(d).slice(0, 10).replace(/\//g, '-') + 'T00:00:00');
+            if (isNaN(t.getTime())) return true;
+            return (Date.now() - t.getTime()) > 183 * 86400000;   // 半年
+        }
+
         function autoMergeValuation(remote) {
             const byCode = {};
             remote.forEach(function (r) { if (r && r.code) byCode[r.code] = r; });
             const KEYS = ['lowPE', 'highPE', 'lowPS', 'highPS'];
-            let changed = 0, added = 0;
+            let changed = 0, added = 0, kept = 0;
             const seen = {};
             stocks.forEach(function (s) {
                 seen[s.code] = true;
                 const r = byCode[s.code];
                 if (!r) return;
+                if (!valIsStale(s)) { kept++; return; }   // 半年内维护过 → 保留你自己填的
                 KEYS.forEach(function (k) {
                     if (r[k] !== undefined && r[k] !== null && r[k] !== s[k]) { s[k] = r[k]; changed++; }
                 });
@@ -3220,7 +3231,7 @@
             remote.forEach(function (r) {
                 if (r && r.code && !seen[r.code]) { stocks.push(r); added++; }
             });
-            return { changed: changed, added: added };
+            return { changed: changed, added: added, kept: kept };
         }
 
         function autoPullValuation() {
@@ -3246,6 +3257,7 @@
                 updateTable();
                 updateStatus('online', '已同步估值 ' + res.changed
                     + (res.added ? ' · 新增 ' + res.added + ' 只' : ''));
+                setTimeout(function () { checkUnsavedStatus(); }, 0);
             }).catch(function () { /* 静默失败，不影响手动拉取 */ });
         }
         setTimeout(autoPullValuation, 800);
