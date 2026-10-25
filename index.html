@@ -3198,6 +3198,58 @@
             window.addEventListener('resize', closeValTip);
         })();
 
+        /* ===== 打开页面时自动拉一次云端估值 =====
+           后台程序（批量估值脚本）会改 data.json 里的 lowPE/highPE/lowPS/highPS，
+           这里自动把这些四个字段合并进来，不用手动点「拉取数据」。
+           只合并估值四字段 + 追加云端新增的标的，绝不覆盖本地的净利/营收/日志/tags，
+           所以即使本地有没上传的改动也不会被冲掉。 */
+        function autoMergeValuation(remote) {
+            const byCode = {};
+            remote.forEach(function (r) { if (r && r.code) byCode[r.code] = r; });
+            const KEYS = ['lowPE', 'highPE', 'lowPS', 'highPS'];
+            let changed = 0, added = 0;
+            const seen = {};
+            stocks.forEach(function (s) {
+                seen[s.code] = true;
+                const r = byCode[s.code];
+                if (!r) return;
+                KEYS.forEach(function (k) {
+                    if (r[k] !== undefined && r[k] !== null && r[k] !== s[k]) { s[k] = r[k]; changed++; }
+                });
+            });
+            remote.forEach(function (r) {
+                if (r && r.code && !seen[r.code]) { stocks.push(r); added++; }
+            });
+            return { changed: changed, added: added };
+        }
+
+        function autoPullValuation() {
+            const cfg = getGbConfig();
+            if (!cfg.token || !cfg.username || !cfg.repo) return;
+            if (APP_STORAGE.getItem('stock_sys_unsaved') === 'true') return;   // 有没上传的改动就不碰
+            const last = Number(APP_STORAGE.getItem('stock_sys_autopull_at') || 0);
+            if (Date.now() - last < 30 * 1000) return;
+            APP_STORAGE.setItem('stock_sys_autopull_at', String(Date.now()));
+            const url = 'https://api.github.com/repos/' + cfg.username + '/' + cfg.repo
+                + '/contents/' + cfg.path;
+            fetch(url + '?ref=' + encodeURIComponent(cfg.branch), {
+                headers: { Accept: 'application/vnd.github.v3+json', Authorization: 'token ' + cfg.token },
+                cache: 'no-store'
+            }).then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
+                if (!j || !j.content) return;
+                let data;
+                try { data = JSON.parse(b64_to_utf8(j.content)); } catch (e) { return; }
+                if (!Array.isArray(data) || !data.length) return;
+                const res = autoMergeValuation(data);
+                if (!res.changed && !res.added) { updateStatus('online', '估值已是最新'); return; }
+                saveStorage();
+                updateTable();
+                updateStatus('online', '已同步估值 ' + res.changed
+                    + (res.added ? ' · 新增 ' + res.added + ' 只' : ''));
+            }).catch(function () { /* 静默失败，不影响手动拉取 */ });
+        }
+        setTimeout(autoPullValuation, 800);
+
         document.addEventListener('keydown', (event) => {
             if (event.key === 'Escape') { closeWatchlistModal(); closeScoreDetails(); closeDevYearPicker(); closeBrokerTip(); closeFillMenu(); closeValTip(); }
         });
