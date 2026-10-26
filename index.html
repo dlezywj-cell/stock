@@ -653,8 +653,10 @@
         // 写进 broker.json 与 consensus.json 的 candYears；页面优先读它——跨年时数据源
         // 往后挪一年（2026/27/28 → 2027/28/29），页面列口径与文案跟着挪，不用改代码。
         let brokerCandYears = [];
-        // 机构明细浮层的关闭入口。声明放在这里，避免 updateTable 先于浮层初始化被调用时报未初始化。
+        // 机构明细浮层的关闭与重挂入口。声明放在这里，避免 updateTable 先于浮层初始化被调用时报未初始化。
         let closeBrokerTip = () => {};
+        // 表格重绘后把开着的浮层重新挂到新的单元格上。刷新不再关浮层，只有用户自己点关才关。
+        let reanchorBrokerTip = () => {};
         
         let intervalId = null, sortState = { key: 'pe_up', dir: 'desc' }, isPanelOpen = false, pendingDeleteCode = null, pendingLogIndex = null, pendingSyncData = null, cachedMarketData = {}, selectedCodes = new Set(), columnFilters = {}, onlySelectedMode = false;
         
@@ -2131,11 +2133,12 @@
         }
 
         async function updateTable(skipFetch = false) {
-            closeBrokerTip();   // 表格要整体重绘，机构明细浮层里引用的单元格会失效，先收起来
+            // 机构明细浮层不在这里关：原来那句 closeBrokerTip() 会让实时刷新每 5 秒
+            // 把用户刚点开的浮层带走。重绘完在末尾用 reanchorBrokerTip() 重新挂回原单元格。
             const el = document.getElementById('result');
             renderWatchlistControls();
             
-            if (stocks.length === 0) { currentVisibleStocks = []; el.innerHTML = '<div style="padding:40px;text-align:center;color:#999;">📭 列表为空</div>'; syncFillControls(); return; }
+            if (stocks.length === 0) { currentVisibleStocks = []; el.innerHTML = '<div style="padding:40px;text-align:center;color:#999;">📭 列表为空</div>'; syncFillControls(); closeBrokerTip(); return; }
             ensureReportDates();
             
             if (!skipFetch) {
@@ -2210,6 +2213,8 @@
             // 来源下拉框与录入面板的提示条要跟着这一轮算完的 eff 走，放在最后统一回填
             fillStatList = data;
             syncFillControls();
+            // 表格已经重画完，开着的机构明细浮层重新挂到新节点上（内容没变就只挪位置）
+            reanchorBrokerTip();
         }
 
         let currentVisibleStocks = [];
@@ -3028,6 +3033,28 @@
                 document.querySelectorAll('.bk-tag.bk-active').forEach((e) => e.classList.remove('bk-active'));
             };
             closeBrokerTip = close;
+            // 表格每次重绘都会把这一格换成新节点，但浮层本身不该关——只把锚点和内容重新挂回去。
+            // 行情 5 秒刷一次，以前这里是先关后画，所以浮层一刷新就消失；现在只有用户
+            // 点 ×、按 Esc、或点空白处才关。
+            const reanchor = () => {
+                if (!openCode) return;
+                const tag = tagOf(openCode);
+                const html = brokerTipHtml(openCode);
+                // 这一只被筛掉、删掉，或者数据源里已经没有它的明细了，浮层没有依附对象，只能收起
+                if (!tag || !html) { close(); return; }
+                // 内容一致时不动 DOM：每 5 秒重写一次 innerHTML 会把用户滚到一半的明细表弹回顶部
+                if (tip.innerHTML !== html) {
+                    const body = tip.querySelector('.bk-body');
+                    const keep = body ? body.scrollTop : 0;
+                    tip.innerHTML = html;
+                    const nb = tip.querySelector('.bk-body');
+                    if (nb) nb.scrollTop = keep;
+                }
+                document.querySelectorAll('.bk-tag.bk-active').forEach((e) => e.classList.remove('bk-active'));
+                tag.classList.add('bk-active');
+                place(tag);
+            };
+            reanchorBrokerTip = reanchor;
             const open = (tag) => {
                 const code = tag.getAttribute('data-bkcode');
                 if (openCode === code) { close(); return; }   // 再点同一格收起
